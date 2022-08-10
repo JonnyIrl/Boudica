@@ -351,3 +351,4 @@ MigrationBackup/
 
 *.config.json
 *.config*
+/Boudica/config.json
