@@ -1,4 +1,5 @@
 ﻿using Boudica.Commands;
+using Boudica.Database;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -77,8 +78,10 @@ class Program
             .AddSingleton(_config)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<CommandService>()
-            .AddSingleton<DatabaseService>()
             .AddSingleton<CommandHandler>()
+            .AddDbContext<DVSContext>()
+            .AddScoped<GuardianService>()
+
             .BuildServiceProvider();
     }
 }
