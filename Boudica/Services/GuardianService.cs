@@ -56,6 +56,15 @@ namespace Boudica.Services
             return true;
         }
 
+        public async Task<List<Guardian>> GetLeaderboard()
+        {
+            return await _db.Guardians
+                .OrderByDescending(x => x.ReputationLevel)
+                .ThenByDescending(x => x.Glimmer)
+                .Take(10)
+                .ToListAsync();
+        }
+
 
     }
 }

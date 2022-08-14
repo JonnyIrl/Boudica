@@ -37,26 +37,43 @@ namespace Boudica.Commands
             string fileName;
             if (number == 0)
             {
-                fileName = "Images/Gifs/heads.gif";
+                fileName = "https://media.giphy.com/media/WyzyENjdELhS4EnuYb/giphy.gif";
             }
             else
             {
-                fileName = "Images/Gifs/tails.gif";
+                fileName = "https://media.giphy.com/media/K7OLwCi2fWQ1YaTItI/giphy.gif";
             }
-            await Context.Channel.SendFileAsync(fileName);
+            var embed = new EmbedBuilder()
+            {
+                ImageUrl = $"{fileName}",
+                Description = "Flipping coin...",
+                Color = Color.Orange      
+            }.Build();
+
+            IUserMessage userMessage = await Context.Channel.SendMessageAsync(embed: embed);
             await Task.Delay(3000);
-            if(number == 0 && args.ToLower() == "heads")
+
+            await userMessage.ModifyAsync(x =>
             {
-                await ReplyAsync("You guessed correctly <@" + Context.User.Id + ">!");
-            }
-            else if (number == 1 && args.ToLower() == "tails")
-            {
-                await ReplyAsync("You guessed correctly <@" + Context.User.Id + ">!");
-            }
-            else
-            {
-                await ReplyAsync("Better luck next time <@" + Context.User.Id + ">!");
-            }
+                EmbedBuilder embed = new EmbedBuilder();
+                embed.ImageUrl = $"{fileName}";
+                if (number == 0 && args.ToLower() == "heads")
+                {
+                    embed.WithDescription("You guessed correctly <@" + Context.User.Id + ">!");
+                    embed.WithColor(Color.Green);
+                }
+                else if (number == 1 && args.ToLower() == "tails")
+                {
+                    embed.WithDescription("You guessed correctly <@" + Context.User.Id + ">!");
+                    embed.WithColor(Color.Green);
+                }
+                else
+                {
+                    embed.WithDescription("Better luck next time <@" + Context.User.Id + ">!");
+                    embed.WithColor(Color.Red);
+                }
+                x.Embed = embed.Build();
+            });
         }
     }
 }
