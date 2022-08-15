@@ -39,5 +39,7 @@ namespace Boudica.Database
         }
 
         public DbSet<Guardian> Guardians { get; set; }
+        public DbSet<Item> Items { get; set; }
+        public DbSet<Eververse> EververseItems { get; set; }
     }
 }

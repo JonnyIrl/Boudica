@@ -81,6 +81,8 @@ class Program
             .AddSingleton<CommandHandler>()
             .AddDbContext<DVSContext>()
             .AddScoped<GuardianService>()
+            .AddScoped<ItemService>()
+            .AddScoped<EververseService>()
 
             .BuildServiceProvider();
     }

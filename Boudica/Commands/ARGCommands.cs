@@ -1,5 +1,6 @@
 ﻿using Boudica.Database;
 using Boudica.Database.Models;
+using Boudica.Helpers;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -15,12 +16,14 @@ namespace Boudica.Commands
 {
     public class ARGCommands : ModuleBase
     {
-        private readonly GuardianService _db;
+        private readonly GuardianService _guardianService;
+        private readonly ItemService _itemService;
         private readonly IConfiguration _config;
 
         public ARGCommands(IServiceProvider services)
         {
-            _db = services.GetRequiredService<GuardianService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
+            _itemService = services.GetRequiredService<ItemService>();
             _config = services.GetRequiredService<IConfiguration>();
         }
 
@@ -44,7 +47,7 @@ namespace Boudica.Commands
                 string userIdString = split[2].Replace("@", string.Empty).Replace(">", string.Empty).Replace("<", string.Empty);
                 if (ulong.TryParse(userIdString, out ulong userId))
                 {
-                    await _db.IncreaseGlimmer(userId, result);
+                    await _guardianService.IncreaseGlimmer(userId, result);
                     return;
                 }
                 else
@@ -61,7 +64,7 @@ namespace Boudica.Commands
         [Command("leaderboard")]
         public async Task GetLeaderboard()
         {
-            List<Guardian> guardians = await _db.GetLeaderboard();
+            List<Guardian> guardians = await _guardianService.GetLeaderboard();
             if(guardians.Any() == false)
             {
                 await ReplyAsync("There is nobody in the leaderboards... yet");
@@ -85,6 +88,31 @@ namespace Boudica.Commands
 
             embed.WithFooter(footer => footer.Text = "Increase your rank by completing discord tasks and earning glimmer");
             await ReplyAsync(embed: embed.Build());
+        }
+
+        [Command("create")]
+        public async Task Create([Remainder] string args)
+        {
+            if (args == null || args.Contains("item") == false)
+            {
+                await ReplyAsync("Invalid command, example is ;create item itemJson");
+                return;
+            }
+            var split = args.Split("item");
+            await CreateItem(split[split.Length - 1]);
+        }
+
+        private async Task CreateItem(string itemJson)
+        {
+            bool result = await _itemService.CreateItem(itemJson);
+            if(result)
+            {
+                await ReplyAsync(embed: EmbedHelper.CreateSuccessReply("Item was created!").Build());
+            }
+            else
+            {
+                await ReplyAsync(embed: EmbedHelper.CreateFailedReply("Failed to create item!").Build());
+            }
         }
 
 
