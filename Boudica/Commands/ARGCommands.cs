@@ -20,6 +20,7 @@ namespace Boudica.Commands
         private readonly GuardianService _guardianService;
         private readonly ItemService _itemService;
         private readonly EververseService _eververseService;
+        private readonly InventoryService _inventoryService;
         private readonly IConfiguration _config;
 
         public ARGCommands(IServiceProvider services)
@@ -27,6 +28,7 @@ namespace Boudica.Commands
             _guardianService = services.GetRequiredService<GuardianService>();
             _itemService = services.GetRequiredService<ItemService>();
             _eververseService = services.GetRequiredService<EververseService>();
+            _inventoryService = services.GetRequiredService<InventoryService>();
             _config = services.GetRequiredService<IConfiguration>();
         }
 
@@ -147,6 +149,35 @@ namespace Boudica.Commands
             return "N/A";
         }
 
+
+        [Command("inventory")]
+        public async Task Inventory()
+        {
+            Guardian guardian = await _guardianService.Get(Context.User.Id);
+            if(guardian == null)
+            {
+                await ReplyAsync("Could not find Guardian.. blame Jonny");
+                return;
+            }
+
+            List<Item> inventoryItems = await _inventoryService.GetAllItems(Context.User.Id);
+            if(inventoryItems == null || inventoryItems.Any() == false)
+            {
+                await ReplyAsync(embed: EmbedHelper.CreateFailedReply("You don't have anything in your inventory. You can buy items from Eververse!").Build());
+                return;
+            }
+
+            await ReplyAsync(embed: CreateInventoryBuilder(inventoryItems, guardian.Glimmer).Build());
+
+        }
+
+        [Command("eververse")]
+        public async Task Eververse()
+        {
+            List<Eververse> allItems = await _eververseService.GetAll();
+            await ReplyAsync(embed: CreateEververseBuilder(allItems).Build());
+        }
+
         [Command("eververse")]
         public async Task Eververse([Remainder] string args)
         {
@@ -206,6 +237,18 @@ namespace Boudica.Commands
             }
 
             return null;
+        }
+
+        private EmbedBuilder CreateInventoryBuilder(List<Item> inventoryItems, int glimmerAmount)
+        {
+            Emote.TryParse("<:misc_glimmer:1009200271475347567>", out Emote parsedGlimmerEmote);
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithDescription($"This is your inventory guardian!\n{parsedGlimmerEmote} {string.Format("{0:n0}", glimmerAmount)}");
+            foreach (Item item in inventoryItems.OrderBy(x => x.IsPrimary).ThenBy(x => x.IsSecondary).ThenBy(x => x.IsSuper))
+            {
+                embedBuilder.AddField($"{item.DisplayName}", $"Type: {item.GetType()}\nId: {item.Id}", true);
+            }
+            return embedBuilder;
         }
     }
 }

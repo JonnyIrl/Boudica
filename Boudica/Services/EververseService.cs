@@ -34,7 +34,7 @@ namespace Boudica.Services
 
         public async Task<List<Eververse>> GetAll()
         {
-            return await _db.EververseItems.OrderBy(x => x.Price).ToListAsync();
+            return await _db.EververseItems.Include(x => x.Item).OrderBy(x => x.Item.IsPrimary).ThenBy(x => x.Item.IsSecondary).ThenBy(x => x.Item.IsSuper).ToListAsync();
         }
 
         public async Task<List<Eververse>> GetAllPrimaryWeapons()

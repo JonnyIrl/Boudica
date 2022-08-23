@@ -19,9 +19,20 @@ namespace Boudica.Services
             _db = database;
         }
 
+        public async Task<List<Item>> GetAllItems(ulong userId)
+        {
+            List<GuardianInventory> guardianInventory = await _db.GuardiansInventory.Include(x => x.Item).Where(x => x.UserId == userId.ToString()).ToListAsync();
+            if (guardianInventory == null)
+            {
+                return null;
+            }
+
+            return guardianInventory.Select(x => x.Item).ToList();
+        }
+
         public async Task<Item> Get(ulong userId, int itemId)
         {
-            GuardianInventory guardianInventory = await _db.GuardiansInventory.FirstOrDefaultAsync(x => x.UserId == userId.ToString() && x.Item.Id == itemId);
+            GuardianInventory guardianInventory = await _db.GuardiansInventory.Include(x => x.Item).FirstOrDefaultAsync(x => x.UserId == userId.ToString() && x.Item.Id == itemId);
             if(guardianInventory == null)
             {
                 return null;

@@ -83,6 +83,7 @@ class Program
             .AddScoped<GuardianService>()
             .AddScoped<ItemService>()
             .AddScoped<EververseService>()
+            .AddScoped<InventoryService>()
 
             .BuildServiceProvider();
     }
