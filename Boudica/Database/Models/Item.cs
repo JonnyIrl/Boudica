@@ -13,9 +13,17 @@ namespace Boudica.Database.Models
         public int Id { get; set; }
         public string DisplayName { get; set; }
         public string Description { get; set; }
-        public string DebuffPercentage { get; set; }
+        public int DebuffPercentage { get; set; }
         public bool IsPrimary { get; set; }
         public bool IsSecondary { get; set; }
         public bool IsSuper { get; set; }
+
+        public string GetType()
+        {
+            if (IsPrimary) return "Kinectic";
+            if (IsSecondary) return "Secondary";
+            if (IsSuper) return "Super";
+            return "N/A";
+        }
     }
 }

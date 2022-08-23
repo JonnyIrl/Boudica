@@ -1,4 +1,5 @@
-﻿using Boudica.Database;
+﻿using Boudica.Classes;
+using Boudica.Database;
 using Boudica.Database.Models;
 using Boudica.Helpers;
 using Boudica.Services;
@@ -18,12 +19,14 @@ namespace Boudica.Commands
     {
         private readonly GuardianService _guardianService;
         private readonly ItemService _itemService;
+        private readonly EververseService _eververseService;
         private readonly IConfiguration _config;
 
         public ARGCommands(IServiceProvider services)
         {
             _guardianService = services.GetRequiredService<GuardianService>();
             _itemService = services.GetRequiredService<ItemService>();
+            _eververseService = services.GetRequiredService<EververseService>();
             _config = services.GetRequiredService<IConfiguration>();
         }
 
@@ -115,7 +118,6 @@ namespace Boudica.Commands
             }
         }
 
-
         private string GetRank(int rank)
         {
             switch(rank)
@@ -143,6 +145,67 @@ namespace Boudica.Commands
             }
 
             return "N/A";
+        }
+
+        [Command("eververse")]
+        public async Task Eververse([Remainder] string args)
+        {
+            if (args != null && args.Contains("primary"))
+            {
+                List<Eververse> primaryItems = await _eververseService.GetAllPrimaryWeapons();
+                IUserMessage message = await ReplyAsync(embed: CreateEververseBuilder(primaryItems).Build());
+                return;
+            }
+
+            if (args != null && args.Contains("buy"))
+            {
+                var split = args.Split("buy");
+                int.TryParse(split[split.Length - 1], out int itemId);
+                if(itemId == 0)
+                {
+                    await ReplyAsync(embed: EmbedHelper.CreateFailedReply("Incorrect item id or command issued. The command should appear like ;eververse buy 1").Build());
+                    return;
+                }
+
+                ResponseResult responseResult = await _eververseService.PurchaseItem(Context.User.Id, itemId);
+                if(responseResult.Success == false)
+                {
+                    await ReplyAsync(embed: EmbedHelper.CreateFailedReply(responseResult.Message).Build());
+                    return;
+                }
+                else
+                {
+                    await ReplyAsync(embed: EmbedHelper.CreateSuccessReply(responseResult.Message).Build());
+                    return;
+                }
+
+
+                List<Eververse> primaryItems = await _eververseService.GetAllPrimaryWeapons();
+                IUserMessage message = await ReplyAsync(embed: CreateEververseBuilder(primaryItems).Build());
+                return;
+            }
+
+            //var split = args.Split("item");
+            //await CreateItem(split[split.Length - 1]);
+        }
+
+        private EmbedBuilder CreateEververseBuilder(List<Eververse> eververseItems)
+        {
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithAuthor(new EmbedAuthorBuilder() { Name = "Tess", IconUrl = "https://www.bungie.net/common/destiny2_content/icons/b1dc8f752214a7b2c4013926c45f307f.png" });
+            embedBuilder.WithDescription("Welcome to my store, if you would like to buy anything type ;buy item {itemId}");
+            Emote.TryParse("<:misc_glimmer:1009200271475347567>", out Emote parsedGlimmerEmote);
+            if (eververseItems.FirstOrDefault(x => x.Item.IsPrimary) != null)
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                foreach (var item in eververseItems.Where(x => x.Item.IsPrimary))
+                {
+                    embedBuilder.AddField($"{item.Item.DisplayName}", $"Type: {item.Item.GetType()}\nId: {item.Item.Id}\n {parsedGlimmerEmote} {string.Format("{0:n0}", item.Price)}", true);
+                }
+                return embedBuilder;
+            }
+
+            return null;
         }
     }
 }
