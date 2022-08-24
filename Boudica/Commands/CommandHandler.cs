@@ -107,7 +107,7 @@ namespace Boudica.Commands
             if (_client.GetUser(reaction.UserId).IsBot) return;
             if (reaction.Emote.Name == "🇯")
             {
-                bool result = await AddPlayerToActivity(message, reaction.UserId);
+                bool result = await AddPlayerToActivityV2(message, reaction.UserId);
                 if (result == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -119,7 +119,7 @@ namespace Boudica.Commands
 
             if (reaction.Emote.Name == "🇸")
             {
-                bool result = await AddSubToActivity(message, reaction.UserId);
+                bool result = await AddSubToActivityV2(message, reaction.UserId);
                 if(result == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -159,6 +159,7 @@ namespace Boudica.Commands
                 //Check the user is already part of the 
                 if (embed.Description.Contains(userId.ToString()))
                 {
+                    var field = embed.Fields.Where(x => x.Name == "Subs");
                     int subIndex = embed.Description.IndexOf("Subs");
                     int userIdIndex = embed.Description.IndexOf(userId.ToString());
                     //if group has no subs
@@ -218,6 +219,176 @@ namespace Boudica.Commands
             }
 
             return true;
+        }
+
+        private async Task<bool> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
+        {
+            
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
+                //Player is a Sub
+                if (field.Value.Contains(userId.ToString()))
+                {
+                    var modifiedEmbed = new EmbedBuilder();
+                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
+                    modifiedEmbed.Title = embed.Title;
+                    modifiedEmbed.Color = embed.Color;
+                    foreach (EmbedField embedField in embed.Fields)
+                    {
+                        if (embedField.Name == "Subs")
+                        {
+                            string replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
+                            if (replaceValue.StartsWith("-")) replaceValue.Replace("-", string.Empty);
+                            if (replaceValue == string.Empty) replaceValue = "-";
+                            modifiedEmbed.AddField("Subs", replaceValue);
+                        }
+                        else if (embedField.Name == "Players")
+                        {
+                            string embedValue = embedField.Value;
+                            if (embedValue.StartsWith("-")) embedValue = embedValue.Replace("-", string.Empty);
+                            embedValue += $"\n<@{userId}>";
+                            modifiedEmbed.AddField(embedField.Name, embedValue);
+                        }
+                        else
+                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
+                    }
+                    if (embed.Footer != null)
+                    {
+                        modifiedEmbed.Footer = new EmbedFooterBuilder()
+                        {
+                            Text = embed.Footer.Value.ToString()
+                        };
+                    }
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+                    return true;
+                }
+                //Add the Player
+                else
+                {
+                    var modifiedEmbed = new EmbedBuilder();
+                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
+                    modifiedEmbed.Title = embed.Title;
+                    modifiedEmbed.Color = embed.Color;
+                    foreach (EmbedField embedField in embed.Fields)
+                    {
+                        if (embedField.Name == "Players")
+                        {
+                            string embedValue = embedField.Value;
+                            embedValue += $"\n<@{userId}>";
+                            modifiedEmbed.AddField(embedField.Name, embedValue);
+                        }
+                        else
+                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
+                    }
+                    if (embed.Footer != null)
+                    {
+                        modifiedEmbed.Footer = new EmbedFooterBuilder()
+                        {
+                            Text = embed.Footer.Value.ToString()
+                        };
+                    }
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task<bool> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
+        {
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                var field = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
+                //Already a Player
+                if (field.Value.Contains(userId.ToString()))
+                {
+                    var modifiedEmbed = new EmbedBuilder();
+                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
+                    modifiedEmbed.Title = embed.Title;
+                    modifiedEmbed.Color = embed.Color;
+                    foreach (EmbedField embedField in embed.Fields)
+                    {
+                        if (embedField.Name == "Players")
+                        {
+                            string replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
+                            if (replaceValue.StartsWith("-")) replaceValue.Replace("-", string.Empty);
+                            modifiedEmbed.AddField("Players", replaceValue);
+                        }
+                        else if (embedField.Name == "Subs")
+                        {
+                            string embedValue = embedField.Value;
+                            if (embedValue.StartsWith("-")) embedValue = embedValue.Replace("-", string.Empty);
+                            embedValue += $"\n<@{userId}>";
+                            modifiedEmbed.AddField(embedField.Name, embedValue);
+                        }
+                        else
+                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
+                    }
+                    if (embed.Footer != null)
+                    {
+                        modifiedEmbed.Footer = new EmbedFooterBuilder()
+                        {
+                            Text = embed.Footer.Value.ToString()
+                        };
+                    }
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+                    return true;
+                }
+                //Add the Player
+                else
+                {
+                    var modifiedEmbed = new EmbedBuilder();
+                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
+                    modifiedEmbed.Title = embed.Title;
+                    modifiedEmbed.Color = embed.Color;
+                    foreach (EmbedField embedField in embed.Fields)
+                    {
+                        if (embedField.Name == "Subs")
+                        {
+                            string embedValue = embedField.Value;
+                            embedValue += $"\n<@{userId}>";
+                            modifiedEmbed.AddField(embedField.Name, embedValue);
+                        }
+                        else
+                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
+                    }
+                    if (embed.Footer != null)
+                    {
+                        modifiedEmbed.Footer = new EmbedFooterBuilder()
+                        {
+                            Text = embed.Footer.Value.ToString()
+                        };
+                    }
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         private async Task<bool> AddSubToActivity(Cacheable<IUserMessage, ulong> message, ulong userId)

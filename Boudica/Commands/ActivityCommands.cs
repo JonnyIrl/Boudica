@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Boudica.Classes;
+using Discord;
 using Discord.Commands;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ namespace Boudica.Commands
             if (args == null)
             {
                 await ReplyAsync("Invalid command arguments, supply the raid and a description for your raid e.g. create raid Vow of Disciple Tuesday 28th 6pm");
+                return;
             }
             var embed = new EmbedBuilder();
 
@@ -42,13 +44,16 @@ namespace Boudica.Commands
 
             var user = Context.User;
 
-            sb.AppendLine($"Players");
-            sb.AppendLine($"<@{user.Id}>");
+            //sb.AppendLine($"Players");
+            //sb.AppendLine($"<@{user.Id}>");
 
-            sb.AppendLine("");
-            sb.AppendLine("Subs");
+            //sb.AppendLine("");
+            //sb.AppendLine("Subs");
 
             embed.Description = sb.ToString();
+
+            embed.AddField("Players", $"<@{user.Id}>");
+            embed.AddField("Subs", "-");
             embed.Footer = new EmbedFooterBuilder()
             {
                 Text = $"Use J to Join | Use S to Sub.\nA max of 6 players may join a raid"

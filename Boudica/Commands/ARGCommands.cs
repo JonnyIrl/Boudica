@@ -95,7 +95,7 @@ namespace Boudica.Commands
             await ReplyAsync(embed: embed.Build());
         }
 
-        [Command("create")]
+        [Command("createitem")]
         public async Task Create([Remainder] string args)
         {
             if (args == null || args.Contains("item") == false)
