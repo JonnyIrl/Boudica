@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Boudica.Classes;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -104,27 +105,40 @@ namespace Boudica.Commands
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
-            if (_client.GetUser(reaction.UserId).IsBot) return;
+            IUser user = await _client.GetUserAsync(reaction.UserId);
+            if (user.IsBot)
+            {
+                return;
+            }
+
             if (reaction.Emote.Name == "🇯")
             {
-                bool result = await AddPlayerToActivityV2(message, reaction.UserId);
-                if (result == false)
+                ActivityResponse result = await AddPlayerToActivityV2(message, reaction.UserId);
+                if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
-                    IUser user = await _client.GetUserAsync(reaction.UserId);
                     await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                }
+                else if(result.Success && result.PreviousReaction)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_s:"), user);
                 }
                 return;
             }
 
             if (reaction.Emote.Name == "🇸")
             {
-                bool result = await AddSubToActivityV2(message, reaction.UserId);
-                if(result == false)
+                ActivityResponse result = await AddSubToActivityV2(message, reaction.UserId);
+                if(result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
-                    IUser user = await _client.GetUserAsync(reaction.UserId);
                     await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                }
+                else if(result.Success && result.PreviousReaction)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_j:"), user);
                 }
 
                 return;
@@ -149,81 +163,9 @@ namespace Boudica.Commands
             }
         }
 
-        private async Task<bool> AddPlayerToActivity(Cacheable<IUserMessage, ulong> message, ulong userId)
+        private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
         {
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            if (embed != null)
-            {
-                //Check the user is already part of the 
-                if (embed.Description.Contains(userId.ToString()))
-                {
-                    var field = embed.Fields.Where(x => x.Name == "Subs");
-                    int subIndex = embed.Description.IndexOf("Subs");
-                    int userIdIndex = embed.Description.IndexOf(userId.ToString());
-                    //if group has no subs
-                    if (subIndex == -1)
-                        return false;
-                    //if user is already part of it.
-                    if (userIdIndex < subIndex)
-                        return false;
-
-                    //Player is currently a sub
-                    if(userIdIndex > subIndex)
-                    {
-                        var modifiedEmbed = new EmbedBuilder();
-                        modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
-                        modifiedEmbed.Title = embed.Title;
-                        modifiedEmbed.Color = embed.Color;
-                        if (embed.Footer != null)
-                        {
-                            modifiedEmbed.Footer = new EmbedFooterBuilder()
-                            {
-                                Text = embed.Footer.Value.ToString()
-                            };
-                        }
-                        
-                        await originalMessage.ModifyAsync(x =>
-                        {
-                            x.Embed = modifiedEmbed.Build();
-                        });
-                        return true;
-                    }
-
-                }
-
-                var newEmbed = new EmbedBuilder();
-                if (embed.Description.Contains("Subs"))
-                {
-                    int indexToReplace = FindIndexToInsertPlayerId(embed.Description);
-                    string newDescription = InsertNewPlayerName(embed.Description, indexToReplace, userId.ToString());
-                    newEmbed.Description = newDescription;
-                    newEmbed.Title = embed.Title;
-                    newEmbed.Color = embed.Color;
-                    if (embed.Footer != null)
-                    {
-                        newEmbed.Footer = new EmbedFooterBuilder()
-                        {
-                            Text = embed.Footer.Value.ToString()
-                        };
-                    }
-                }
-
-
-                await originalMessage.ModifyAsync(x =>
-                {
-                    x.Embed = newEmbed.Build();
-                });
-                return true;
-            }
-
-            return true;
-        }
-
-        private async Task<bool> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
-        {
-            
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
             var embed = embeds?.First();
@@ -233,8 +175,8 @@ namespace Boudica.Commands
                 //Player is a Sub
                 if (field.Value.Contains(userId.ToString()))
                 {
+                    activityResponse.PreviousReaction = true;
                     var modifiedEmbed = new EmbedBuilder();
-                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
                     modifiedEmbed.Title = embed.Title;
                     modifiedEmbed.Color = embed.Color;
                     foreach (EmbedField embedField in embed.Fields)
@@ -268,13 +210,20 @@ namespace Boudica.Commands
                     {
                         x.Embed = modifiedEmbed.Build();
                     });
-                    return true;
+                    activityResponse.Success = true;
+                    return activityResponse;
                 }
                 //Add the Player
                 else
                 {
+                    var playerField = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
+                    //Player is a Player - This is an edge case that happens when the raid is created
+                    if (playerField.Value.Contains(userId.ToString()))
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
                     var modifiedEmbed = new EmbedBuilder();
-                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
                     modifiedEmbed.Title = embed.Title;
                     modifiedEmbed.Color = embed.Color;
                     foreach (EmbedField embedField in embed.Fields)
@@ -300,15 +249,18 @@ namespace Boudica.Commands
                     {
                         x.Embed = modifiedEmbed.Build();
                     });
-                    return true;
+
+                    activityResponse.Success = true;
+                    return activityResponse;
                 }
             }
 
-            return false;
+            return activityResponse;
         }
 
-        private async Task<bool> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
+        private async Task<ActivityResponse> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
         {
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
             var embed = embeds?.First();
@@ -318,8 +270,8 @@ namespace Boudica.Commands
                 //Already a Player
                 if (field.Value.Contains(userId.ToString()))
                 {
+                    activityResponse.PreviousReaction = true;
                     var modifiedEmbed = new EmbedBuilder();
-                    modifiedEmbed.Description = embed.Description.Replace($"<@{userId}>", string.Empty);
                     modifiedEmbed.Title = embed.Title;
                     modifiedEmbed.Color = embed.Color;
                     foreach (EmbedField embedField in embed.Fields)
@@ -328,6 +280,7 @@ namespace Boudica.Commands
                         {
                             string replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
                             if (replaceValue.StartsWith("-")) replaceValue.Replace("-", string.Empty);
+                            if (string.IsNullOrEmpty(replaceValue)) replaceValue = "-";
                             modifiedEmbed.AddField("Players", replaceValue);
                         }
                         else if (embedField.Name == "Subs")
@@ -352,7 +305,8 @@ namespace Boudica.Commands
                     {
                         x.Embed = modifiedEmbed.Build();
                     });
-                    return true;
+                    activityResponse.Success = true;
+                    return activityResponse;
                 }
                 //Add the Player
                 else
@@ -366,6 +320,7 @@ namespace Boudica.Commands
                         if (embedField.Name == "Subs")
                         {
                             string embedValue = embedField.Value;
+                            if (embedValue.StartsWith("-")) embedValue.Replace("-", string.Empty);
                             embedValue += $"\n<@{userId}>";
                             modifiedEmbed.AddField(embedField.Name, embedValue);
                         }
@@ -384,110 +339,13 @@ namespace Boudica.Commands
                     {
                         x.Embed = modifiedEmbed.Build();
                     });
-                    return true;
+                    activityResponse.Success = true;
+                    return activityResponse;
                 }
             }
-            
-            return false;
+
+            return activityResponse;
         }
-
-        private async Task<bool> AddSubToActivity(Cacheable<IUserMessage, ulong> message, ulong userId)
-        {
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            if (embed != null)
-            {
-                var newEmbed = new EmbedBuilder();
-                if (embed.Description.Contains("Subs"))
-                {
-                    if (embed.Description.Contains(userId.ToString()))
-                    {
-                        int playerIndex = embed.Description.IndexOf($"<@{userId.ToString()}>");
-                        int subsIndex = embed.Description.IndexOf("Subs");
-                        
-                        //Player is a main player
-                        if(playerIndex < subsIndex)
-                        {
-                            return false;
-                        }
-                    }
-
-                    int indexToReplace = FindIndexToInsertSubPlayerId(embed.Description);
-                    string newDescription = InsertNewPlayerName(embed.Description, indexToReplace, userId.ToString());
-                    newEmbed.Description = newDescription;
-                    newEmbed.Title = embed.Title;
-                    newEmbed.Color = embed.Color;
-                    if (embed.Footer != null)
-                    {
-                        newEmbed.Footer = new EmbedFooterBuilder()
-                        {
-                            Text = embed.Footer.Value.ToString()
-                        };
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-
-
-                await originalMessage.ModifyAsync(x =>
-                {
-                    x.Embed = newEmbed.Build();
-                });
-
-                return true;
-            }
-
-            return false;
-        }
-
-        public int FindIndexToInsertPlayerId(string embedDescription)
-        {
-            if (string.IsNullOrEmpty(embedDescription)) return -1;
-            string[] split = embedDescription.Split("Subs");
-            int lastFoundIndex = -1;
-            foreach(string text in split)
-            {
-                if (text.Contains("Subs")) break;
-                if (text.Contains(">"))
-                    lastFoundIndex = text.LastIndexOf(">");
-            }
-            if (lastFoundIndex == -1) return -1;
-            // + 1 to return the index just after the >
-            return (lastFoundIndex + 1);
-        }
-
-        public int FindIndexToInsertSubPlayerId(string embedDescription)
-        {
-            if (string.IsNullOrEmpty(embedDescription)) return -1;
-            int index = embedDescription.LastIndexOf("Subs");
-            if (index == -1) return -1;
-            //Bring us to the end of "Subs"
-            index += 4;
-            int lastSubIndex = embedDescription.LastIndexOf(">");
-
-            //Then we have no Subs
-            if (lastSubIndex < index)
-            {
-                return index;
-            }
-
-            return (lastSubIndex + 1);
-        }
-
-
-        public string InsertNewPlayerName(string embedDescription, int subStringIndex, string userId)
-        {
-            if(string.IsNullOrEmpty(embedDescription)) return string.Empty;
-            if(subStringIndex <= 0) return string.Empty;
-
-            string subString = embedDescription.Substring(0, subStringIndex);
-            embedDescription = embedDescription.Replace(subString, subString + $"\n<@{userId}>");
-            return embedDescription;
-        }
-
 
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {

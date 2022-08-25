@@ -44,16 +44,11 @@ namespace Boudica.Commands
 
             var user = Context.User;
 
-            //sb.AppendLine($"Players");
-            //sb.AppendLine($"<@{user.Id}>");
-
-            //sb.AppendLine("");
-            //sb.AppendLine("Subs");
-
             embed.Description = sb.ToString();
 
             embed.AddField("Players", $"<@{user.Id}>");
             embed.AddField("Subs", "-");
+
             embed.Footer = new EmbedFooterBuilder()
             {
                 Text = $"Use J to Join | Use S to Sub.\nA max of 6 players may join a raid"
@@ -65,7 +60,7 @@ namespace Boudica.Commands
             await newMessage.AddReactionsAsync(new List<IEmote>()
             {
                 new Emoji("🇯"),
-                new Emoji("🇸")
+                new Emoji("🇸"),
             });
         }
     }
