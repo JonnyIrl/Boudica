@@ -172,6 +172,11 @@ namespace Boudica.Commands
             if (embed != null)
             {
                 var modifiedEmbed = new EmbedBuilder();
+                var playerCountField = embed.Fields.FirstOrDefault(x => x.Name == "Players");
+                if(playerCountField.Value.Count(x => x == '@') >= 6)
+                {
+                    return activityResponse;
+                }
                 var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
                 //Player is a Sub
                 if (field.Value.Contains(userId.ToString()))
