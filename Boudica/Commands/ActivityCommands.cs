@@ -39,7 +39,8 @@ namespace Boudica.Commands
                 sb.AppendLine(split[i]);
             }
 
-
+            embed.WithAuthor(Context.User);
+            sb.AppendLine();
             sb.AppendLine();
 
             var user = Context.User;
