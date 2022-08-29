@@ -84,6 +84,7 @@ class Program
             .AddScoped<ItemService>()
             .AddScoped<EververseService>()
             .AddScoped<InventoryService>()
+            .AddScoped<ActivityService>()
 
             .BuildServiceProvider();
     }
