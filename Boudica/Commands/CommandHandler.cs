@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Boudica.Classes;
+using Boudica.Helpers;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -219,9 +220,9 @@ namespace Boudica.Commands
                     }
                 }
 
-                UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                UpdateFooterOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
                 await originalMessage.ModifyAsync(x =>
                 {
@@ -258,9 +259,9 @@ namespace Boudica.Commands
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
                     }
 
-                    UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -300,9 +301,9 @@ namespace Boudica.Commands
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
                     }
 
-                    UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -360,9 +361,9 @@ namespace Boudica.Commands
                     }
                 }
 
-                UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                UpdateFooterOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
                 await originalMessage.ModifyAsync(x =>
                 {
@@ -406,42 +407,6 @@ namespace Boudica.Commands
             //            x.Embed = newEmbed.Build();
             //        });
             //    }
-        }
-
-        public void UpdateAuthorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
-        {
-            if (embed == null) return;
-            EmbedAuthor? author = embed.Author;
-            if (author != null)
-            {
-                EmbedAuthor realAuthor = (EmbedAuthor) embed.Author;
-                modifiedEmbed.Author = new EmbedAuthorBuilder()
-                {
-                    Name = realAuthor.Name,
-                    IconUrl = realAuthor.IconUrl,
-                    Url = realAuthor.Url
-                };
-            }
-        }
-
-        public void UpdateDescriptionTitleColorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
-        {
-            if (embed == null) return;
-            modifiedEmbed.Description = embed.Description;
-            modifiedEmbed.Title = embed.Title;
-            modifiedEmbed.Color = embed.Color;
-        }
-
-        public void UpdateFooterOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
-        {
-            if(embed == null) return;
-            if (embed.Footer != null)
-            {
-                modifiedEmbed.Footer = new EmbedFooterBuilder()
-                {
-                    Text = embed.Footer.Value.ToString()
-                };
-            }
         }
 
         public string RemovePlayerNameFromEmbedText(EmbedField embedField, string userId)

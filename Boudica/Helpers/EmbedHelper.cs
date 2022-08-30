@@ -24,5 +24,58 @@ namespace Boudica.Helpers
             builder.Color = Color.Red;
             return builder;
         }
+
+        public static void UpdateAuthorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            EmbedAuthor? author = embed.Author;
+            if (author != null)
+            {
+                EmbedAuthor realAuthor = (EmbedAuthor)embed.Author;
+                modifiedEmbed.Author = new EmbedAuthorBuilder()
+                {
+                    Name = realAuthor.Name,
+                    IconUrl = realAuthor.IconUrl,
+                    Url = realAuthor.Url
+                };
+            }
+        }
+
+        public static void UpdateTitleColorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            modifiedEmbed.Title = embed.Title;
+            modifiedEmbed.Color = embed.Color;
+        }
+
+        public static void UpdateDescriptionTitleColorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            modifiedEmbed.Description = embed.Description;
+            modifiedEmbed.Title = embed.Title;
+            modifiedEmbed.Color = embed.Color;
+        }
+
+        public static void UpdateFooterOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            if (embed.Footer != null)
+            {
+                modifiedEmbed.Footer = new EmbedFooterBuilder()
+                {
+                    Text = embed.Footer.Value.ToString()
+                };
+            }
+        }
+
+        public static void UpdateFieldsOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            if (embed.Fields == null) return;
+            foreach(EmbedField field in embed.Fields)
+            {
+                modifiedEmbed.AddField(field.Name, field.Value);
+            }
+        }
     }
 }
