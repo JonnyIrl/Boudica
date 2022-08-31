@@ -17,7 +17,7 @@ namespace Boudica.Commands
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "Here's a list of commands!";
             builder.Description = $"\n";
-            builder.AddField("Create Raid", $"{Prefix}create raid some text to to describe your raid");
+            builder.AddField("Create Raid", $"{Prefix}create raid some text to describe your raid");
             builder.AddField("Edit Raid", $"{Prefix}edit raid Id some new text here");
             builder.AddField("Close Raid", $"{Prefix}close raid Id");
             builder.AddField("Coinflip", $"{Prefix}coinflip heads (or tails)");

@@ -30,7 +30,6 @@ namespace Boudica.Commands
 
         [Command("8ball")]
         [Alias("ask")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task AskEightBall([Remainder] string args = null)
         {
             // I like using StringBuilder to build out the reply
