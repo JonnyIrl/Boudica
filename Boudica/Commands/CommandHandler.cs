@@ -15,6 +15,8 @@ namespace Boudica.Commands
 {
     public class CommandHandler
     {
+        private const string RaidIsClosed = "This raid is now closed";
+        private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
         private readonly IConfiguration _config;
         private readonly CommandService _commands;
@@ -172,6 +174,11 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
+                if(embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+
                 var modifiedEmbed = new EmbedBuilder();
                 var playerCountField = embed.Fields.FirstOrDefault(x => x.Name == "Players");
                 if(playerCountField.Value.Count(x => x == '@') >= 6)
@@ -243,6 +250,11 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+
                 var modifiedEmbed = new EmbedBuilder();
                 var playerField = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
                 //Player is a Player - This is an edge case that happens when the raid is created
@@ -283,6 +295,11 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+
                 var subField = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
                 //Player is a Player - This is an edge case that happens when the raid is created
                 if (subField.Value.Contains(userId.ToString()))
@@ -325,6 +342,11 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+
                 var modifiedEmbed = new EmbedBuilder();
                 var field = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
                 //Already a Player
