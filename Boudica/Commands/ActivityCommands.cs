@@ -173,21 +173,21 @@ namespace Boudica.Commands
         {
             if (args == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;edit raid 6 This is a new description").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
                 return false;
             }
 
             string[] split = args.Split(" ");
             if (split.Length < 2)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;edit raid 6 This is a new description").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
                 return false;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;edit raid 6 This is a new description").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
                 return false;
             }
 
@@ -198,21 +198,21 @@ namespace Boudica.Commands
         {
             if (args == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;close raid 6").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
                 return false;
             }
 
             string[] split = args.Split(" ");
             if (split.Length >= 2)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;close raid 6").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
                 return false;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g. ;close raid 6").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
                 return false;
             }
 
@@ -235,6 +235,14 @@ namespace Boudica.Commands
 
             if (existingRaid.CreatedByUserId != Context.User.Id.ToString())
             {
+                IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
+                if(guildUser != null)
+                {
+                    if(guildUser.GuildPermissions.ModerateMembers)
+                    {
+                        return true;
+                    }
+                }
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only the Guardian who created the raid or an Admin can edit/close a raid").Build());
                 return false;
             }

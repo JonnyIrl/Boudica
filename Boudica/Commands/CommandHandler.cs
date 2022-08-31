@@ -433,7 +433,15 @@ namespace Boudica.Commands
 
         public string RemovePlayerNameFromEmbedText(EmbedField embedField, string userId)
         {
-            string replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
+            string replaceValue = string.Empty;
+            if (embedField.Value.Contains($"\n<@{userId}>"))
+            {
+                replaceValue = embedField.Value.Replace($"\n<@{userId}>", string.Empty);
+            }
+            else
+            {
+                replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
+            }
             if (replaceValue.StartsWith("-")) replaceValue.Replace("-", string.Empty);
             if (replaceValue == string.Empty) replaceValue = "-";
             return replaceValue;
