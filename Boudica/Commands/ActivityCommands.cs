@@ -16,9 +16,11 @@ namespace Boudica.Commands
     public class ActivityCommands : ModuleBase
     {
         private readonly ActivityService _activityService;
+        private readonly GuardianService _guardianService;
         public ActivityCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
         }
 
         [Command("create raid")]
@@ -47,11 +49,6 @@ namespace Boudica.Commands
 
             string[] split = args.Split('\n');
             bool title = false;
-            //if (split.Length > 1)
-            //{
-            //    embed.Title = split[0];
-            //    title = true;
-            //}
 
             embed.WithColor(new Color(0, 255, 0));
             StringBuilder sb = new StringBuilder();
