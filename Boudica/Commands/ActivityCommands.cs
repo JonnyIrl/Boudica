@@ -17,10 +17,14 @@ namespace Boudica.Commands
     {
         private readonly ActivityService _activityService;
         private readonly GuardianService _guardianService;
+        private readonly GuardianReputationService _guardianReputationService;
+
+        private const int CreatorPoints = 5;
         public ActivityCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _guardianReputationService = services.GetRequiredService<GuardianReputationService>();
         }
 
         [Command("create raid")]
@@ -88,6 +92,12 @@ namespace Boudica.Commands
                 new Emoji("🇯"),
                 new Emoji("🇸"),
             });
+
+            //TODO Add RaidGroupInfo
+            //Task.Run(async () =>
+            //{
+            //    await 
+            //});
         }
 
         [Command("edit raid")]
@@ -164,6 +174,11 @@ namespace Boudica.Commands
             });
 
             await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The raid has been closed!").Build());
+        }
+
+        private async Task AwardReputation(Raid existingRaid)
+        {
+
         }
 
         private async Task<bool> CheckEditRaidCommandIsValid(string args)

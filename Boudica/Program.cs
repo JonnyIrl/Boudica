@@ -85,6 +85,7 @@ class Program
             .AddScoped<EververseService>()
             .AddScoped<InventoryService>()
             .AddScoped<ActivityService>()
+            .AddScoped<GuardianReputationService>()
 
             .BuildServiceProvider();
     }

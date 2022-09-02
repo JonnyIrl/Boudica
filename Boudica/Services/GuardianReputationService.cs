@@ -3,6 +3,7 @@ using Boudica.Database;
 using Boudica.Database.Models;
 using Boudica.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,9 +15,28 @@ namespace Boudica.Services
     public class GuardianReputationService
     {
         private readonly DVSContext _db;
-        public GuardianReputationService(DVSContext dbContext)
+        private readonly GuardianService _guardianService;
+        public GuardianReputationService(IServiceProvider services, DVSContext dbContext)
         {
             _db = dbContext;
+            _guardianService = services.GetRequiredService<GuardianService>();
+        }
+
+        public async Task<bool> AddGuardianReputation(int amount, ulong userId)
+        {
+            Guardian existingGuardian = await _guardianService.Get(userId);
+            if(existingGuardian == null) throw new ArgumentNullException(nameof(existingGuardian));
+
+            GuardianReputation guardianReputation = new GuardianReputation()
+            {
+                Amount = amount,
+                GuardianId = existingGuardian.Id,
+                DateTimeAwarded = DateTime.UtcNow,
+            };
+
+            await _db.AddAsync(guardianReputation);
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         public async Task<int> GetGuardianReputation(int guardianId)
