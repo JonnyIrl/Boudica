@@ -75,6 +75,7 @@ namespace Boudica.Commands
             // determine if the message has a valid prefix, and adjust argPos based on prefix
             if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(prefix, ref argPos)))
             {
+                Task.Run(() => { ReplyWhereIsXur(message); });
                 return;
             }
 
@@ -84,6 +85,18 @@ namespace Boudica.Commands
             await _commands.ExecuteAsync(context, argPos, _services);
         }
 
+        public async Task ReplyWhereIsXur(SocketUserMessage message)
+        {
+            string content = message.Content;
+            if (string.IsNullOrEmpty(content)) return;
+            if (content.Contains("<@244209636897456129>") == false) return;
+            if (content.ToLower().Contains("xur") && content.ToLower().Contains("where"))
+            {
+                var context = new SocketCommandContext(_client, message);
+                await context.Channel.SendMessageAsync(null, false, EmbedHelper.CreateSuccessReply($"Here you go {message.Author.Username}, as you were too lazy to look yourself, let me help you!\n\nhttps://letmegooglethat.com/?q=where+the+fuck+is+Xur&l=1").Build());
+
+            }
+        }
         public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             // if a command isn't found, log that info to console and exit this method
