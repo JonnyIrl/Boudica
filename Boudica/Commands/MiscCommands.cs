@@ -1,5 +1,6 @@
 ﻿using Boudica.Database;
 using Boudica.Database.Models;
+using Boudica.Helpers;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -16,6 +17,36 @@ namespace Boudica.Commands
 {
     public class MiscCommands : ModuleBase
     {
+        [Command("insult")]
+        public async Task InsultCommand([Remainder] string args)
+        {
+            if (args == null || (args.Contains("@") == false))
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                return;
+            }
+
+            int startIndex = args.IndexOf("<@");
+            int endIndex = args.IndexOf(">");
+            try
+            {
+                if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {Insults.GetRandomInsult()}").Build());
+                }
+                else
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+            }
+        }
+
+
         [Command("coinflip")]
         public async Task CoinflipCommand()
         {
