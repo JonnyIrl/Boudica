@@ -110,7 +110,8 @@ namespace Boudica.Helpers
             "in the battle of wits, you fight unarmed",
             "I heard you went to a haunted house and they offered you a job.",
             "you have the face of a saint. Saint Bernard, that is.",
-            "the twinkle in your eyes is actually the sun shining between your ears."
+            "the twinkle in your eyes is actually the sun shining between your ears.",
+            "Reverse uno card. Stop trying to insult people, {userId} you are ugly and nobody likes you!"
         };
     }
 }

@@ -17,6 +17,7 @@ namespace Boudica.Commands
 {
     public class MiscCommands : ModuleBase
     {
+        private const string ReverseUnoCard = "Reverse uno card";
         [Command("insult")]
         public async Task InsultCommand([Remainder] string args)
         {
@@ -32,7 +33,16 @@ namespace Boudica.Commands
             {
                 if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
                 {
-                    await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {Insults.GetRandomInsult()}").Build());
+                    string insult = Insults.GetRandomInsult();
+                    if (insult.StartsWith(ReverseUnoCard))
+                    {
+                        insult = insult.Replace("{userId}", $"<@{Context.User.Id}>");
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{insult}").Build());
+                    }
+                    else
+                    {
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {Insults.GetRandomInsult()}").Build());
+                    }
                 }
                 else
                 {

@@ -77,7 +77,7 @@ namespace Boudica.Commands
             // determine if the message has a valid prefix, and adjust argPos based on prefix
             if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(prefix, ref argPos)))
             {
-                Task.Run(() => { ReplyWhereIsXur(message); });
+                //Task.Run(() => { ReplyWhereIsXur(message); });
                 return;
             }
 
@@ -96,7 +96,6 @@ namespace Boudica.Commands
             {
                 var context = new SocketCommandContext(_client, message);
                 await context.Channel.SendMessageAsync(null, false, EmbedHelper.CreateSuccessReply($"Here you go {message.Author.Username}, as you were too lazy to look yourself, let me help you!\n\nhttps://letmegooglethat.com/?q=where+the+fuck+is+Xur&l=1").Build());
-
             }
         }
         public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
@@ -123,15 +122,14 @@ namespace Boudica.Commands
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
-            IUser user = await _client.GetUserAsync(reaction.UserId);
-            if (user.IsBot)
-            {
-                return;
-            }
-
             if (reaction.Emote.Name == "🇯")
             {
-                ActivityResponse result = await AddPlayerToActivityV2(message, reaction.UserId);
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await AddPlayerToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -147,7 +145,12 @@ namespace Boudica.Commands
 
             if (reaction.Emote.Name == "🇸")
             {
-                ActivityResponse result = await AddSubToActivityV2(message, reaction.UserId);
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await AddSubToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -181,7 +184,7 @@ namespace Boudica.Commands
             //}
         }
 
-        private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
+        private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -226,7 +229,7 @@ namespace Boudica.Commands
                 }
                 var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
                 //Player is a Sub
-                if (field.Value.Contains(userId.ToString()))
+                if (field.Value.Contains(user.Id.ToString()))
                 {
                     activityResponse.PreviousReaction = true;
                     modifiedEmbed = new EmbedBuilder();
@@ -234,11 +237,11 @@ namespace Boudica.Commands
                     {
                         if (embedField.Name == "Subs")
                         {
-                            modifiedEmbed.AddField("Subs", RemovePlayerNameFromEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField("Subs", RemovePlayerNameFromEmbedText(embedField, user.Id.ToString()));
                         }
                         else if (embedField.Name == "Players")
                         {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
                         }
                         else
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
@@ -249,7 +252,7 @@ namespace Boudica.Commands
                 {
                     var playerField = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
                     //Player is a Player - This is an edge case that happens when the raid is created
-                    if (playerField.Value.Contains(userId.ToString()))
+                    if (playerField.Value.Contains(user.Id.ToString()))
                     {
                         activityResponse.Success = true;
                         return activityResponse;
@@ -259,7 +262,7 @@ namespace Boudica.Commands
                     {
                         if (embedField.Name == "Players")
                         {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
                         }
                         else
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
@@ -373,7 +376,7 @@ namespace Boudica.Commands
             return activityResponse;
         }
 
-        private async Task<ActivityResponse> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
+        private async Task<ActivityResponse> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -389,7 +392,7 @@ namespace Boudica.Commands
                 var modifiedEmbed = new EmbedBuilder();
                 var field = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
                 //Already a Player
-                if (field.Value.Contains(userId.ToString()))
+                if (field.Value.Contains(user.Id.ToString()))
                 {
                     activityResponse.PreviousReaction = true;
                     modifiedEmbed = new EmbedBuilder();
@@ -397,11 +400,11 @@ namespace Boudica.Commands
                     {
                         if (embedField.Name == "Players")
                         {
-                            modifiedEmbed.AddField("Players", RemovePlayerNameFromEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField("Players", RemovePlayerNameFromEmbedText(embedField, user.Id.ToString()));
                         }
                         else if (embedField.Name == "Subs")
                         {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
                         }
                         else
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
@@ -415,7 +418,7 @@ namespace Boudica.Commands
                     {
                         if (embedField.Name == "Subs")
                         {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, userId.ToString()));
+                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
                         }
                         else
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
@@ -439,8 +442,6 @@ namespace Boudica.Commands
 
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
-            if (_client.GetUser(reaction.UserId).IsBot) return;
-
             if (reaction.Emote.Name == "🇯")
             {
                 ActivityResponse result = await RemovePlayerFromActivityV2(message, reaction.UserId);

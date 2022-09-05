@@ -80,9 +80,19 @@ namespace Boudica.Commands
                 Text = $"Raid Id {newRaid.Id}\nUse J to Join | Use S to Sub.\nA max of 6 players may join a raid"
             };
 
+            IUserMessage newMessage;
+            IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+            if(role != null)
+            {
+                // this will reply with the embed
+                newMessage = await ReplyAsync(role.Mention, false, embed.Build());
+            }
+            else
+            {
+                // this will reply with the embed
+                newMessage = await ReplyAsync(null, false, embed.Build());
+            }
 
-            // this will reply with the embed
-            IUserMessage newMessage = await ReplyAsync(null, false, embed.Build());
             
             newRaid.MessageId = newMessage.Id.ToString();
             await _activityService.UpdateRaidAsync(newRaid);
