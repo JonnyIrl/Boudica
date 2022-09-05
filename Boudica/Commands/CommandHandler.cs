@@ -17,6 +17,8 @@ namespace Boudica.Commands
     {
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
+        private const string AMaxOf = "A max of ";
+        private const string PlayersMayJoin = "players may join";
         // setup fields to be set later in the constructor
         private readonly IConfiguration _config;
         private readonly CommandService _commands;
@@ -194,9 +196,33 @@ namespace Boudica.Commands
 
                 var modifiedEmbed = new EmbedBuilder();
                 var playerCountField = embed.Fields.FirstOrDefault(x => x.Name == "Players");
-                if(playerCountField.Value.Count(x => x == '@') >= 6)
+                var footer = embed?.Footer.Value.Text;
+                string[] split = footer.Split("\n");
+                if (string.IsNullOrEmpty(footer))
                 {
-                    return activityResponse;
+                    if (playerCountField.Value.Count(x => x == '@') >= 6)
+                    {
+                        return activityResponse;
+                    }
+                }
+                else
+                {
+                    string test = split[split.Length - 1];
+                    test = test.Replace(AMaxOf, string.Empty);
+                    if (int.TryParse(test[0].ToString(), out int maxPlayerCount))
+                    {
+                        if (playerCountField.Value.Count(x => x == '@') >= maxPlayerCount)
+                        {
+                            return activityResponse;
+                        }
+                    }
+                    else
+                    {
+                        if (playerCountField.Value.Count(x => x == '@') >= 6)
+                        {
+                            return activityResponse;
+                        }
+                    }
                 }
                 var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
                 //Player is a Sub
