@@ -24,6 +24,7 @@ namespace Boudica.Commands
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
+        private char Prefix = ';';
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
@@ -36,6 +37,9 @@ namespace Boudica.Commands
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             _services = services;
+
+            // get prefix from the configuration file
+            Prefix = Char.Parse(_config["Prefix"]);
 
             // take action when we execute a command
             _commands.CommandExecuted += CommandExecutedAsync;

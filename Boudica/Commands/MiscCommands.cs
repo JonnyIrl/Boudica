@@ -34,7 +34,7 @@ namespace Boudica.Commands
                 if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
                 {
                     string insult = Insults.GetRandomInsult();
-                    if (insult.StartsWith(ReverseUnoCard))
+                    if (insult.Contains(ReverseUnoCard))
                     {
                         insult = insult.Replace("{userId}", $"<@{Context.User.Id}>");
                         await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{insult}").Build());
@@ -53,6 +53,49 @@ namespace Boudica.Commands
             catch (Exception ex)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+            }
+        }
+
+        [Command("shush")]
+        public async Task ShushCommand([Remainder] string args)
+        {
+            if (args == null || (args.Contains("@") == false))
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
+                return;
+            }
+
+            int startIndex = args.IndexOf("<@");
+            int endIndex = args.IndexOf(">");
+            try
+            {
+                if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
+                {
+                    IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
+                    if (guildUser != null)
+                    {
+                        if (guildUser.GuildPermissions.ModerateMembers)
+                        {
+                            IGuildUser timeoutUser = await Context.Guild.GetUserAsync(userId);
+                            await timeoutUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
+                            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> has been timed out for 30 seconds").Build());
+                        }
+                        else
+                        {
+                            await guildUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
+                            await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"You lack the powers to timeout so instead you have been timed out for 30 seconds get rekd!").Build());
+                        }
+                    }
+                }
+                else
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
             }
         }
 

@@ -44,8 +44,12 @@ class Program
             client.Ready += ReadyAsync;
             services.GetRequiredService<CommandService>().Log += LogAsync;
 
-            // this is where we get the Token value from the configuration file, and start the bot
+#if DEBUG
+            await client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
+#else
             await client.LoginAsync(TokenType.Bot, _config["Token"]);
+#endif
+
             await client.StartAsync();
 
             // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
