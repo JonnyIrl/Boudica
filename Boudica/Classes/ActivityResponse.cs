@@ -10,11 +10,15 @@ namespace Boudica.Classes
     {
         public bool Success { get; set; }
         public bool PreviousReaction { get; set; }
+        public bool IsFull { get; set; }
+        public string FullMessage { get; set; }
 
         public ActivityResponse(bool success, bool previousReaction)
         {
             Success = success;
             PreviousReaction = previousReaction;
+            IsFull = false;
+            FullMessage = string.Empty;
         }
     }
 }

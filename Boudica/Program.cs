@@ -36,21 +36,20 @@ class Program
         {
             // get the client and assign to client 
             // you get the services via GetRequiredService<T>
-            var client = services.GetRequiredService<DiscordSocketClient>();
-            _client = client;
+            _client = services.GetRequiredService<DiscordSocketClient>();
 
             // setup logging and the ready event
-            client.Log += LogAsync;
-            client.Ready += ReadyAsync;
+            _client.Log += LogAsync;
+            _client.Ready += ReadyAsync;
             services.GetRequiredService<CommandService>().Log += LogAsync;
 
 #if DEBUG
-            await client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
+            await _client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
 #else
             await client.LoginAsync(TokenType.Bot, _config["Token"]);
 #endif
 
-            await client.StartAsync();
+            await _client.StartAsync();
 
             // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
             await services.GetRequiredService<CommandHandler>().InitializeAsync();
@@ -74,12 +73,18 @@ class Program
     // this method handles the ServiceCollection creation/configuration, and builds out the service provider we can call on later
     private ServiceProvider ConfigureServices()
     {
+        var socketConfig = new DiscordSocketConfig
+        {
+            AlwaysDownloadUsers = true,
+            MessageCacheSize = 100
+        };
         // this returns a ServiceProvider that is used later to call for those services
         // we can add types we have access to here, hence adding the new using statement:
         // using csharpi.Services;
         // the config we build is also added, which comes in handy for setting the command prefix!
         return new ServiceCollection()
             .AddSingleton(_config)
+            .AddSingleton(socketConfig)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<CommandService>()
             .AddSingleton<CommandHandler>()

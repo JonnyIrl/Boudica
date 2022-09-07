@@ -75,11 +75,8 @@ namespace Boudica.Commands
             // sets the argument position away from the prefix we set
             var argPos = 0;
 
-            // get prefix from the configuration file
-            char prefix = Char.Parse(_config["Prefix"]);
-
             // determine if the message has a valid prefix, and adjust argPos based on prefix
-            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(prefix, ref argPos)))
+            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos)))
             {
                 //Task.Run(() => { ReplyWhereIsXur(message); });
                 return;
@@ -138,6 +135,10 @@ namespace Boudica.Commands
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
                     await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                    if(result.IsFull)
+                    {
+                        await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{user.Id}>, sorry " + result.FullMessage).Build());
+                    }
                 }
                 else if (result.Success && result.PreviousReaction)
                 {
@@ -209,6 +210,8 @@ namespace Boudica.Commands
                 {
                     if (playerCountField.Value.Count(x => x == '@') >= 6)
                     {
+                        activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
+                        activityResponse.IsFull = true;
                         return activityResponse;
                     }
                 }
@@ -220,6 +223,8 @@ namespace Boudica.Commands
                     {
                         if (playerCountField.Value.Count(x => x == '@') >= maxPlayerCount)
                         {
+                            activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
+                            activityResponse.IsFull = true;
                             return activityResponse;
                         }
                     }
@@ -227,6 +232,8 @@ namespace Boudica.Commands
                     {
                         if (playerCountField.Value.Count(x => x == '@') >= 6)
                         {
+                            activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
+                            activityResponse.IsFull = true;
                             return activityResponse;
                         }
                     }
