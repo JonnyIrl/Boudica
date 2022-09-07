@@ -71,8 +71,15 @@ namespace Boudica.Commands
             {
                 if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
                 {
-                    string compliment = Compliments.GetRandomCompliment();
-                    await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {compliment}").Build());
+                    if (userId == Context.User.Id)
+                    {
+                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{userId}> self praise is no praise, sorry not sorry!").Build());
+                    }
+                    else
+                    {
+                        string compliment = Compliments.GetRandomCompliment();
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {compliment}").Build());
+                    }
 
                 }
                 else

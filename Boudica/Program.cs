@@ -51,6 +51,8 @@ class Program
 
             await _client.StartAsync();
 
+            await _client.SetGameAsync(";help for command list");
+
             // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
             await services.GetRequiredService<CommandHandler>().InitializeAsync();
 
