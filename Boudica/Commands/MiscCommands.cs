@@ -41,7 +41,7 @@ namespace Boudica.Commands
                     }
                     else
                     {
-                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {Insults.GetRandomInsult()}").Build());
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
                     }
                 }
                 else
@@ -53,6 +53,37 @@ namespace Boudica.Commands
             catch (Exception ex)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+            }
+        }
+
+        [Command("compliment")]
+        public async Task ComplimentCommand([Remainder] string args)
+        {
+            if (args == null || (args.Contains("@") == false))
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
+                return;
+            }
+
+            int startIndex = args.IndexOf("<@");
+            int endIndex = args.IndexOf(">");
+            try
+            {
+                if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
+                {
+                    string compliment = Compliments.GetRandomCompliment();
+                    await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {compliment}").Build());
+
+                }
+                else
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
             }
         }
 
@@ -74,17 +105,8 @@ namespace Boudica.Commands
                     IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
                     if (guildUser != null)
                     {
-                        if (guildUser.GuildPermissions.ModerateMembers)
-                        {
-                            IGuildUser timeoutUser = await Context.Guild.GetUserAsync(userId);
-                            await timeoutUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
-                            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> has been timed out for 30 seconds").Build());
-                        }
-                        else
-                        {
-                            await guildUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
-                            await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"You lack the powers to timeout so instead you have been timed out for 30 seconds get rekd!").Build());
-                        }
+                        await guildUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
+                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"With great power comes great responsibility. You have been timed out for 30 seconds get rekd!").Build());
                     }
                 }
                 else

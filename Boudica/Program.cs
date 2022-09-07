@@ -46,7 +46,7 @@ class Program
 #if DEBUG
             await _client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
 #else
-            await client.LoginAsync(TokenType.Bot, _config["Token"]);
+            await _client.LoginAsync(TokenType.Bot, _config["Token"]);
 #endif
 
             await _client.StartAsync();
