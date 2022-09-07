@@ -44,7 +44,7 @@ namespace Boudica.Helpers
             "you have a unique set of skills that can somehow turn any situation into an awkward one.",
             "you are definitely not someone who I pretend not to see in public.",
             "if you were a box of crayons, you’d be the gigantic branded variety with the built-in sharpener... unlike those dirty Titans",
-            "you are like mathematics. You difficult at times, but worth getting to know.",
+            "you are like mathematics. You're difficult at times, but worth getting to know.",
             "you are perfectly imperfect. And that’s just perfect.",
             "I don’t think you’re clumsy. The floor and the walls are just really friendly to you.",
             "if there’s one thing that I like about you, it’s that I like more than just one thing about you.",
