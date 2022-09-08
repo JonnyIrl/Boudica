@@ -9,6 +9,8 @@ namespace Boudica.Helpers
 {
     public static class EmbedHelper
     {
+
+        public static Color InfoColor = new Color(255, 191, 0);
         public static EmbedBuilder CreateSuccessReply(string description)
         {
             EmbedBuilder builder = new EmbedBuilder();
@@ -22,6 +24,14 @@ namespace Boudica.Helpers
             EmbedBuilder builder = new EmbedBuilder();
             builder.Description = description;
             builder.Color = Color.Red;
+            return builder;
+        }
+
+        public static EmbedBuilder CreateInfoReply(string description)
+        {
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.Description = description;
+            builder.Color = InfoColor;
             return builder;
         }
 

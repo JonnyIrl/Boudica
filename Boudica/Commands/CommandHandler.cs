@@ -333,6 +333,18 @@ namespace Boudica.Commands
                         x.Embed = modifiedEmbed.Build();
                     });
 
+                    try
+                    {
+                        var footer = embed?.Footer.Value.Text;
+                        string[] split = footer?.Split("\n");
+                        if(split != null)
+                            await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{userId}> has left {split[0]}").Build());
+                    }
+                    catch(Exception ex)
+                    {
+
+                    }
+
                     activityResponse.Success = true;
                     return activityResponse;
                 }
