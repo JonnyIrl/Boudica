@@ -111,13 +111,13 @@ namespace Boudica.Commands
             //});
         }
 
-        [Command("edit raid", RunMode = RunMode.Async)]
+        [Command("edit raid")]
         public async Task EditRaid()
         {
             await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
         }
 
-        [Command("edit raid", RunMode = RunMode.Async)]
+        [Command("edit raid")]
         public async Task EditRaid([Remainder] string args)
         {
             bool result = await CheckEditRaidCommandIsValid(args);
@@ -160,7 +160,7 @@ namespace Boudica.Commands
             await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
         }
 
-        [Command("close raid", RunMode = RunMode.Async)]
+        [Command("close raid")]
         public async Task CloseRaid([Remainder] string args)
         {
             bool result = await CheckCloseRaidCommandIsValid(args);
@@ -418,8 +418,11 @@ namespace Boudica.Commands
             result = await CheckExistingFireteamIsValid(existingFireteam);
             if (result == false) return;
 
-            existingFireteam.DateTimeClosed = DateTime.Now;
-            await _activityService.UpdateFireteamAsync(existingFireteam);
+            if (existingFireteam.DateTimeCreated == null || existingFireteam.DateTimeCreated == DateTime.MinValue)
+            {
+                existingFireteam.DateTimeClosed = DateTime.Now;
+                await _activityService.UpdateFireteamAsync(existingFireteam);
+            }
 
             IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(ulong.Parse(existingFireteam.MessageId), CacheMode.AllowDownload);
             if (message == null)
@@ -429,6 +432,12 @@ namespace Boudica.Commands
             }
             var modifiedEmbed = new EmbedBuilder();
             var embed = message.Embeds.FirstOrDefault();
+            if(embed?.Title == "This activity is now closed")
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
+                return;
+            }
+
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
@@ -499,12 +508,6 @@ namespace Boudica.Commands
             if (existingRaid == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a Fireteam with that Id").Build());
-                return false;
-            }
-
-            if (existingRaid.DateTimeClosed != null)
-            {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
                 return false;
             }
 

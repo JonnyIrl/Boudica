@@ -28,7 +28,7 @@ namespace Boudica.Commands
         }
 
 
-        [Command("insult", RunMode = RunMode.Async)]
+        [Command("insult")]
         public async Task InsultCommand([Remainder] string args)
         {
             if (args == null || (args.Contains("@") == false))
