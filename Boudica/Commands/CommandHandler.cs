@@ -4,7 +4,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Boudica.Classes;
+using Boudica.Database.Models;
 using Boudica.Helpers;
+using Boudica.Services;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -24,6 +26,7 @@ namespace Boudica.Commands
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
+        private readonly ActivityService _activityService;
         private char Prefix = ';';
 
         private Emoji _jEmoji = new Emoji("🇯");
@@ -36,6 +39,7 @@ namespace Boudica.Commands
             _config = services.GetRequiredService<IConfiguration>();
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
+            _activityService = services.GetRequiredService<ActivityService>();
             _services = services;
 
             // get prefix from the configuration file
@@ -283,6 +287,38 @@ namespace Boudica.Commands
                 EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                 EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
                 EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                //try
+                //{
+                //    var footerText = embed?.Footer.Value.Text;
+                //    string[] footerSplit = footerText?.Split("\n");
+                //    if (footerSplit?.Length > 0)
+                //    {
+                //        string idText = split[0];
+                //        if (idText.Contains("Raid"))
+                //        {
+                //            Raid existingRaid = await _activityService.GetRaidAsync(int.Parse(idText.Substring(idText.IndexOf("Id") + 2)));
+                //            if (existingRaid != null && (existingRaid.DateTimeClosed != null || existingRaid.DateTimeClosed == DateTime.MinValue))
+                //            {
+                //                activityResponse.Success = false;
+                //                return activityResponse;
+                //            }
+                //        }
+                //        else if (idText.Contains("Fireteam"))
+                //        {
+                //            Fireteam existingFireteam = await _activityService.GetFireteamAsync(int.Parse(idText.Substring(idText.IndexOf("Id") + 2)));
+                //            if (existingFireteam != null && (existingFireteam.DateTimeClosed != null || existingFireteam.DateTimeClosed == DateTime.MinValue))
+                //            {
+                //                activityResponse.Success = false;
+                //                return activityResponse;
+                //            }
+                //        }
+                //    }
+                //}
+                //catch(Exception ex)
+                //{
+                //    Console.Error.WriteLine(ex.Message);
+                //}
 
                 await originalMessage.ModifyAsync(x =>
                 {
