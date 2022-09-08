@@ -18,7 +18,17 @@ namespace Boudica.Commands
     public class MiscCommands : ModuleBase
     {
         private const string ReverseUnoCard = "Reverse uno card";
-        [Command("insult")]
+
+        private readonly InsultService _insultService;
+
+        private const int CreatorPoints = 5;
+        public MiscCommands(IServiceProvider services)
+        {
+            _insultService = services.GetRequiredService<InsultService>();
+        }
+
+
+        [Command("insult", RunMode = RunMode.Async)]
         public async Task InsultCommand([Remainder] string args)
         {
             if (args == null || (args.Contains("@") == false))
@@ -33,6 +43,13 @@ namespace Boudica.Commands
             {
                 if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
                 {
+                    Insult usersLastInsult = await _insultService.Get(Context.User.Id);
+                    if(usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.Date == DateTime.UtcNow.Date)
+                    {
+                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
+                        return;
+                    }
+
                     string insult = Insults.GetRandomInsult();
                     if (insult.Contains(ReverseUnoCard))
                     {
@@ -43,6 +60,8 @@ namespace Boudica.Commands
                     {
                         await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
                     }
+
+                    await _insultService.UpsertUsersInsult(userId, usersLastInsult);
                 }
                 else
                 {

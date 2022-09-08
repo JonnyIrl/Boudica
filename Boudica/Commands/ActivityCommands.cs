@@ -28,7 +28,7 @@ namespace Boudica.Commands
         }
 
         #region Raid
-        [Command("create raid")]
+        [Command("create raid", RunMode = RunMode.Async)]
         public async Task CreateRaidCommand([Remainder] string args)
         {
             if (args == null)
@@ -111,7 +111,13 @@ namespace Boudica.Commands
             //});
         }
 
-        [Command("edit raid")]
+        [Command("edit raid", RunMode = RunMode.Async)]
+        public async Task EditRaid()
+        {
+            await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
+        }
+
+        [Command("edit raid", RunMode = RunMode.Async)]
         public async Task EditRaid([Remainder] string args)
         {
             bool result = await CheckEditRaidCommandIsValid(args);
@@ -145,10 +151,16 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The raid has been edited!").Build());
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been edited!").Build());
         }
 
         [Command("close raid")]
+        public async Task CloseRaid()
+        {
+            await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
+        }
+
+        [Command("close raid", RunMode = RunMode.Async)]
         public async Task CloseRaid([Remainder] string args)
         {
             bool result = await CheckCloseRaidCommandIsValid(args);
@@ -184,7 +196,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The raid has been closed!").Build());
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
         }
 
         private async Task AwardReputation(Raid existingRaid)
