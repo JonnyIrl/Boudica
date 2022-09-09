@@ -46,5 +46,6 @@ namespace Boudica.Database
         public DbSet<Fireteam> Fireteams { get; set; }
         public DbSet<GuardianReputation> GuardianReputation { get; set; }
         public DbSet<Insult> Insult { get; set; }
+        public DbSet<RaidGroup> RaidGroups { get; set; }
     }
 }

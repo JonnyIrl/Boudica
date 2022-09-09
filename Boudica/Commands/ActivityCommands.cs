@@ -18,6 +18,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly GuardianService _guardianService;
         private readonly GuardianReputationService _guardianReputationService;
+        private readonly RaidGroupService _raidGroupService;
 
         private const int CreatorPoints = 5;
         public ActivityCommands(IServiceProvider services)
@@ -25,6 +26,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
             _guardianReputationService = services.GetRequiredService<GuardianReputationService>();
+            _raidGroupService = services.GetRequiredService<RaidGroupService>();
         }
 
         #region Raid
@@ -49,6 +51,9 @@ namespace Boudica.Commands
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("I couldn't create the raid because Jonny did something wrong!").Build());
                 return;
             }
+
+            await _raidGroupService.AddPlayerToRaidGroup(newRaid.Id, Context.User.Id);
+
 
             var embed = new EmbedBuilder();
 
@@ -103,12 +108,6 @@ namespace Boudica.Commands
                 new Emoji("🇯"),
                 new Emoji("🇸"),
             });
-
-            //TODO Add RaidGroupInfo
-            //Task.Run(async () =>
-            //{
-            //    await 
-            //});
         }
 
         [Command("edit raid")]

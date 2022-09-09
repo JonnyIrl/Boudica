@@ -27,6 +27,7 @@ namespace Boudica.Commands
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
         private readonly ActivityService _activityService;
+        private readonly RaidGroupService _raidGroupService;
         private char Prefix = ';';
 
         private Emoji _jEmoji = new Emoji("🇯");
@@ -40,6 +41,7 @@ namespace Boudica.Commands
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             _activityService = services.GetRequiredService<ActivityService>();
+            _raidGroupService = services.GetRequiredService<RaidGroupService>();
             _services = services;
 
             // get prefix from the configuration file
@@ -288,6 +290,21 @@ namespace Boudica.Commands
                 EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
                 EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
+                string idText = split[0];
+                Tuple<bool, int> result = GetRaidAndIdFromText(idText);
+                if(result != null)
+                {
+                    //Raid
+                    if(result.Item1)
+                    {
+                        await AddToRaidGroup(result.Item2, user.Id);
+                    }
+                    else
+                    {
+                        await AddToFireteamGroup(result.Item2, user.Id);
+                    }
+                }
+
                 //try
                 //{
                 //    var footerText = embed?.Footer.Value.Text;
@@ -373,8 +390,26 @@ namespace Boudica.Commands
                     {
                         var footer = embed?.Footer.Value.Text;
                         string[] split = footer?.Split("\n");
-                        if(split != null)
+                        if (split != null)
+                        {
+                            string idText = split[0];
+                            Tuple<bool, int> result = GetRaidAndIdFromText(idText);
+                            if (result != null)
+                            {
+                                //Raid
+                                if (result.Item1)
+                                {
+                                    await RemoveFromRaidGroup(result.Item2, userId);
+                                }
+                                else
+                                {
+                                    await RemoveFromFireteamGroup(result.Item2, userId);
+                                }
+                            }
+
+
                             await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{userId}> has left {split[0]}").Build());
+                        }
                     }
                     catch(Exception ex)
                     {
@@ -468,6 +503,22 @@ namespace Boudica.Commands
                         else
                             modifiedEmbed.AddField(embedField.Name, embedField.Value);
                     }
+
+                    string idText = GetFooterIdTextFromEmbed(embed);
+                    Tuple<bool, int> result = GetRaidAndIdFromText(idText);
+                    if (result != null)
+                    {
+                        //Raid
+                        if (result.Item1)
+                        {
+                            await RemoveFromRaidGroup(result.Item2, user.Id);
+                        }
+                        else
+                        {
+                            await RemoveFromFireteamGroup(result.Item2, user.Id);
+                        }
+                    }
+
                 }
                 //Add the Player
                 else
@@ -497,6 +548,54 @@ namespace Boudica.Commands
             }
 
             return activityResponse;
+        }
+
+        private Tuple<bool, int> GetRaidAndIdFromText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            if(text.Contains("Raid"))
+            {
+                int id = int.Parse(text.Split(" ")[2]);
+                return new Tuple<bool, int>(true, id);
+            }
+            else if(text.Contains("Fireteam"))
+            {
+                int id = int.Parse(text.Split(" ")[2]);
+                return new Tuple<bool, int>(false, id);
+            }
+
+            return null;
+        }
+
+        private string GetFooterIdTextFromEmbed(IEmbed embed)
+        {
+            if (embed == null) return string.Empty;
+            if (embed.Footer == null) return string.Empty;
+            if (embed.Footer.HasValue == false) return string.Empty;
+            string[] split = embed.Footer.Value.Text.Split("\n");
+            if(split.Length == 0) return string.Empty;
+            if(split[0].Contains("Id") == false) return string.Empty;
+            return split[0];
+        }
+
+        private async Task AddToRaidGroup(int raidId, ulong userId)
+        {
+            await _raidGroupService.AddPlayerToRaidGroup(raidId, userId);
+        }
+
+        private async Task AddToFireteamGroup(int fireteamId, ulong userId)
+        {
+
+        }
+
+        private async Task RemoveFromRaidGroup(int raidId, ulong userId)
+        {
+            await _raidGroupService.RemovePlayerFromRaidGroup(raidId, userId);
+        }
+
+        private async Task RemoveFromFireteamGroup(int fireteamId, ulong userId)
+        {
+
         }
 
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)

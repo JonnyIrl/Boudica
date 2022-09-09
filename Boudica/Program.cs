@@ -98,6 +98,7 @@ class Program
             .AddScoped<ActivityService>()
             .AddScoped<GuardianReputationService>()
             .AddScoped<InsultService>()
+            .AddScoped<RaidGroupService>()
 
             .BuildServiceProvider();
     }
