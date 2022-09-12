@@ -29,6 +29,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly RaidGroupService _raidGroupService;
         private char Prefix = ';';
+        private char SlashPrefix = '/';
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
@@ -50,12 +51,29 @@ namespace Boudica.Commands
             // take action when we execute a command
             _commands.CommandExecuted += CommandExecutedAsync;
 
+            _client.SlashCommandExecuted += SlashCommandHandler;
+
             // take action when we receive a message (so we can process it, and see if it is a valid command)
             _client.MessageReceived += MessageReceivedAsync;
 
             //Listen for Reactions
             _client.ReactionAdded += ReactionAddedAsync;
             _client.ReactionRemoved += ReactionRemovedAsync;
+
+            //Listen for modals
+            _client.ModalSubmitted += ModalSubmitted;
+        }
+
+        private async Task ModalSubmitted(SocketModal arg)
+        {
+            List<SocketMessageComponentData> components = arg.Data.Components.ToList();
+            StringBuilder sb = new StringBuilder();
+            foreach(SocketMessageComponentData component in components)
+            {
+                sb.AppendLine(component.CustomId + " - " + component.Value);
+            }
+
+            await arg.RespondAsync(sb.ToString());
         }
 
         public async Task InitializeAsync()
@@ -82,7 +100,7 @@ namespace Boudica.Commands
             var argPos = 0;
 
             // determine if the message has a valid prefix, and adjust argPos based on prefix
-            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos)))
+            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos) || message.HasCharPrefix(SlashPrefix, ref argPos)))
             {
                 //Task.Run(() => { ReplyWhereIsXur(message); });
                 return;
@@ -92,6 +110,11 @@ namespace Boudica.Commands
 
             // execute command if one is found that matches
             await _commands.ExecuteAsync(context, argPos, _services);
+        }
+
+        private async Task SlashCommandHandler(SocketSlashCommand command)
+        {
+            //TODO
         }
 
         public async Task ReplyWhereIsXur(SocketUserMessage message)
