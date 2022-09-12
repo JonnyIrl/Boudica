@@ -48,6 +48,11 @@ namespace Boudica.Services
             Raid existingRaid = await _db.Raids.FirstOrDefaultAsync(x => x.Id == raidId);
             return await Task.FromResult(existingRaid);
         }
+
+        public async Task<IList<Raid>> FindAllOpenRaids()
+        {
+            return await _db.Raids.Where(x => x.DateTimeClosed == null).ToListAsync();
+        }
         #endregion
 
         #region Fireteam

@@ -29,7 +29,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly RaidGroupService _raidGroupService;
         private char Prefix = ';';
-        private char SlashPrefix = '/';
+        //private char SlashPrefix = '/';
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
@@ -100,7 +100,7 @@ namespace Boudica.Commands
             var argPos = 0;
 
             // determine if the message has a valid prefix, and adjust argPos based on prefix
-            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos) || message.HasCharPrefix(SlashPrefix, ref argPos)))
+            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos)))
             {
                 //Task.Run(() => { ReplyWhereIsXur(message); });
                 return;

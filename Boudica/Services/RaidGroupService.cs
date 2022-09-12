@@ -40,7 +40,5 @@ namespace Boudica.Services
                 await _db.SaveChangesAsync();
             }
         }
-
-
     }
 }
