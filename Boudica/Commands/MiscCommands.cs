@@ -113,6 +113,17 @@ namespace Boudica.Commands
             }
         }
 
+        [Command("joke")]
+        public async Task JokeCommand()
+        {
+            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
+            return;
+
+
+            string joke = Jokes.GetRandomJoke();
+            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{joke}").Build());
+        }
+
         [Command("shush")]
         public async Task ShushCommand([Remainder] string args)
         {

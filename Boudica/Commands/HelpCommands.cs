@@ -25,6 +25,7 @@ namespace Boudica.Commands
             builder.AddField("Close Fireteam", $"{Prefix}close fireteam Id");
             builder.AddField("Insult", $"{Prefix}insult @Somebody");
             builder.AddField("Compliment", $"{Prefix}compliment @Somebody");
+            builder.AddField("Joke", $"{Prefix}joke");
             builder.AddField("Coinflip", $"{Prefix}coinflip heads (or tails)");
             builder.AddField("Magic 8 Ball", $"{Prefix}ask whatever question you may have");
             builder.WithColor(Color.Green);

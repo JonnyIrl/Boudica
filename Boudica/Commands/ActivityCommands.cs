@@ -119,15 +119,15 @@ namespace Boudica.Commands
         [Command("edit raid")]
         public async Task EditRaid([Remainder] string args)
         {
-            bool result = await CheckEditRaidCommandIsValid(args);
-            if (result == false) return;
+            string result = await CheckEditRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
 
-            string[] split = args.Split(" ");
+            string[] split = result.Split(" ");
             int raidId = int.Parse(split[0]);
 
             Raid existingRaid = await _activityService.GetRaidAsync(raidId);
-            result = await CheckExistingRaidIsValid(existingRaid);
-            if(result == false) return;
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid);
+            if(existingRaidResult == false) return;
 
             IUserMessage message = (IUserMessage) await Context.Channel.GetMessageAsync(ulong.Parse(existingRaid.MessageId), CacheMode.AllowDownload);
             if (message == null)
@@ -136,7 +136,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            string description = args.Remove(0, raidId.ToString().Length + 1);
+            string description = result.Remove(0, raidId.ToString().Length + 1);
 
             var modifiedEmbed = new EmbedBuilder();
             var embed = message.Embeds.FirstOrDefault();
@@ -162,15 +162,15 @@ namespace Boudica.Commands
         [Command("close raid")]
         public async Task CloseRaid([Remainder] string args)
         {
-            bool result = await CheckCloseRaidCommandIsValid(args);
-            if (result == false) return;
+            string result = await CheckCloseRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
 
-            string[] split = args.Split(" ");
+            string[] split = result.Split(" ");
             int raidId = int.Parse(split[0]);
 
             Raid existingRaid = await _activityService.GetRaidAsync(raidId);
-            result = await CheckExistingRaidIsValid(existingRaid);
-            if (result == false) return;
+            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid);
+            if (exisingRaidResult == false) return;
 
             existingRaid.DateTimeClosed = DateTime.Now;
             await _activityService.UpdateRaidAsync(existingRaid);
@@ -203,54 +203,64 @@ namespace Boudica.Commands
 
         }
 
-        private async Task<bool> CheckEditRaidCommandIsValid(string args)
+        private async Task<string> CheckEditRaidCommandIsValid(string args)
         {
             if (args == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
-                return false;
+                return null;
+            }
+
+            if (args.ToLower().StartsWith("id"))
+            {
+                args = args.Substring(2).TrimStart();
             }
 
             string[] split = args.Split(" ");
             if (split.Length < 2)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
-                return false;
+                return null;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;edit raid 16 This is a new description").Build());
-                return false;
+                return null;
             }
 
-            return true;
+            return args;
         }
 
-        private async Task<bool> CheckCloseRaidCommandIsValid(string args)
+        private async Task<string> CheckCloseRaidCommandIsValid(string args)
         {
             if (args == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
-                return false;
+                return null;
+            }
+
+            if (args.ToLower().StartsWith("id"))
+            {
+                args = args.Substring(2).TrimStart();
             }
 
             string[] split = args.Split(" ");
             if (split.Length >= 2)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
-                return false;
+                return null;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;close raid 16").Build());
-                return false;
+                return null;
             }
 
-            return true;
+            return args;
         }
 
         private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid)
@@ -370,15 +380,15 @@ namespace Boudica.Commands
         [Command("edit fireteam")]
         public async Task EditFireteam([Remainder] string args)
         {
-            bool result = await CheckEditFireteamCommandIsValid(args);
-            if (result == false) return;
+            string result = await CheckEditFireteamCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
 
-            string[] split = args.Split(" ");
+            string[] split = result.Split(" ");
             int fireteamId = int.Parse(split[0]);
 
             Fireteam existingFireteam = await _activityService.GetFireteamAsync(fireteamId);
-            result = await CheckExistingFireteamIsValid(existingFireteam);
-            if (result == false) return;
+            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+            if (existingFireteamResult == false) return;
 
             IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(ulong.Parse(existingFireteam.MessageId), CacheMode.AllowDownload);
             if (message == null)
@@ -387,7 +397,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            string description = args.Remove(0, fireteamId.ToString().Length + 1);
+            string description = result.Remove(0, fireteamId.ToString().Length + 1);
 
             var modifiedEmbed = new EmbedBuilder();
             var embed = message.Embeds.FirstOrDefault();
@@ -407,15 +417,15 @@ namespace Boudica.Commands
         [Command("close fireteam")]
         public async Task CloseFireteam([Remainder] string args)
         {
-            bool result = await CheckCloseFireteamCommandIsValid(args);
-            if (result == false) return;
+            string result = await CheckCloseFireteamCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
 
-            string[] split = args.Split(" ");
+            string[] split = result.Split(" ");
             int fireteamId = int.Parse(split[0]);
 
             Fireteam existingFireteam = await _activityService.GetFireteamAsync(fireteamId);
-            result = await CheckExistingFireteamIsValid(existingFireteam);
-            if (result == false) return;
+            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+            if (existingFireteamResult == false) return;
 
             if (existingFireteam.DateTimeCreated == null || existingFireteam.DateTimeCreated == DateTime.MinValue)
             {
@@ -452,54 +462,64 @@ namespace Boudica.Commands
             await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The Fireteam has been closed!").Build());
         }
 
-        private async Task<bool> CheckEditFireteamCommandIsValid(string args)
+        private async Task<string> CheckEditFireteamCommandIsValid(string args)
         {
             if (args == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;edit fireteam 16 This is a new description").Build());
-                return false;
+                return null;
+            }
+
+            if (args.ToLower().StartsWith("id"))
+            {
+                args = args.Substring(2).TrimStart();
             }
 
             string[] split = args.Split(" ");
             if (split.Length < 2)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;edit fireteam 16 This is a new description").Build());
-                return false;
+                return null;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;edit fireteam 16 This is a new description").Build());
-                return false;
+                return null;
             }
 
-            return true;
+            return args;
         }
 
-        private async Task<bool> CheckCloseFireteamCommandIsValid(string args)
+        private async Task<string> CheckCloseFireteamCommandIsValid(string args)
         {
             if (args == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;close fireteam 16").Build());
-                return false;
+                return null;
+            }
+
+            if (args.ToLower().StartsWith("id"))
+            {
+                args = args.Substring(2).TrimStart();
             }
 
             string[] split = args.Split(" ");
             if (split.Length >= 2)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;close fireteam 16").Build());
-                return false;
+                return null;
             }
 
             int.TryParse(split[0], out int raidId);
             if (raidId <= 0)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the fireteam id located in the footer of a raid e.g.\n\n;close fireteam 16").Build());
-                return false;
+                return null;
             }
 
-            return true;
+            return args;
         }
 
         private async Task<bool> CheckExistingFireteamIsValid(Fireteam existingRaid)
