@@ -39,7 +39,7 @@ namespace Boudica.Services
                     _db.Insult.Update(existingInsult);
                 }
 
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync(true);
                 return true;
             }
             catch(Exception ex)

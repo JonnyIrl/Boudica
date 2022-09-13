@@ -28,7 +28,7 @@ namespace Boudica.Services
             };
 
             await _db.RaidGroups.AddAsync(raidGroup);
-            return await _db.SaveChangesAsync() > 0;
+            return await _db.SaveChangesAsync(true) > 0;
         }
 
         public async Task RemovePlayerFromRaidGroup(int raidId, ulong userId)
@@ -37,7 +37,7 @@ namespace Boudica.Services
             if (existing != null)
             {
                 _db.Remove(existing);
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync(true);
             }
         }
     }

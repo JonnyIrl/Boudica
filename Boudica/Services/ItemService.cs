@@ -33,7 +33,7 @@ namespace Boudica.Services
             if(existingItem != null) return await Task.FromResult(false);
 
             await _db.Items.AddAsync(newItem);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return await Task.FromResult(true);
         }
     }

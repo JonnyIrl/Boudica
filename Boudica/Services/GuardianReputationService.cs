@@ -35,7 +35,7 @@ namespace Boudica.Services
             };
 
             await _db.AddAsync(guardianReputation);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return true;
         }
 

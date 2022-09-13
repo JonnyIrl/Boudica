@@ -27,7 +27,7 @@ namespace Boudica.Services
             };
 
             await _db.Guardians.AddAsync(guardian);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return guardian;
         }
 
@@ -52,7 +52,7 @@ namespace Boudica.Services
 
             guardian.Glimmer += amount;
             _db.Update(guardian);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return true;
         }
 

@@ -175,10 +175,16 @@ namespace Boudica.Commands
             existingRaid.DateTimeClosed = DateTime.Now;
             await _activityService.UpdateRaidAsync(existingRaid);
 
-            IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(ulong.Parse(existingRaid.MessageId), CacheMode.AllowDownload);
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(ulong.Parse(existingRaid.ChannelId));
+            if(channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage) await channel.GetMessageAsync(ulong.Parse(existingRaid.MessageId), CacheMode.AllowDownload);
             if (message == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
                 return;
             }
             var modifiedEmbed = new EmbedBuilder();
@@ -427,13 +433,20 @@ namespace Boudica.Commands
             bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
             if (existingFireteamResult == false) return;
 
-            if (existingFireteam.DateTimeCreated == null || existingFireteam.DateTimeCreated == DateTime.MinValue)
+            if (existingFireteam.DateTimeClosed == null || existingFireteam.DateTimeClosed == DateTime.MinValue)
             {
                 existingFireteam.DateTimeClosed = DateTime.Now;
                 await _activityService.UpdateFireteamAsync(existingFireteam);
             }
 
-            IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(ulong.Parse(existingFireteam.MessageId), CacheMode.AllowDownload);
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(ulong.Parse(existingFireteam.ChannelId));
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(ulong.Parse(existingFireteam.MessageId), CacheMode.AllowDownload);
             if (message == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());

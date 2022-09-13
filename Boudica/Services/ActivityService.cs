@@ -25,7 +25,7 @@ namespace Boudica.Services
             if (string.IsNullOrEmpty(raid.ChannelId)) throw new ArgumentNullException("ChannelId must be provided");
 
             await _db.Raids.AddAsync(raid);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return await Task.FromResult(raid);
         }
 
@@ -37,7 +37,7 @@ namespace Boudica.Services
             if (string.IsNullOrEmpty(raid.ChannelId)) throw new ArgumentNullException("ChannelId must be provided");
 
             _db.Raids.Update(raid);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return await Task.FromResult(raid);
         }
 
@@ -62,7 +62,7 @@ namespace Boudica.Services
             if (string.IsNullOrEmpty(raid.ChannelId)) throw new ArgumentNullException("ChannelId must be provided");
 
             await _db.Fireteams.AddAsync(raid);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return await Task.FromResult(raid);
         }
 
@@ -74,7 +74,7 @@ namespace Boudica.Services
             if (string.IsNullOrEmpty(fireteam.ChannelId)) throw new ArgumentNullException("ChannelId must be provided");
 
             _db.Fireteams.Update(fireteam);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(true);
             return await Task.FromResult(fireteam);
         }
 
@@ -84,6 +84,11 @@ namespace Boudica.Services
 
             Fireteam existingRaid = await _db.Fireteams.FirstOrDefaultAsync(x => x.Id == fireteamId);
             return await Task.FromResult(existingRaid);
+        }
+
+        public async Task<IList<Fireteam>> FindAllOpenFireteams()
+        {
+            return await _db.Fireteams.Where(x => x.DateTimeClosed == null).ToListAsync();
         }
         #endregion
     }

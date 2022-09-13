@@ -94,7 +94,7 @@ namespace Boudica.Services
                         GuardianId = existingGuardian.Id
                     });
 
-                    await _db.SaveChangesAsync();
+                    await _db.SaveChangesAsync(true);
 
                 }
                 catch(Exception ex)
