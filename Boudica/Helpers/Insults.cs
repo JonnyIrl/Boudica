@@ -40,7 +40,7 @@ namespace Boudica.Helpers
             "you'll never be the man that your Mother is.",
             "I'm not saying I hate you but I would unplug your life support to charge my phone.",
             "the last time I saw something like you.. I flushed it.",
-            "I guess those penis enlargement pulls are working, you're twice the dick you were yesterday.",
+            "I guess those penis enlargement pills are working, you're twice the dick you were yesterday.",
             "shit happens. I mean, look at your face.",
             "everyone's entitled to be stupid but you're abusing the privilege.",
             "I've met some pricks in my time, but you my friend, are the f*cking cactus.",

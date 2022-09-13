@@ -31,15 +31,17 @@ namespace Boudica.Services
             {
                 if (existingInsult == null)
                 {
-                    await _db.Insult.AddAsync(new Insult() { DateTimeLastInsulted = DateTime.UtcNow, UserId = userId.ToString() });
+                    Insult newInsult = new Insult() { DateTimeLastInsulted = DateTime.UtcNow, UserId = userId.ToString() };
+                    await _db.Insult.AddAsync(newInsult);
+                    await _db.SaveChangesAsync(true);
                 }
                 else
                 {
                     existingInsult.DateTimeLastInsulted = DateTime.UtcNow;
                     _db.Insult.Update(existingInsult);
+                    await _db.SaveChangesAsync(true);
                 }
 
-                await _db.SaveChangesAsync(true);
                 return true;
             }
             catch(Exception ex)

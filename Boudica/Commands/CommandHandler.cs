@@ -133,21 +133,28 @@ namespace Boudica.Commands
             // if a command isn't found, log that info to console and exit this method
             if (!command.IsSpecified)
             {
-                Console.WriteLine($"Command failed to execute for [] <-> []!");
-                return;
+                if (command.GetValueOrDefault() == null)
+                {
+                    Console.WriteLine($"Command failed to execute for [] <-> []!");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine($"Command failed to execute for {context.User.Username} <-> {context.Message.Content}!");
+                }
             }
 
 
             // log success to the console and exit this method
             if (result.IsSuccess)
             {
-                Console.WriteLine($"Command [] executed for -> []");
+                Console.WriteLine($"Command {context.Message.Content} executed for -> {context.User.Username}");
                 return;
             }
 
 
             // failure scenario, let's let the user know
-            await context.Channel.SendMessageAsync($"Sorry, ... something went wrong -> []!");
+            await context.Channel.SendMessageAsync($"Sorry, ... something went wrong, blame Jonny!");
         }
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
@@ -224,6 +231,7 @@ namespace Boudica.Commands
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
             var embed = embeds?.First();
+            bool atMaxPlayersNow = false;
             if (embed != null)
             {
                 if(embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
@@ -235,36 +243,45 @@ namespace Boudica.Commands
                 var playerCountField = embed.Fields.FirstOrDefault(x => x.Name == "Players");
                 var footer = embed?.Footer.Value.Text;
                 string[] split = footer.Split("\n");
+                int playerCount = 0;
+                int maxPlayerCount = 0;
                 if (string.IsNullOrEmpty(footer))
                 {
-                    if (playerCountField.Value.Count(x => x == '@') >= 6)
+                    playerCount = playerCountField.Value.Count(x => x == '@');
+                    if (playerCount >= 6)
                     {
                         activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
                         activityResponse.IsFull = true;
                         return activityResponse;
                     }
+                    if (playerCount + 1 == 6) atMaxPlayersNow = true;
                 }
                 else
                 {
+                    playerCount = playerCountField.Value.Count(x => x == '@');
                     string test = split[split.Length - 1];
                     test = test.Replace(AMaxOf, string.Empty);
-                    if (int.TryParse(test[0].ToString(), out int maxPlayerCount))
+                    if (int.TryParse(test[0].ToString(), out maxPlayerCount))
                     {
-                        if (playerCountField.Value.Count(x => x == '@') >= maxPlayerCount)
+                        if (playerCount >= maxPlayerCount)
                         {
                             activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
                             activityResponse.IsFull = true;
                             return activityResponse;
                         }
+
+                        if (playerCount + 1 == maxPlayerCount) atMaxPlayersNow = true;
                     }
                     else
                     {
-                        if (playerCountField.Value.Count(x => x == '@') >= 6)
+                        if (playerCount >= 6)
                         {
                             activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
                             activityResponse.IsFull = true;
                             return activityResponse;
                         }
+
+                        if (playerCount + 1 == 6) atMaxPlayersNow = true;
                     }
                 }
                 var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
@@ -314,6 +331,7 @@ namespace Boudica.Commands
                 EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
 
                 string idText = split[0];
+                string fullText = string.Empty;
                 Tuple<bool, int> result = GetRaidAndIdFromText(idText);
                 if(result != null)
                 {
@@ -321,49 +339,32 @@ namespace Boudica.Commands
                     if(result.Item1)
                     {
                         await AddToRaidGroup(result.Item2, user.Id);
+                        fullText = $"your raid Id {result.Item2} is now full!";
                     }
                     else
                     {
                         await AddToFireteamGroup(result.Item2, user.Id);
+                        fullText = $"your fireteam Id {result.Item2} is now full!";
                     }
                 }
-
-                //try
-                //{
-                //    var footerText = embed?.Footer.Value.Text;
-                //    string[] footerSplit = footerText?.Split("\n");
-                //    if (footerSplit?.Length > 0)
-                //    {
-                //        string idText = split[0];
-                //        if (idText.Contains("Raid"))
-                //        {
-                //            Raid existingRaid = await _activityService.GetRaidAsync(int.Parse(idText.Substring(idText.IndexOf("Id") + 2)));
-                //            if (existingRaid != null && (existingRaid.DateTimeClosed != null || existingRaid.DateTimeClosed == DateTime.MinValue))
-                //            {
-                //                activityResponse.Success = false;
-                //                return activityResponse;
-                //            }
-                //        }
-                //        else if (idText.Contains("Fireteam"))
-                //        {
-                //            Fireteam existingFireteam = await _activityService.GetFireteamAsync(int.Parse(idText.Substring(idText.IndexOf("Id") + 2)));
-                //            if (existingFireteam != null && (existingFireteam.DateTimeClosed != null || existingFireteam.DateTimeClosed == DateTime.MinValue))
-                //            {
-                //                activityResponse.Success = false;
-                //                return activityResponse;
-                //            }
-                //        }
-                //    }
-                //}
-                //catch(Exception ex)
-                //{
-                //    Console.Error.WriteLine(ex.Message);
-                //}
 
                 await originalMessage.ModifyAsync(x =>
                 {
                     x.Embed = modifiedEmbed.Build();
                 });
+
+                if (atMaxPlayersNow)
+                {
+                    try
+                    {
+                        await originalMessage.ReplyAsync($"@{embed.Author.Value}, {fullText}");
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
+
                 activityResponse.Success = true;
                 return activityResponse;
             }
