@@ -1,5 +1,6 @@
 ﻿using Boudica.Commands;
 using Boudica.Database;
+using Boudica.MongoDB;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -99,6 +100,7 @@ class Program
             .AddScoped<GuardianReputationService>()
             .AddScoped<InsultService>()
             .AddScoped<RaidGroupService>()
+            .AddSingleton<IMongoDBContext, MongoDBContext>()
 
             .BuildServiceProvider();
     }

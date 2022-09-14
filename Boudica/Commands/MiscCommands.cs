@@ -27,6 +27,54 @@ namespace Boudica.Commands
             _insultService = services.GetRequiredService<InsultService>();
         }
 
+        [Command("testinsult")]
+        public async Task TestInsultCommand([Remainder] string args)
+        {
+            if (args == null || (args.Contains("@") == false))
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                return;
+            }
+
+            int startIndex = args.IndexOf("<@");
+            int endIndex = args.IndexOf(">");
+            try
+            {
+                if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
+                {
+                    MongoDB.Models.Insult usersLastInsult = await _insultService.GetTest(Context.User.Id);
+                    if (usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.Date == DateTime.UtcNow.Date)
+                    {
+                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
+                        return;
+                    }
+
+                    string insult = Insults.GetRandomInsult();
+                    if (insult.Contains(ReverseUnoCard))
+                    {
+                        insult = insult.Replace("{userId}", $"<@{Context.User.Id}>");
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{insult}").Build());
+                    }
+                    else
+                    {
+                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
+                    }
+
+                    await _insultService.UpsertUsersInsultTest(userId);
+                }
+                else
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+            }
+        }
+
+
 
         [Command("insult")]
         public async Task InsultCommand([Remainder] string args)
