@@ -30,7 +30,7 @@ namespace Boudica.Commands
         }
 
         #region Raid
-        [Command("create raid", RunMode = RunMode.Async)]
+        [Command("create raid")]
         public async Task CreateRaidCommand([Remainder] string args)
         {
             if (args == null)
@@ -298,6 +298,97 @@ namespace Boudica.Commands
             }
 
             return true;
+        }
+        #endregion
+
+        #region Mongo Raid
+        [Command("testcreate raid")]
+        public async Task TestCreateRaidCommand([Remainder] string args)
+        {
+            if (args == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid and a description for your raid e.g. create raid Vow of Disciple Tuesday 28th 6pm").Build());
+                return;
+            }
+
+            MongoDB.Models.Raid newRaid = new MongoDB.Models.Raid()
+            {
+                DateTimeCreated = DateTime.UtcNow,
+                CreatedByUserId = Context.User.Id,
+                GuidId = Context.Guild.Id,
+                ChannelId = Context.Channel.Id,
+                MaxPlayerCount = 6,
+                Players = new List<MongoDB.Models.ActivityUser>()
+                {
+                    new MongoDB.Models.ActivityUser()
+                    {
+                        UserId = Context.User.Id,
+                        DateTimeJoined = DateTime.UtcNow,
+                        DisplayName = Context.User.Username
+                    }
+                }
+            };
+            newRaid = await _activityService.CreateRaidAsync(newRaid);
+            if (newRaid.Id <= 0)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("I couldn't create the raid because Jonny did something wrong!").Build());
+                return;
+            }
+
+
+            var embed = new EmbedBuilder();
+
+            string[] split = args.Split('\n');
+            bool title = false;
+
+            embed.WithColor(new Color(0, 255, 0));
+            StringBuilder sb = new StringBuilder();
+            int startingPostion = title ? 1 : 0;
+
+            for (int i = startingPostion; i < split.Length; i++)
+            {
+                sb.AppendLine(split[i]);
+            }
+
+            embed.WithAuthor(Context.User);
+            sb.AppendLine();
+            sb.AppendLine();
+
+            var user = Context.User;
+
+            embed.Description = sb.ToString();
+
+            embed.AddField("Players", $"<@{user.Id}>");
+            embed.AddField("Subs", "-");
+
+            embed.Footer = new EmbedFooterBuilder()
+            {
+                Text = $"Raid Id {newRaid.Id}\nUse J to Join | Use S to Sub.\nA max of 6 players may join a raid"
+            };
+
+            IUserMessage newMessage;
+            IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+            if (role != null)
+            {
+                // this will reply with the embed
+                newMessage = await ReplyAsync(role.Mention, false, embed.Build());
+            }
+            else
+            {
+                // this will reply with the embed
+                newMessage = await ReplyAsync(null, false, embed.Build());
+            }
+
+
+            newRaid.MessageId = newMessage.Id;
+            await _activityService.UpdateRaidAsync(newRaid);
+
+            await newMessage.PinAsync();
+            await newMessage.AddReactionsAsync(new List<IEmote>()
+            {
+                new Emoji("🇯"),
+                new Emoji("🇸"),
+            });
         }
         #endregion
 

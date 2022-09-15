@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace Boudica.MongoDB.Models
 {
-    public class Raid
+    public class Raid : IRecordId
     {
         [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
+        public int Id { get; set; }
         public ulong CreatedByUserId { get; set; }
+        public ulong GuidId { get; set; }
         public ulong ChannelId { get; set; }
         public ulong MessageId { get; set; }
         public byte MaxPlayerCount { get; set; }

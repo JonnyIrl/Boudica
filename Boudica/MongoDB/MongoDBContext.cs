@@ -25,7 +25,7 @@ namespace Boudica.MongoDB
             _mongoClient = new MongoClient(configuration[nameof(Mongosettings.MongoReleaseConnectionString)]);
             _database = _mongoClient.GetDatabase(configuration[nameof(Mongosettings.MongoReleaseDatabaseName)]);
 #endif
-            bool isMongoLive = _database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+            bool isMongoLive = _database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(5000);
             if (isMongoLive)
             {
                 // connected
@@ -41,6 +41,22 @@ namespace Boudica.MongoDB
         public IMongoCollection<T> GetCollection<T>(string collectionName)
         {
             return _database.GetCollection<T>(collectionName);
+        }
+
+        public async Task<int> GetNextId<T>(string collectionName) where T : class, IRecordId
+        {
+            if (string.IsNullOrEmpty(collectionName)) return -1;
+            IMongoCollection<T> collection = _database.GetCollection<T>(collectionName);
+            T item = await collection.Find(doc => doc.Id > 0).SortByDescending(x => x.Id).Limit(1).FirstOrDefaultAsync();
+            if (item == null) return 1;
+            return item.Id + 1;
+        }
+
+        public async Task<int> GetNextId<T>(IMongoCollection<T> collection) where T : class, IRecordId
+        {
+            T item = await collection.Find(doc => doc.Id > 0).SortByDescending(x => x.Id).Limit(1).FirstOrDefaultAsync();
+            if (item == null) return 1;
+            return item.Id + 1;
         }
     }
 }
