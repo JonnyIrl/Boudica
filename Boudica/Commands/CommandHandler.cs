@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Boudica.Classes;
 using Boudica.Database.Models;
 using Boudica.Helpers;
+using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -157,6 +158,74 @@ namespace Boudica.Commands
             await context.Channel.SendMessageAsync($"Sorry, ... something went wrong, blame Jonny!");
         }
 
+        public async Task TestReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        {
+            if (reaction.Emote.Name == "🇯")
+            {
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await AddPlayerToActivityV2(message, user);
+                if (result.Success == false)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                    if (result.IsFull)
+                    {
+                        await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{user.Id}>, sorry " + result.FullMessage).Build());
+                    }
+                }
+                else if (result.Success && result.PreviousReaction)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_s:"), user);
+                }
+                return;
+            }
+
+            if (reaction.Emote.Name == "🇸")
+            {
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await AddSubToActivityV2(message, user);
+                if (result.Success == false)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                }
+                else if (result.Success && result.PreviousReaction)
+                {
+                    var originalMessage = await message.GetOrDownloadAsync();
+                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_j:"), user);
+                }
+
+                return;
+            }
+
+            //if (reaction.Emote.Name == "👍")
+            //{
+            //    var originalMessage = await message.GetOrDownloadAsync();
+            //    var embeds = originalMessage.Embeds.ToList();
+            //    var embed = embeds?.First();
+            //    if (embed != null)
+            //    {
+            //        EmbedBuilder newEmbed = new EmbedBuilder();
+            //        newEmbed.Color = embed.Color;
+            //        newEmbed.Title = embed.Title;
+            //        newEmbed.Description = embed.Description + "\n\nI see you reacted!";
+            //        await originalMessage.ModifyAsync(x =>
+            //        {
+            //            x.Embed = newEmbed.Build();
+            //        });
+            //    }
+            //}
+        }
+
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
             if (reaction.Emote.Name == "🇯")
@@ -225,6 +294,109 @@ namespace Boudica.Commands
             //}
         }
 
+        private async Task<ActivityResponse> TestAddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        {
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                #region Check Closed
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+                #endregion
+
+
+                ActivityType activityType = new ActivityType();
+                activityType.Parse(embed);
+                if (activityType.Activity == ActivityTypes.Unknown)
+                    return activityResponse;
+
+                if (activityType.Activity == ActivityTypes.Raid)
+                {
+                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    if (existingRaid == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    if (existingRaid.MaxPlayerCount == existingRaid.Players.Count)
+                    {
+                        return activityResponse;
+                    }
+
+                    //Player is a Sub
+                    ActivityUser subUser = existingRaid.Substitutes?.Find(x => x.UserId == user.Id);
+                    if (subUser != null)
+                    {
+                        existingRaid.Substitutes?.Remove(subUser);
+                    }
+                    //Already Joined
+                    else if (existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //Now Add them to the Players list
+                    existingRaid.Players.Add(new ActivityUser(user.Id, user.Username));
+                    existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
+                    if (existingRaid.Players.Count == existingRaid.MaxPlayerCount)
+                    {
+                        activityResponse.IsFull = true;
+                        activityResponse.FullMessage = $"Raid Id {existingRaid.Id} is now full. Feel free to Sub or watch if a slot becomes available!";
+                    }
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    StringBuilder sb = new StringBuilder();
+                    foreach (ActivityUser activityUser in existingRaid.Players)
+                    {
+
+                    }
+
+                        EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    if (atMaxPlayersNow)
+                    {
+                        try
+                        {
+                            await originalMessage.ReplyAsync($"@{embed.Author.Value}, {fullText}");
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                    }
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+
+                return activityResponse;
+            }
+        }
+
+        private void AddActivityUsersField(string title, List<ActivityUser> activityUsers)
+        {
+            if(activityUsers == null || activityUsers.Count == 0)
+            {
+
+            }
+
+        }
+        
         private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
@@ -679,5 +851,41 @@ namespace Boudica.Commands
             }
             return embedValue;
         }
+    }
+
+    public class ActivityType
+    {
+        public ActivityTypes Activity { get; set; }
+        public int Id { get; set; }
+
+        public void Parse(IEmbed embed)
+        {
+            if (embed == null) return;
+            if (embed.Footer.HasValue == false) return;
+            var footerText = embed.Footer.Value.Text;
+            string[] split = footerText.Split("\n");
+            if(split.Length == 0) return;
+            string text = split[0];
+            if (string.IsNullOrEmpty(text)) return;
+            int.TryParse(text.Split(" ")[2], out int id);
+            if (id <= 0) return;
+            Id = id;
+            if (text.Contains("Raid"))
+            {
+                Activity = ActivityTypes.Raid;
+            }
+            else if (text.Contains("Fireteam"))
+            {
+                Activity = ActivityTypes.Fireteam;
+            }
+        }
+        
+    }
+
+    public enum ActivityTypes
+    {
+        Unknown = 0,
+        Raid = 1,
+        Fireteam = 2
     }
 }

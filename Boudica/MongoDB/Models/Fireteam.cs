@@ -1,5 +1,4 @@
-﻿using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.MongoDB.Models
 {
-    public class Raid : IRecordId
+    public class Fireteam : IRecordId
     {
         [BsonId]
         public int Id { get; set; }
@@ -22,11 +21,10 @@ namespace Boudica.MongoDB.Models
         public List<ActivityUser> Players { get; set; }
         public List<ActivityUser> Substitutes { get; set; }
 
-        public Raid()
+        public Fireteam()
         {
             Players = new List<ActivityUser>();
             Substitutes = new List<ActivityUser>();
         }
-
     }
 }

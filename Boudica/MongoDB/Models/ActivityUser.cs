@@ -12,5 +12,12 @@ namespace Boudica.MongoDB.Models
         public ulong UserId { get; set; }
         public string DisplayName { get; set; }
         public DateTime DateTimeJoined { get; set; }
+
+        public ActivityUser(ulong userId, string displayName)
+        {
+            UserId = userId;
+            DisplayName = displayName;
+            DateTimeJoined = DateTime.UtcNow;
+        }
     }
 }
