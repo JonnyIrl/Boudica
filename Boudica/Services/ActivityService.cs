@@ -16,6 +16,7 @@ namespace Boudica.Services
         private readonly DVSContext _db;
         private readonly IMongoDBContext _mongoDBContext;
         protected IMongoCollection<MongoDB.Models.Raid> _raidCollection;
+        protected IMongoCollection<MongoDB.Models.Fireteam> _fireteamCollection;
 
         public ActivityService(DVSContext database, IMongoDBContext mongoDBContext)
         {
@@ -23,6 +24,7 @@ namespace Boudica.Services
             _mongoDBContext = mongoDBContext;
             string name = typeof(MongoDB.Models.Raid).Name;
             _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(name);
+            _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(name);
         }
 
         #region SQL Raid
@@ -133,6 +135,38 @@ namespace Boudica.Services
         public async Task<IList<Fireteam>> FindAllOpenFireteams()
         {
             return await _db.Fireteams.Where(x => x.DateTimeClosed == null).ToListAsync();
+        }
+        #endregion
+
+        #region Mongo Fireteam
+        public async Task<MongoDB.Models.Fireteam> CreateFireteamAsync(MongoDB.Models.Fireteam fireteam)
+        {
+            if (fireteam.CreatedByUserId <= 0) throw new ArgumentNullException("CreatedByUserId must be provided");
+            if (fireteam.ChannelId <= 0) throw new ArgumentNullException("ChannelId must be provided");
+
+            int nextId = await _mongoDBContext.GetNextId(_fireteamCollection);
+            if (nextId > 0)
+            {
+                fireteam.Id = nextId;
+                await _fireteamCollection.InsertOneAsync(fireteam);
+            }
+
+            return await Task.FromResult(fireteam);
+        }
+
+        public async Task<MongoDB.Models.Fireteam> UpdateRaidAsync(MongoDB.Models.Fireteam fireteam)
+        {
+            if (fireteam.Id <= 0) throw new ArgumentNullException("Id must be provided to update");
+            var builder = Builders<MongoDB.Models.Fireteam>.Filter;
+            var updateBuilder = Builders<MongoDB.Models.Fireteam>.Update;
+            var filter = builder.Eq(x => x.Id, fireteam.Id);
+            return await _fireteamCollection.FindOneAndReplaceAsync(filter, fireteam, new FindOneAndReplaceOptions<MongoDB.Models.Fireteam, MongoDB.Models.Fireteam>() { ReturnDocument = ReturnDocument.After });
+        }
+
+        public async Task<MongoDB.Models.Fireteam> GetMongoFireteamAsync(int fireteamId)
+        {
+            if (fireteamId <= 0) throw new ArgumentNullException("Id must be provided to update");
+            return await (await _fireteamCollection.FindAsync(x => x.Id == fireteamId)).FirstOrDefaultAsync();
         }
         #endregion
     }

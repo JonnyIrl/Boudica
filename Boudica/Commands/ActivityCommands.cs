@@ -299,6 +299,37 @@ namespace Boudica.Commands
 
             return true;
         }
+
+        private async Task<bool> CheckExistingRaidIsValid(MongoDB.Models.Raid existingRaid)
+        {
+            if (existingRaid == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This raid is already closed").Build());
+                return false;
+            }
+
+            if (existingRaid.CreatedByUserId != Context.User.Id)
+            {
+                IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
+                if (guildUser != null)
+                {
+                    if (guildUser.GuildPermissions.ModerateMembers)
+                    {
+                        return true;
+                    }
+                }
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only the Guardian who created the raid or an Admin can edit/close a raid").Build());
+                return false;
+            }
+
+            return true;
+        }
         #endregion
 
         #region Mongo Raid
@@ -320,12 +351,7 @@ namespace Boudica.Commands
                 MaxPlayerCount = 6,
                 Players = new List<MongoDB.Models.ActivityUser>()
                 {
-                    new MongoDB.Models.ActivityUser()
-                    {
-                        UserId = Context.User.Id,
-                        DateTimeJoined = DateTime.UtcNow,
-                        DisplayName = Context.User.Username
-                    }
+                    new MongoDB.Models.ActivityUser(Context.User.Id, Context.User.Username)
                 }
             };
             newRaid = await _activityService.CreateRaidAsync(newRaid);
@@ -389,6 +415,51 @@ namespace Boudica.Commands
                 new Emoji("🇯"),
                 new Emoji("🇸"),
             });
+        }
+
+        [Command("testclose raid")]
+        public async Task TestCloseRaid([Remainder] string args)
+        {
+            string result = await CheckCloseRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeClosed = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            modifiedEmbed.Title = "This raid is now closed";
+            modifiedEmbed.Color = Color.Red;
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
         }
         #endregion
 

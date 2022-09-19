@@ -235,7 +235,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await AddPlayerToActivityV2(message, user);
+                ActivityResponse result = await TestAddPlayerToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -260,7 +260,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await AddSubToActivityV2(message, user);
+                ActivityResponse result = await TestAddSubstituteToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -351,28 +351,87 @@ namespace Boudica.Commands
                     }
 
                     var modifiedEmbed = new EmbedBuilder();
-                    StringBuilder sb = new StringBuilder();
-                    foreach (ActivityUser activityUser in existingRaid.Players)
-                    {
+                    AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingRaid.Substitutes);
 
-                    }
-
-                        EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-
 
                     await originalMessage.ModifyAsync(x =>
                     {
                         x.Embed = modifiedEmbed.Build();
                     });
 
-                    if (atMaxPlayersNow)
+                    if (existingRaid.Players.Count == existingRaid.MaxPlayerCount)
                     {
                         try
                         {
-                            await originalMessage.ReplyAsync($"@{embed.Author.Value}, {fullText}");
+                            await originalMessage.ReplyAsync($"@<{existingRaid.CreatedByUserId}>, your Raid is now full!");
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                    }
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+                else if (activityType.Activity == ActivityTypes.Fireteam)
+                {
+                    MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
+                    if (existingFireteam == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    if (existingFireteam.MaxPlayerCount == existingFireteam.Players.Count)
+                    {
+                        return activityResponse;
+                    }
+
+                    //Player is a Sub
+                    ActivityUser subUser = existingFireteam.Substitutes?.Find(x => x.UserId == user.Id);
+                    if (subUser != null)
+                    {
+                        existingFireteam.Substitutes?.Remove(subUser);
+                        activityResponse.PreviousReaction = true;
+                    }
+                    //Already Joined
+                    else if (existingFireteam.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //Now Add them to the Players list
+                    existingFireteam.Players.Add(new ActivityUser(user.Id, user.Username));
+                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+                    if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+                    {
+                        activityResponse.IsFull = true;
+                        activityResponse.FullMessage = $"Fireteam Id {existingFireteam.Id} is now full. Feel free to Sub or watch if a slot becomes available!";
+                    }
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingFireteam.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+                    {
+                        try
+                        {
+                            await originalMessage.ReplyAsync($"@<{existingFireteam.CreatedByUserId}>, your Fireteam is now full!");
                         }
                         catch (Exception ex)
                         {
@@ -386,15 +445,135 @@ namespace Boudica.Commands
 
                 return activityResponse;
             }
+            return activityResponse;
         }
 
-        private void AddActivityUsersField(string title, List<ActivityUser> activityUsers)
+        private async Task<ActivityResponse> TestAddSubstituteToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        {
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                #region Check Closed
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+                #endregion
+
+
+                ActivityType activityType = new ActivityType();
+                activityType.Parse(embed);
+                if (activityType.Activity == ActivityTypes.Unknown)
+                    return activityResponse;
+
+                if (activityType.Activity == ActivityTypes.Raid)
+                {
+                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    if (existingRaid == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    //User is already a Player
+                    ActivityUser playerUser = existingRaid.Players?.Find(x => x.UserId == user.Id);
+                    if (playerUser != null)
+                    {
+                        existingRaid.Players?.Remove(playerUser);
+                        activityResponse.PreviousReaction = true;
+                    }
+                    //Already Joined
+                    else if (existingRaid.Substitutes.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //Now Add them to the Substitues list
+                    existingRaid.Substitutes.Add(new ActivityUser(user.Id, user.Username));
+                    existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingRaid.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+                else if (activityType.Activity == ActivityTypes.Fireteam)
+                {
+                    MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
+                    if (existingFireteam == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    //User is already a Player
+                    ActivityUser playerUser = existingFireteam.Players?.Find(x => x.UserId == user.Id);
+                    if (playerUser != null)
+                    {
+                        existingFireteam.Players?.Remove(playerUser);
+                    }
+                    //Already Joined
+                    else if (existingFireteam.Substitutes.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //Now Add them to the Substitues list
+                    existingFireteam.Substitutes.Add(new ActivityUser(user.Id, user.Username));
+                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingFireteam.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+
+                return activityResponse;
+            }
+            return activityResponse;
+        }
+
+        private EmbedBuilder AddActivityUsersField(EmbedBuilder embed, string title, List<ActivityUser> activityUsers)
         {
             if(activityUsers == null || activityUsers.Count == 0)
             {
-
+                embed.AddField(title, "-");
+                return embed;
             }
 
+            StringBuilder sb = new StringBuilder();
+            foreach(ActivityUser user in activityUsers)
+            {
+                sb.AppendLine(user.DisplayName);
+            }
+
+            embed.AddField(title, sb.ToString().Trim());
+            return embed;
         }
         
         private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
