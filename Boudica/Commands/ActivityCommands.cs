@@ -464,6 +464,103 @@ namespace Boudica.Commands
         #endregion
 
         #region Fireteam
+        [Command("testcreate fireteam")]
+        public async Task TestCreateFireteamCommand([Remainder] string args)
+        {
+            if (args == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the total slots and a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());
+                return;
+            }
+
+            string[] sizeSplit = args.Split(" ");
+
+            if (int.TryParse(sizeSplit[0], out int fireteamSize) == false || fireteamSize > 6 || fireteamSize <= 1)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the the total slots and a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());
+                return;
+            }
+
+            if (string.IsNullOrEmpty(args.Remove(0, 1)))
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, you must supply a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());
+                return;
+            }
+
+            MongoDB.Models.Fireteam newFireteam = new MongoDB.Models.Fireteam()
+            {
+                DateTimeCreated = DateTime.UtcNow,
+                CreatedByUserId = Context.User.Id,
+                GuidId = Context.Guild.Id,
+                ChannelId = Context.Channel.Id,
+                MaxPlayerCount = (byte)fireteamSize,
+                Players = new List<MongoDB.Models.ActivityUser>()
+                {
+                    new MongoDB.Models.ActivityUser(Context.User.Id, Context.User.Username)
+                }
+            };
+            newFireteam = await _activityService.CreateFireteamAsync(newFireteam);
+            if (newFireteam.Id <= 0)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("I couldn't create the fireteam because Jonny did something wrong!").Build());
+                return;
+            }
+
+
+            var embed = new EmbedBuilder();
+
+            string[] split = args.Split('\n');
+            bool title = false;
+
+            embed.WithColor(new Color(0, 255, 0));
+            StringBuilder sb = new StringBuilder();
+            int startingPostion = title ? 1 : 0;
+
+            for (int i = startingPostion; i < split.Length; i++)
+            {
+                sb.AppendLine(split[i]);
+            }
+
+            embed.WithAuthor(Context.User);
+            sb.AppendLine();
+            sb.AppendLine();
+
+            var user = Context.User;
+
+            embed.Description = sb.ToString();
+
+            embed.AddField("Players", $"<@{user.Id}>");
+            embed.AddField("Subs", "-");
+
+            embed.Footer = new EmbedFooterBuilder()
+            {
+                Text = $"Fireteam Id {newFireteam.Id}\nUse J to Join | Use S to Sub.\nA max of {newFireteam.MaxPlayerCount} players may join this fireteam"
+            };
+
+            IUserMessage newMessage;
+            //IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+            //if (role != null)
+            //{
+            //    // this will reply with the embed
+            //    newMessage = await ReplyAsync(role.Mention, false, embed.Build());
+            //}
+            //else
+            //{
+                // this will reply with the embed
+                newMessage = await ReplyAsync(null, false, embed.Build());
+            //}
+
+
+            newFireteam.MessageId = newMessage.Id;
+            await _activityService.UpdateRaidAsync(newFireteam);
+
+            await newMessage.PinAsync();
+            await newMessage.AddReactionsAsync(new List<IEmote>()
+            {
+                new Emoji("🇯"),
+                new Emoji("🇸"),
+            });
+        }
         [Command("create fireteam")]
         public async Task CreateFireteamCommand([Remainder] string args)
         {

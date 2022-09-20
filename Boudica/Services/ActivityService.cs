@@ -22,9 +22,8 @@ namespace Boudica.Services
         {
             _db = database;
             _mongoDBContext = mongoDBContext;
-            string name = typeof(MongoDB.Models.Raid).Name;
-            _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(name);
-            _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(name);
+            _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(typeof(MongoDB.Models.Raid).Name);
+            _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(typeof(MongoDB.Models.Fireteam).Name);
         }
 
         #region SQL Raid

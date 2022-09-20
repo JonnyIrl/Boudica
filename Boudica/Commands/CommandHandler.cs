@@ -30,6 +30,9 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly RaidGroupService _raidGroupService;
         private char Prefix = ';';
+
+        private static List<ulong> _manualRemovedReactionList = new List<ulong>();
+        private object _lock = new object();
         //private char SlashPrefix = '/';
 
         private Emoji _jEmoji = new Emoji("🇯");
@@ -248,6 +251,10 @@ namespace Boudica.Commands
                 else if (result.Success && result.PreviousReaction)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
+                    lock (_lock)
+                    {
+                        _manualRemovedReactionList.Add(user.Id);
+                    }
                     await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_s:"), user);
                 }
                 return;
@@ -269,6 +276,10 @@ namespace Boudica.Commands
                 else if (result.Success && result.PreviousReaction)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
+                    lock (_lock)
+                    {
+                        _manualRemovedReactionList.Add(user.Id);
+                    }
                     await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_j:"), user);
                 }
 
@@ -293,7 +304,47 @@ namespace Boudica.Commands
             //    }
             //}
         }
+        public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        {
+            if (reaction.Emote.Name == "🇯")
+            {
+                lock (_lock)
+                {
+                    if (_manualRemovedReactionList.Contains(reaction.UserId))
+                    {
+                        _manualRemovedReactionList.Remove(reaction.UserId);
+                        return;
+                    }
+                }
 
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await TestRemovePlayerFromActivityV2(message, user); //await RemovePlayerFromActivityV2(message, reaction.UserId);
+                return;
+            }
+
+            if (reaction.Emote.Name == "🇸")
+            {
+                lock (_lock)
+                {
+                    if (_manualRemovedReactionList.Contains(reaction.UserId))
+                    {
+                        _manualRemovedReactionList.Remove(reaction.UserId);
+                        return;
+                    }
+                }
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+                ActivityResponse result = await TestRemoveSubFromActivityV2(message, user); //await RemoveSubFromActivityV2(message, reaction.UserId);
+                return;
+            }
+        }
         private async Task<ActivityResponse> TestAddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
@@ -367,7 +418,7 @@ namespace Boudica.Commands
                     {
                         try
                         {
-                            await originalMessage.ReplyAsync($"@<{existingRaid.CreatedByUserId}>, your Raid is now full!");
+                            await originalMessage.ReplyAsync($"<@{existingRaid.CreatedByUserId}>, your Raid is now full!");
                         }
                         catch (Exception ex)
                         {
@@ -431,7 +482,7 @@ namespace Boudica.Commands
                     {
                         try
                         {
-                            await originalMessage.ReplyAsync($"@<{existingFireteam.CreatedByUserId}>, your Fireteam is now full!");
+                            await originalMessage.ReplyAsync($"<@{existingFireteam.CreatedByUserId}>, your Fireteam is now full!");
                         }
                         catch (Exception ex)
                         {
@@ -447,6 +498,234 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
+
+        private async Task<ActivityResponse> TestRemovePlayerFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        {
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                #region Check Closed
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+                #endregion
+
+
+                ActivityType activityType = new ActivityType();
+                activityType.Parse(embed);
+                if (activityType.Activity == ActivityTypes.Unknown)
+                    return activityResponse;
+
+                if (activityType.Activity == ActivityTypes.Raid)
+                {
+                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    if (existingRaid == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    //Player is a Sub
+                    ActivityUser playerUser = existingRaid.Players?.Find(x => x.UserId == user.Id);
+                    if (playerUser != null)
+                    {
+                        existingRaid.Players?.Remove(playerUser);
+                    }
+
+                    existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    if (existingRaid.Players.Count == existingRaid.MaxPlayerCount - 1)
+                    {
+                        try
+                        {
+                            IRole role = user.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+                            if (role != null)
+                            {
+                                await originalMessage.ReplyAsync(role.Mention + " A slot has now opened up!");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                    }
+
+                    await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{user.Id}> has left Raid Id {existingRaid.Id}").Build());
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+                else if (activityType.Activity == ActivityTypes.Fireteam)
+                {
+                    MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
+                    if (existingFireteam == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    ActivityUser playerUser = existingFireteam.Players?.Find(x => x.UserId == user.Id);
+                    if (playerUser != null)
+                    {
+                        existingFireteam.Players?.Remove(playerUser);
+                    }
+                    //Player got stuck in bad loop where said was active but wasn't.
+                    else
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+
+                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount - 1)
+                    {
+                        try
+                        {
+                            IRole role = user.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+                            if (role != null)
+                            {
+                                await originalMessage.ReplyAsync(role.Mention + " A slot has now opened up!");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                    }
+
+                    await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{user.Id}> has left Fireteam Id {existingFireteam.Id}").Build());
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+
+                return activityResponse;
+            }
+            return activityResponse;
+        }
+
+        private async Task<ActivityResponse> TestRemoveSubFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        {
+            ActivityResponse activityResponse = new ActivityResponse(false, false);
+            var originalMessage = await message.GetOrDownloadAsync();
+            var embeds = originalMessage.Embeds.ToList();
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                #region Check Closed
+                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
+                {
+                    return activityResponse;
+                }
+                #endregion
+
+
+                ActivityType activityType = new ActivityType();
+                activityType.Parse(embed);
+                if (activityType.Activity == ActivityTypes.Unknown)
+                    return activityResponse;
+
+                if (activityType.Activity == ActivityTypes.Raid)
+                {
+                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    if (existingRaid == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    //Player is a Sub
+                    ActivityUser subUser = existingRaid.Substitutes?.Find(x => x.UserId == user.Id);
+                    if (subUser != null)
+                    {
+                        existingRaid.Substitutes?.Remove(subUser);
+                    }
+
+                    existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+                else if (activityType.Activity == ActivityTypes.Fireteam)
+                {
+                    MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
+                    if (existingFireteam == null)
+                    {
+                        return activityResponse;
+                    }
+
+                    ActivityUser subUser = existingFireteam.Substitutes?.Find(x => x.UserId == user.Id);
+                    if (subUser != null)
+                    {
+                        existingFireteam.Substitutes?.Remove(subUser);
+                    }
+
+                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+
+                    var modifiedEmbed = new EmbedBuilder();
+                    AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
+
+                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+
+                    await originalMessage.ModifyAsync(x =>
+                    {
+                        x.Embed = modifiedEmbed.Build();
+                    });
+
+                    activityResponse.Success = true;
+                    return activityResponse;
+                }
+
+                return activityResponse;
+            }
+            return activityResponse;
+        }
+
 
         private async Task<ActivityResponse> TestAddSubstituteToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
@@ -524,6 +803,7 @@ namespace Boudica.Commands
                     if (playerUser != null)
                     {
                         existingFireteam.Players?.Remove(playerUser);
+                        activityResponse.PreviousReaction = true;
                     }
                     //Already Joined
                     else if (existingFireteam.Substitutes.FirstOrDefault(x => x.UserId == user.Id) != null)
@@ -971,37 +1251,6 @@ namespace Boudica.Commands
         private async Task RemoveFromFireteamGroup(int fireteamId, ulong userId)
         {
 
-        }
-
-        public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
-        {
-            if (reaction.Emote.Name == "🇯")
-            {
-                ActivityResponse result = await RemovePlayerFromActivityV2(message, reaction.UserId);
-                return;
-            }
-
-            if (reaction.Emote.Name == "🇸")
-            {
-                ActivityResponse result = await RemoveSubFromActivityV2(message, reaction.UserId);
-                return;
-            }
-            //if (reaction.Emote.Name == "👍")
-            //{
-            //    var originalMessage = await message.GetOrDownloadAsync();
-            //    var embeds = originalMessage.Embeds.ToList();
-            //    var embed = embeds?.First();
-            //    if (embed != null)
-            //    {
-            //        EmbedBuilder newEmbed = new EmbedBuilder();
-            //        newEmbed.Color = embed.Color;
-            //        newEmbed.Title = embed.Title;
-            //        newEmbed.Description = embed.Description.Replace("\n\nI see you reacted!", string.Empty);
-            //        await originalMessage.ModifyAsync(x =>
-            //        {
-            //            x.Embed = newEmbed.Build();
-            //        });
-            //    }
         }
 
         public string RemovePlayerNameFromEmbedText(EmbedField embedField, string userId)
