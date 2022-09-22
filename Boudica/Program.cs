@@ -1,5 +1,4 @@
 ﻿using Boudica.Commands;
-using Boudica.Database;
 using Boudica.MongoDB;
 using Boudica.Services;
 using Discord;
@@ -91,15 +90,8 @@ class Program
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<CommandService>()
             .AddSingleton<CommandHandler>()
-            .AddDbContext<DVSContext>()
-            .AddScoped<GuardianService>()
-            .AddScoped<ItemService>()
-            .AddScoped<EververseService>()
-            .AddScoped<InventoryService>()
             .AddScoped<ActivityService>()
-            .AddScoped<GuardianReputationService>()
             .AddScoped<InsultService>()
-            .AddScoped<RaidGroupService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
 
             .BuildServiceProvider();

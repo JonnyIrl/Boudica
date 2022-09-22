@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Boudica.Classes;
-using Boudica.Database.Models;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -20,15 +19,12 @@ namespace Boudica.Commands
     {
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
-        private const string AMaxOf = "A max of ";
-        private const string PlayersMayJoin = "players may join";
         // setup fields to be set later in the constructor
         private readonly IConfiguration _config;
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
         private readonly ActivityService _activityService;
-        private readonly RaidGroupService _raidGroupService;
         private char Prefix = ';';
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
@@ -46,7 +42,6 @@ namespace Boudica.Commands
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             _activityService = services.GetRequiredService<ActivityService>();
-            _raidGroupService = services.GetRequiredService<RaidGroupService>();
             _services = services;
 
             // get prefix from the configuration file
@@ -161,73 +156,6 @@ namespace Boudica.Commands
             await context.Channel.SendMessageAsync($"Sorry, ... something went wrong, blame Jonny!");
         }
 
-        public async Task TestReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
-        {
-            if (reaction.Emote.Name == "🇯")
-            {
-                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
-                if (user == null || user.IsBot)
-                {
-                    return;
-                }
-                ActivityResponse result = await AddPlayerToActivityV2(message, user);
-                if (result.Success == false)
-                {
-                    var originalMessage = await message.GetOrDownloadAsync();
-                    await originalMessage.RemoveReactionAsync(reaction.Emote, user);
-                    if (result.IsFull)
-                    {
-                        await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{user.Id}>, sorry " + result.FullMessage).Build());
-                    }
-                }
-                else if (result.Success && result.PreviousReaction)
-                {
-                    var originalMessage = await message.GetOrDownloadAsync();
-                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_s:"), user);
-                }
-                return;
-            }
-
-            if (reaction.Emote.Name == "🇸")
-            {
-                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
-                if (user == null || user.IsBot)
-                {
-                    return;
-                }
-                ActivityResponse result = await AddSubToActivityV2(message, user);
-                if (result.Success == false)
-                {
-                    var originalMessage = await message.GetOrDownloadAsync();
-                    await originalMessage.RemoveReactionAsync(reaction.Emote, user);
-                }
-                else if (result.Success && result.PreviousReaction)
-                {
-                    var originalMessage = await message.GetOrDownloadAsync();
-                    await originalMessage.RemoveReactionAsync(Emoji.Parse(":regional_indicator_j:"), user);
-                }
-
-                return;
-            }
-
-            //if (reaction.Emote.Name == "👍")
-            //{
-            //    var originalMessage = await message.GetOrDownloadAsync();
-            //    var embeds = originalMessage.Embeds.ToList();
-            //    var embed = embeds?.First();
-            //    if (embed != null)
-            //    {
-            //        EmbedBuilder newEmbed = new EmbedBuilder();
-            //        newEmbed.Color = embed.Color;
-            //        newEmbed.Title = embed.Title;
-            //        newEmbed.Description = embed.Description + "\n\nI see you reacted!";
-            //        await originalMessage.ModifyAsync(x =>
-            //        {
-            //            x.Embed = newEmbed.Build();
-            //        });
-            //    }
-            //}
-        }
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
@@ -242,6 +170,10 @@ namespace Boudica.Commands
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
+                    lock (_lock)
+                    {
+                        _manualRemovedReactionList.Add(user.Id);
+                    }
                     await originalMessage.RemoveReactionAsync(reaction.Emote, user);
                     if(result.IsFull)
                     {
@@ -271,6 +203,10 @@ namespace Boudica.Commands
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
+                    lock (_lock)
+                    {
+                        _manualRemovedReactionList.Add(user.Id);
+                    }
                     await originalMessage.RemoveReactionAsync(reaction.Emote, user);
                 }
                 else if (result.Success && result.PreviousReaction)
@@ -285,24 +221,6 @@ namespace Boudica.Commands
 
                 return;
             }
-
-            //if (reaction.Emote.Name == "👍")
-            //{
-            //    var originalMessage = await message.GetOrDownloadAsync();
-            //    var embeds = originalMessage.Embeds.ToList();
-            //    var embed = embeds?.First();
-            //    if (embed != null)
-            //    {
-            //        EmbedBuilder newEmbed = new EmbedBuilder();
-            //        newEmbed.Color = embed.Color;
-            //        newEmbed.Title = embed.Title;
-            //        newEmbed.Description = embed.Description + "\n\nI see you reacted!";
-            //        await originalMessage.ModifyAsync(x =>
-            //        {
-            //            x.Embed = newEmbed.Build();
-            //        });
-            //    }
-            //}
         }
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
@@ -312,7 +230,7 @@ namespace Boudica.Commands
                 {
                     if (_manualRemovedReactionList.Contains(reaction.UserId))
                     {
-                        _manualRemovedReactionList.Remove(reaction.UserId);
+                        _manualRemovedReactionList.RemoveAll(x => x == reaction.UserId);
                         return;
                     }
                 }
@@ -332,7 +250,7 @@ namespace Boudica.Commands
                 {
                     if (_manualRemovedReactionList.Contains(reaction.UserId))
                     {
-                        _manualRemovedReactionList.Remove(reaction.UserId);
+                        _manualRemovedReactionList.RemoveAll(x => x == reaction.UserId);
                         return;
                     }
                 }
@@ -350,6 +268,11 @@ namespace Boudica.Commands
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
+            if(embeds.Any() == false)
+            {
+                activityResponse.Success = true;
+                return activityResponse;
+            }
             var embed = embeds?.First();
             if (embed != null)
             {
@@ -384,6 +307,7 @@ namespace Boudica.Commands
                     if (subUser != null)
                     {
                         existingRaid.Substitutes?.Remove(subUser);
+                        activityResponse.PreviousReaction = true;
                     }
                     //Already Joined
                     else if (existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
@@ -458,7 +382,7 @@ namespace Boudica.Commands
 
                     //Now Add them to the Players list
                     existingFireteam.Players.Add(new ActivityUser(user.Id, user.Username));
-                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+                    existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);
                     if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
                     {
                         activityResponse.IsFull = true;
@@ -498,12 +422,16 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-
         private async Task<ActivityResponse> TestRemovePlayerFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
+            if (embeds.Any() == false)
+            {
+                activityResponse.Success = true;
+                return activityResponse;
+            }
             var embed = embeds?.First();
             if (embed != null)
             {
@@ -592,7 +520,7 @@ namespace Boudica.Commands
                     }
 
 
-                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+                    existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);
 
                     var modifiedEmbed = new EmbedBuilder();
                     AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
@@ -633,12 +561,16 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-
         private async Task<ActivityResponse> TestRemoveSubFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
+            if (embeds.Any() == false)
+            {
+                activityResponse.Success = true;
+                return activityResponse;
+            }
             var embed = embeds?.First();
             if (embed != null)
             {
@@ -702,7 +634,7 @@ namespace Boudica.Commands
                         existingFireteam.Substitutes?.Remove(subUser);
                     }
 
-                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+                    existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);
 
                     var modifiedEmbed = new EmbedBuilder();
                     AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
@@ -725,13 +657,16 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-
-
         private async Task<ActivityResponse> TestAddSubstituteToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
             var embeds = originalMessage.Embeds.ToList();
+            if (embeds.Any() == false)
+            {
+                activityResponse.Success = true;
+                return activityResponse;
+            }
             var embed = embeds?.First();
             if (embed != null)
             {
@@ -814,7 +749,7 @@ namespace Boudica.Commands
 
                     //Now Add them to the Substitues list
                     existingFireteam.Substitutes.Add(new ActivityUser(user.Id, user.Username));
-                    existingFireteam = await _activityService.UpdateRaidAsync(existingFireteam);
+                    existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);
 
                     var modifiedEmbed = new EmbedBuilder();
                     AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
@@ -837,7 +772,6 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-
         private EmbedBuilder AddActivityUsersField(EmbedBuilder embed, string title, List<ActivityUser> activityUsers)
         {
             if(activityUsers == null || activityUsers.Count == 0)
@@ -854,430 +788,6 @@ namespace Boudica.Commands
 
             embed.AddField(title, sb.ToString().Trim());
             return embed;
-        }
-        
-        private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
-        {
-            ActivityResponse activityResponse = new ActivityResponse(false, false);
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            bool atMaxPlayersNow = false;
-            if (embed != null)
-            {
-                if(embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-
-                var modifiedEmbed = new EmbedBuilder();
-                var playerCountField = embed.Fields.FirstOrDefault(x => x.Name == "Players");
-                var footer = embed?.Footer.Value.Text;
-                string[] split = footer.Split("\n");
-                int playerCount = 0;
-                int maxPlayerCount = 0;
-                if (string.IsNullOrEmpty(footer))
-                {
-                    playerCount = playerCountField.Value.Count(x => x == '@');
-                    if (playerCount >= 6)
-                    {
-                        activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
-                        activityResponse.IsFull = true;
-                        return activityResponse;
-                    }
-                    if (playerCount + 1 == 6) atMaxPlayersNow = true;
-                }
-                else
-                {
-                    playerCount = playerCountField.Value.Count(x => x == '@');
-                    string test = split[split.Length - 1];
-                    test = test.Replace(AMaxOf, string.Empty);
-                    if (int.TryParse(test[0].ToString(), out maxPlayerCount))
-                    {
-                        if (playerCount >= maxPlayerCount)
-                        {
-                            activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
-                            activityResponse.IsFull = true;
-                            return activityResponse;
-                        }
-
-                        if (playerCount + 1 == maxPlayerCount) atMaxPlayersNow = true;
-                    }
-                    else
-                    {
-                        if (playerCount >= 6)
-                        {
-                            activityResponse.FullMessage = split[0] + " is now full. Feel free to Sub or watch if a slot becomes available!";
-                            activityResponse.IsFull = true;
-                            return activityResponse;
-                        }
-
-                        if (playerCount + 1 == 6) atMaxPlayersNow = true;
-                    }
-                }
-                var field = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
-                //Player is a Sub
-                if (field.Value.Contains(user.Id.ToString()))
-                {
-                    activityResponse.PreviousReaction = true;
-                    modifiedEmbed = new EmbedBuilder();
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Subs")
-                        {
-                            modifiedEmbed.AddField("Subs", RemovePlayerNameFromEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else if (embedField.Name == "Players")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-                }
-                //Add the Player
-                else
-                {
-                    var playerField = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
-                    //Player is a Player - This is an edge case that happens when the raid is created
-                    if (playerField.Value.Contains(user.Id.ToString()))
-                    {
-                        activityResponse.Success = true;
-                        return activityResponse;
-                    }
-                    modifiedEmbed = new EmbedBuilder();
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Players")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-                }
-
-                EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                string idText = split[0];
-                string fullText = string.Empty;
-                Tuple<bool, int> result = GetRaidAndIdFromText(idText);
-                if(result != null)
-                {
-                    //Raid
-                    if(result.Item1)
-                    {
-                        await AddToRaidGroup(result.Item2, user.Id);
-                        fullText = $"your raid Id {result.Item2} is now full!";
-                    }
-                    else
-                    {
-                        await AddToFireteamGroup(result.Item2, user.Id);
-                        fullText = $"your fireteam Id {result.Item2} is now full!";
-                    }
-                }
-
-                await originalMessage.ModifyAsync(x =>
-                {
-                    x.Embed = modifiedEmbed.Build();
-                });
-
-                if (atMaxPlayersNow)
-                {
-                    try
-                    {
-                        await originalMessage.ReplyAsync($"@{embed.Author.Value}, {fullText}");
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                }
-
-                activityResponse.Success = true;
-                return activityResponse;
-            }
-
-            return activityResponse;
-        }
-
-        private async Task<ActivityResponse> RemovePlayerFromActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
-        {
-            ActivityResponse activityResponse = new ActivityResponse(false, false);
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            if (embed != null)
-            {
-                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-
-                var modifiedEmbed = new EmbedBuilder();
-                var playerField = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
-                //Player is a Player - This is an edge case that happens when the raid is created
-                if (playerField.Value.Contains(userId.ToString()))
-                {
-                    modifiedEmbed = new EmbedBuilder();
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Players")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, RemovePlayerNameFromEmbedText(embedField, userId.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-
-                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                    await originalMessage.ModifyAsync(x =>
-                    {
-                        x.Embed = modifiedEmbed.Build();
-                    });
-
-                    try
-                    {
-                        var footer = embed?.Footer.Value.Text;
-                        string[] split = footer?.Split("\n");
-                        if (split != null)
-                        {
-                            string idText = split[0];
-                            Tuple<bool, int> result = GetRaidAndIdFromText(idText);
-                            if (result != null)
-                            {
-                                //Raid
-                                if (result.Item1)
-                                {
-                                    await RemoveFromRaidGroup(result.Item2, userId);
-                                }
-                                else
-                                {
-                                    await RemoveFromFireteamGroup(result.Item2, userId);
-                                }
-                            }
-
-
-                            await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{userId}> has left {split[0]}").Build());
-                        }
-                    }
-                    catch(Exception ex)
-                    {
-
-                    }
-
-                    activityResponse.Success = true;
-                    return activityResponse;
-                }
-            }
-            return activityResponse;
-        }
-
-        private async Task<ActivityResponse> RemoveSubFromActivityV2(Cacheable<IUserMessage, ulong> message, ulong userId)
-        {
-            ActivityResponse activityResponse = new ActivityResponse(false, false);
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            if (embed != null)
-            {
-                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-
-                var subField = embed.Fields.Where(x => x.Name == "Subs").FirstOrDefault();
-                //Player is a Player - This is an edge case that happens when the raid is created
-                if (subField.Value.Contains(userId.ToString()))
-                {
-                    var modifiedEmbed = new EmbedBuilder();
-                    modifiedEmbed.Title = embed.Title;
-                    modifiedEmbed.Description = embed.Description;
-                    modifiedEmbed.Color = embed.Color;
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Subs")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, RemovePlayerNameFromEmbedText(embedField, userId.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-
-                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                    await originalMessage.ModifyAsync(x =>
-                    {
-                        x.Embed = modifiedEmbed.Build();
-                    });
-
-                    activityResponse.Success = true;
-                    return activityResponse;
-                }
-            }
-            return activityResponse;
-        }
-
-        private async Task<ActivityResponse> AddSubToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
-        {
-            ActivityResponse activityResponse = new ActivityResponse(false, false);
-            var originalMessage = await message.GetOrDownloadAsync();
-            var embeds = originalMessage.Embeds.ToList();
-            var embed = embeds?.First();
-            if (embed != null)
-            {
-                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-
-                var modifiedEmbed = new EmbedBuilder();
-                var field = embed.Fields.Where(x => x.Name == "Players").FirstOrDefault();
-                //Already a Player
-                if (field.Value.Contains(user.Id.ToString()))
-                {
-                    activityResponse.PreviousReaction = true;
-                    modifiedEmbed = new EmbedBuilder();
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Players")
-                        {
-                            modifiedEmbed.AddField("Players", RemovePlayerNameFromEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else if (embedField.Name == "Subs")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-
-                    string idText = GetFooterIdTextFromEmbed(embed);
-                    Tuple<bool, int> result = GetRaidAndIdFromText(idText);
-                    if (result != null)
-                    {
-                        //Raid
-                        if (result.Item1)
-                        {
-                            await RemoveFromRaidGroup(result.Item2, user.Id);
-                        }
-                        else
-                        {
-                            await RemoveFromFireteamGroup(result.Item2, user.Id);
-                        }
-                    }
-
-                }
-                //Add the Player
-                else
-                {
-                    modifiedEmbed = new EmbedBuilder();
-                    foreach (EmbedField embedField in embed.Fields)
-                    {
-                        if (embedField.Name == "Subs")
-                        {
-                            modifiedEmbed.AddField(embedField.Name, AddPlayerNameToEmbedText(embedField, user.Id.ToString()));
-                        }
-                        else
-                            modifiedEmbed.AddField(embedField.Name, embedField.Value);
-                    }
-                }
-
-                EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                await originalMessage.ModifyAsync(x =>
-                {
-                    x.Embed = modifiedEmbed.Build();
-                });
-                activityResponse.Success = true;
-                return activityResponse;
-            }
-
-            return activityResponse;
-        }
-
-        private Tuple<bool, int> GetRaidAndIdFromText(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return null;
-            if(text.Contains("Raid"))
-            {
-                int id = int.Parse(text.Split(" ")[2]);
-                return new Tuple<bool, int>(true, id);
-            }
-            else if(text.Contains("Fireteam"))
-            {
-                int id = int.Parse(text.Split(" ")[2]);
-                return new Tuple<bool, int>(false, id);
-            }
-
-            return null;
-        }
-
-        private string GetFooterIdTextFromEmbed(IEmbed embed)
-        {
-            if (embed == null) return string.Empty;
-            if (embed.Footer == null) return string.Empty;
-            if (embed.Footer.HasValue == false) return string.Empty;
-            string[] split = embed.Footer.Value.Text.Split("\n");
-            if(split.Length == 0) return string.Empty;
-            if(split[0].Contains("Id") == false) return string.Empty;
-            return split[0];
-        }
-
-        private async Task AddToRaidGroup(int raidId, ulong userId)
-        {
-            await _raidGroupService.AddPlayerToRaidGroup(raidId, userId);
-        }
-
-        private async Task AddToFireteamGroup(int fireteamId, ulong userId)
-        {
-
-        }
-
-        private async Task RemoveFromRaidGroup(int raidId, ulong userId)
-        {
-            await _raidGroupService.RemovePlayerFromRaidGroup(raidId, userId);
-        }
-
-        private async Task RemoveFromFireteamGroup(int fireteamId, ulong userId)
-        {
-
-        }
-
-        public string RemovePlayerNameFromEmbedText(EmbedField embedField, string userId)
-        {
-            string replaceValue = string.Empty;
-            if (embedField.Value.Contains($"\n<@{userId}>"))
-            {
-                replaceValue = embedField.Value.Replace($"\n<@{userId}>", string.Empty);
-            }
-            else
-            {
-                replaceValue = embedField.Value.Replace($"<@{userId}>", string.Empty);
-            }
-            if (replaceValue.StartsWith("-")) replaceValue.Replace("-", string.Empty);
-            if (replaceValue == string.Empty) replaceValue = "-";
-            return replaceValue;
-        }
-
-        public string AddPlayerNameToEmbedText(EmbedField embedField, string userId)
-        {
-            string embedValue = embedField.Value;
-            if (embedValue.StartsWith("-")) embedValue = embedValue.Replace("-", string.Empty);
-            if (embedValue.Contains(userId.ToString()) == false)
-            {
-                embedValue += $"\n<@{userId}>";
-            }
-            return embedValue;
         }
     }
 

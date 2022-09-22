@@ -1,6 +1,4 @@
 ﻿using Boudica.Classes;
-using Boudica.Database;
-using Boudica.Database.Models;
 using Boudica.Helpers;
 using Boudica.Services;
 using Discord;
@@ -17,10 +15,6 @@ namespace Boudica.Commands
 {
     public class ARGCommands : ModuleBase
     {
-        private readonly GuardianService _guardianService;
-        private readonly ItemService _itemService;
-        private readonly EververseService _eververseService;
-        private readonly InventoryService _inventoryService;
         private readonly IConfiguration _config;
 
         public ARGCommands(IServiceProvider services)

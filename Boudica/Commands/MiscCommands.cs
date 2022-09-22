@@ -1,6 +1,5 @@
-﻿using Boudica.Database;
-using Boudica.Database.Models;
-using Boudica.Helpers;
+﻿using Boudica.Helpers;
+using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -42,7 +41,7 @@ namespace Boudica.Commands
             {
                 if (ulong.TryParse(args.Substring(startIndex + 2, endIndex - (startIndex + 2)), out ulong userId))
                 {
-                    MongoDB.Models.Insult usersLastInsult = await _insultService.GetTest(Context.User.Id);
+                    MongoDB.Models.Insult usersLastInsult = await _insultService.Get(Context.User.Id);
                     if (usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.Date == DateTime.UtcNow.Date)
                     {
                         await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
@@ -60,7 +59,7 @@ namespace Boudica.Commands
                         await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
                     }
 
-                    await _insultService.UpsertUsersInsultTest(userId);
+                    await _insultService.UpsertUsersInsult(Context.User.Id);
                 }
                 else
                 {
@@ -109,7 +108,7 @@ namespace Boudica.Commands
                         await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
                     }
 
-                    await _insultService.UpsertUsersInsult(userId, usersLastInsult);
+                    await _insultService.UpsertUsersInsult(userId);
                 }
                 else
                 {
@@ -164,10 +163,8 @@ namespace Boudica.Commands
         [Command("joke")]
         public async Task JokeCommand()
         {
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
-            return;
-
-
+            //await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
+            //return;
             string joke = Jokes.GetRandomJoke();
             await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{joke}").Build());
         }

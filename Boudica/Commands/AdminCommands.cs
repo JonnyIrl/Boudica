@@ -1,4 +1,4 @@
-﻿using Boudica.Database.Models;
+﻿using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -14,17 +14,11 @@ namespace Boudica.Commands
     public class AdminCommands: ModuleBase
     {
         private readonly ActivityService _activityService;
-        private readonly GuardianService _guardianService;
-        private readonly GuardianReputationService _guardianReputationService;
-        private readonly RaidGroupService _raidGroupService;
 
         private const int CreatorPoints = 5;
         public AdminCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();
-            _guardianService = services.GetRequiredService<GuardianService>();
-            _guardianReputationService = services.GetRequiredService<GuardianReputationService>();
-            _raidGroupService = services.GetRequiredService<RaidGroupService>();
         }
 
         [Command("list open raids")]
@@ -44,12 +38,14 @@ namespace Boudica.Commands
             embedBuilder.WithTitle("Below is a list of open raids. The command to close the raid is at the beginning of each.");
             foreach(Raid openRaid in openRaids)
             {
-                ITextChannel channel = await Context.Guild.GetTextChannelAsync(ulong.Parse(openRaid.ChannelId));
+                if (openRaid.GuidId != Context.Guild.Id) 
+                    continue;
+                ITextChannel channel = await Context.Guild.GetTextChannelAsync(openRaid.ChannelId);
                 if (channel == null) continue;
-                IMessage message = await channel.GetMessageAsync(ulong.Parse(openRaid.MessageId));
+                IMessage message = await channel.GetMessageAsync(openRaid.MessageId);
                 if(message == null) continue;
 
-                double daysOld = Math.Round(DateTime.UtcNow.Subtract((DateTime)openRaid?.DateTimeCreated).TotalDays, 0);
+                double daysOld = Math.Round(DateTime.UtcNow.Subtract(openRaid.DateTimeCreated).TotalDays, 0);
                 sb.AppendLine($";close raid {openRaid.Id} | {daysOld} days open | Created By <@{openRaid.CreatedByUserId}> |\n{message.Embeds.First().Description}\n\n");
             }
 
@@ -81,9 +77,11 @@ namespace Boudica.Commands
             embedBuilder.WithTitle("Below is a list of open Fireteam. The command to close the fireteam is at the beginning of each.");
             foreach (Fireteam openFireteam in openFireteams)
             {
-                ITextChannel channel = await Context.Guild.GetTextChannelAsync(ulong.Parse(openFireteam.ChannelId));
+                if (openFireteam.GuidId != Context.Guild.Id)
+                    continue;
+                ITextChannel channel = await Context.Guild.GetTextChannelAsync(openFireteam.ChannelId);
                 if (channel == null) continue;
-                IMessage message = await channel.GetMessageAsync(ulong.Parse(openFireteam.MessageId));
+                IMessage message = await channel.GetMessageAsync(openFireteam.MessageId);
                 if (message == null) continue;
 
                 double daysOld = Math.Round(DateTime.UtcNow.Subtract((DateTime)openFireteam?.DateTimeCreated).TotalDays, 0);
