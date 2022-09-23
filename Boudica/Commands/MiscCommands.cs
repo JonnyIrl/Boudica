@@ -156,13 +156,50 @@ namespace Boudica.Commands
         }
 
 
-        [Command("coinflip")]
+        [Command("coinflip", RunMode =RunMode.Async)]
         public async Task CoinflipCommand()
         {
-            await ReplyAsync("Invalid command, supply either heads or tails after the command like ;coinflip heads");
+            Random random = new Random();
+            int number = random.Next(0, 2);
+
+            string fileName;
+            if (number == 0)
+            {
+                fileName = "https://media.giphy.com/media/WyzyENjdELhS4EnuYb/giphy.gif";
+            }
+            else
+            {
+                fileName = "https://media.giphy.com/media/K7OLwCi2fWQ1YaTItI/giphy.gif";
+            }
+            var embed = new EmbedBuilder()
+            {
+                ImageUrl = $"{fileName}",
+                Description = "Flipping coin...",
+                Color = Color.Orange
+            }.Build();
+
+            IUserMessage userMessage = await Context.Channel.SendMessageAsync(embed: embed);
+            await Task.Delay(3000);
+
+            await userMessage.ModifyAsync(x =>
+            {
+                EmbedBuilder embed = new EmbedBuilder();
+                embed.ImageUrl = $"{fileName}";
+                if (number == 0 )
+                {
+                    embed.WithDescription("**Heads!**");
+                    embed.WithColor(Color.Green);
+                }
+                else if (number == 1)
+                {
+                    embed.WithDescription("**Tails!**");
+                    embed.WithColor(Color.Green);
+                }
+                x.Embed = embed.Build();
+            });
         }
 
-        [Command("coinflip")]
+        [Command("coinflip", RunMode = RunMode.Async)]
         public async Task CoinflipCommand([Remainder] string args)
         {
             if (args == null || (args.ToLower() != "heads" && args.ToLower() != "tails"))
