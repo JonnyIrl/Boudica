@@ -85,6 +85,36 @@ namespace Boudica.Commands
             return args;
         }
 
+        private async Task<string> CheckAlertRaidCommandIsValid(string args)
+        {
+            if (args == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;roll call/alert/rollcall/ raid 16").Build());
+                return null;
+            }
+
+            if (args.ToLower().StartsWith("id"))
+            {
+                args = args.Substring(2).TrimStart();
+            }
+
+            string[] split = args.Split(" ");
+            if (split.Length >= 2)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;roll call/alert/rollcall/ raid 16").Build());
+                return null;
+            }
+
+            int.TryParse(split[0], out int raidId);
+            if (raidId <= 0)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command arguments, supply the raid id located in the footer of a raid e.g.\n\n;roll call/alert/rollcall/ raid 16").Build());
+                return null;
+            }
+
+            return args;
+        }
+
         private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid)
         {
             if (existingRaid == null)
@@ -115,6 +145,35 @@ namespace Boudica.Commands
 
             return true;
         }
+
+        private async Task<bool> CheckCanAlert(Raid existingRaid)
+        {
+
+            if (existingRaid == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
+                return false;
+            }
+            if (existingRaid.CreatedByUserId != Context.User.Id)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only the person who created the Raid can alert the players").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeAlerted.Date == DateTime.UtcNow.Date)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only roll call/rollcall/alert once per day").Build());
+                return false;
+            }
+
+            return true;
+        }
         #endregion
 
         #region Mongo Raid
@@ -127,7 +186,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            List<ActivityUser> addedUsers = await AddPlayersToNewRaid(args);
+            List<ActivityUser> addedUsers = await AddPlayersToNewActivity(args);
             MongoDB.Models.Raid newRaid = new MongoDB.Models.Raid()
             {
                 DateTimeCreated = DateTime.UtcNow,
@@ -173,8 +232,13 @@ namespace Boudica.Commands
             sb.AppendLine();
 
             var user = Context.User;
-
-            embed.Description = sb.ToString();
+            string description = sb.ToString();
+            foreach(ActivityUser activityUser in addedUsers)
+            {
+                description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
+            }
+            description = description.Trim();
+            embed.Description = description;
 
             AddActivityUsersField(embed, "Players", newRaid.Players);
             AddActivityUsersField(embed, "Subs", newRaid.Substitutes);
@@ -313,6 +377,47 @@ namespace Boudica.Commands
 
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
         }
+
+        [Command("alert raid")]
+        [Alias("rollcall raid", "roll call raid")]
+        public async Task AlertRaid([Remainder] string args)
+        {
+            string result = await CheckAlertRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckCanAlert(existingRaid);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeAlerted = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach(ActivityUser player in existingRaid.Players)
+            {
+                if (player.UserId == Context.User.Id) continue;
+                sb.Append($"<@{player.UserId}> ");
+            }
+
+            sb.Append("Are you all still ok for this raid?");
+            await message.ReplyAsync(sb.ToString());
+        }
         #endregion
 
         #region Fireteam
@@ -339,6 +444,7 @@ namespace Boudica.Commands
                 return;
             }
 
+            List<ActivityUser> addedUsers = await AddPlayersToNewActivity(args, fireteamSize - 1);
             MongoDB.Models.Fireteam newFireteam = new MongoDB.Models.Fireteam()
             {
                 DateTimeCreated = DateTime.UtcNow,
@@ -352,6 +458,10 @@ namespace Boudica.Commands
                 }
             };
 
+            if (addedUsers.Any())
+            {
+                newFireteam.Players.AddRange(addedUsers);
+            }
             newFireteam = await _activityService.CreateFireteamAsync(newFireteam);
             if (newFireteam.Id <= 0)
             {
@@ -380,10 +490,16 @@ namespace Boudica.Commands
 
             var user = Context.User;
 
-            embed.Description = sb.ToString();
+            string description = sb.ToString();
+            foreach (ActivityUser activityUser in addedUsers)
+            {
+                description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
+            }
+            description = description.Trim();
+            embed.Description = description;
 
-            embed.AddField("Players", $"<@{user.Id}>");
-            embed.AddField("Subs", "-");
+            AddActivityUsersField(embed, "Players", newFireteam.Players);
+            AddActivityUsersField(embed, "Subs", newFireteam.Substitutes);
 
             embed.Footer = new EmbedFooterBuilder()
             {
@@ -391,17 +507,8 @@ namespace Boudica.Commands
             };
 
             IUserMessage newMessage;
-            //IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
-            //if (role != null)
-            //{
-            //    // this will reply with the embed
-            //    newMessage = await ReplyAsync(role.Mention, false, embed.Build());
-            //}
-            //else
-            //{
-                // this will reply with the embed
-                newMessage = await ReplyAsync(null, false, embed.Build());
-            //}
+
+            newMessage = await ReplyAsync(null, false, embed.Build());
 
 
             newFireteam.MessageId = newMessage.Id;
@@ -598,7 +705,7 @@ namespace Boudica.Commands
 
             return true;
         }
-        private async Task<List<ActivityUser>> AddPlayersToNewRaid(string args)
+        private async Task<List<ActivityUser>> AddPlayersToNewActivity(string args, int maxCount = 5)
         {
             string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
             List<ActivityUser> activityUsers = new List<ActivityUser>();
@@ -629,7 +736,7 @@ namespace Boudica.Commands
                 }               
             }
 
-            while (activityUsers.Count > 5)
+            while (activityUsers.Count > maxCount)
             {
                 activityUsers.RemoveAt(activityUsers.Count -1);
             }

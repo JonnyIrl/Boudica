@@ -297,6 +297,13 @@ namespace Boudica.Commands
                         return activityResponse;
                     }
 
+                    //Already joined
+                    if (existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
                     if (existingRaid.MaxPlayerCount == existingRaid.Players.Count)
                     {
                         return activityResponse;
@@ -308,12 +315,6 @@ namespace Boudica.Commands
                     {
                         existingRaid.Substitutes?.Remove(subUser);
                         activityResponse.PreviousReaction = true;
-                    }
-                    //Already Joined
-                    else if (existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
-                    {
-                        activityResponse.Success = true;
-                        return activityResponse;
                     }
 
                     //Now Add them to the Players list

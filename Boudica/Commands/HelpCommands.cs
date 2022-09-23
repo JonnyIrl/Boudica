@@ -18,9 +18,12 @@ namespace Boudica.Commands
             builder.Title = "Here's a list of commands!";
             builder.Description = $"\n";
             builder.AddField("Create Raid", $"{Prefix}create raid some text to describe your raid");
+            builder.AddField("Create Raid with existing Players", $"{Prefix}create raid some text to describe your raid @Person1 @Person2");
             builder.AddField("Edit Raid", $"{Prefix}edit raid Id some new text here");
             builder.AddField("Close Raid", $"{Prefix}close raid Id");
+            builder.AddField("Rollcall Raid", $"{Prefix}alert/roll call/rollcall raid Id - This will @ all the members of the Raid to make sure they are still good to raid.");
             builder.AddField("Create Fireteam", $"{Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam");
+            builder.AddField("Create Fireteam with existing Players", $"{Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam @Person1 @Person2");
             builder.AddField("Edit Fireteam", $"{Prefix}edit fireteam Id some new text here");
             builder.AddField("Close Fireteam", $"{Prefix}close fireteam Id");
             builder.AddField("Insult", $"{Prefix}insult @Somebody");

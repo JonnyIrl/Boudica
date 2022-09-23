@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -29,12 +30,19 @@ namespace Boudica.MongoDB
             if (isMongoLive)
             {
                 // connected
-                int breakHere = 0;
+                using (StreamWriter sw = new StreamWriter(Directory.GetCurrentDirectory() + "/mongoConnection.txt", true))
+                {
+                    sw.WriteLine("Connected " + DateTime.UtcNow.ToString());
+                }
             }
             else
             {
                 // couldn't connect
                 int breakHere = 0;
+                using (StreamWriter sw = new StreamWriter(Directory.GetCurrentDirectory() + "/mongoConnection.txt", true))
+                {
+                    sw.WriteLine("Could not connect " + DateTime.UtcNow.ToString());
+                }
             }
         }
 
