@@ -463,6 +463,11 @@ namespace Boudica.Commands
                     {
                         existingRaid.Players?.Remove(playerUser);
                     }
+                    else
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
 
                     existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
 
@@ -602,6 +607,11 @@ namespace Boudica.Commands
                     {
                         existingRaid.Substitutes?.Remove(subUser);
                     }
+                    else
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
 
                     existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
 
@@ -633,6 +643,11 @@ namespace Boudica.Commands
                     if (subUser != null)
                     {
                         existingFireteam.Substitutes?.Remove(subUser);
+                    }
+                    else
+                    {
+                        activityResponse.Success = true;
+                        return activityResponse;
                     }
 
                     existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);

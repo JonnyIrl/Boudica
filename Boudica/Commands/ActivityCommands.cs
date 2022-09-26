@@ -17,6 +17,11 @@ namespace Boudica.Commands
     public class ActivityCommands : ModuleBase
     {
         private readonly ActivityService _activityService;
+        public delegate void AddRemoveReactionDelegate(ulong userId, bool addReaction);
+        public event AddRemoveReactionDelegate OnAddRemoveReaction;
+
+        private Emoji _jEmoji = new Emoji("🇯");
+        private Emoji _sEmoji = new Emoji("🇸");
 
         private const int CreatorPoints = 5;
         public ActivityCommands(IServiceProvider services)
@@ -115,7 +120,7 @@ namespace Boudica.Commands
             return args;
         }
 
-        private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid)
+        private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid, bool forceClose)
         {
             if (existingRaid == null)
             {
@@ -129,7 +134,7 @@ namespace Boudica.Commands
                 return false;
             }
 
-            if (existingRaid.CreatedByUserId != Context.User.Id)
+            if (forceClose)
             {
                 IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
                 if (guildUser != null)
@@ -139,8 +144,16 @@ namespace Boudica.Commands
                         return true;
                     }
                 }
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only the Guardian who created the raid or an Admin can edit/close a raid").Build());
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only a Moderator or Admin can edit/close a raid with this command.").Build());
                 return false;
+            }
+            else
+            {
+                if (existingRaid.CreatedByUserId != Context.User.Id)
+                {
+                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only the Guardian who created the raid can edit/close a raid").Build());
+                    return false;
+                }
             }
 
             return true;
@@ -289,7 +302,7 @@ namespace Boudica.Commands
             int raidId = int.Parse(split[0]);
 
             MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid);
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
             if (existingRaidResult == false) return;
 
             if (Context.Guild.Id != existingRaid.GuidId)
@@ -327,6 +340,159 @@ namespace Boudica.Commands
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been edited!").Build());
         }
 
+        [Command("remove player raid")]
+        public async Task RemovePlayerFromRaid([Remainder] string args)
+        {
+            string result = await CheckEditRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            int oldPlayerCount = existingRaid.Players.Count;
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            if (existingRaidResult == false) return;
+
+            if (Context.Guild.Id != existingRaid.GuidId)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+
+            List<ActivityUser> usersToRemove = await AddPlayersToNewActivity(args);
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser userToRemove in usersToRemove)
+            {
+                IGuildUser guildUser = await Context.Guild.GetUserAsync(userToRemove.UserId);
+                if (guildUser != null)
+                {
+                    sb.Append($"<@{userToRemove.UserId}>");
+                    existingRaid.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                    await message.RemoveReactionAsync(_jEmoji, guildUser);
+                }
+            }
+
+            if(oldPlayerCount == existingRaid.Players.Count)
+            {
+                await message.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Could not find player to remove from Raid {existingRaid.Id}").Build());
+                return;
+            }
+
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
+
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Raid").Build());
+        }
+
+        [Command("add player raid")]
+        public async Task AddPlayerToRaid([Remainder] string args)
+        {
+            string result = await CheckEditRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            int oldPlayerCount = existingRaid.Players.Count;
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            if (existingRaidResult == false) return;
+
+            if (Context.Guild.Id != existingRaid.GuidId)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+
+            if(existingRaid.Players.Count == existingRaid.MaxPlayerCount)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This raid is already full!").Build());
+                return;
+            }
+
+            List<ActivityUser> usersToAdd = await AddPlayersToNewActivity(args);
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser userToRemove in usersToAdd)
+            {
+                IGuildUser guildUser = await Context.Guild.GetUserAsync(userToRemove.UserId);
+                if (guildUser != null)
+                {
+                    
+                    ActivityUser existingUser = existingRaid.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId);
+                    //Already added
+                    if (existingUser != null)
+                    {
+                        continue;
+                    }
+                    else if(existingRaid.Players.Count < existingRaid.MaxPlayerCount)
+                    {
+                        sb.Append($"<@{userToRemove.UserId}>");
+                        existingRaid.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
+                    }
+                }
+            }
+
+            if (oldPlayerCount == existingRaid.Players.Count)
+            {
+                await message.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Could not find player to add to Raid {existingRaid.Id} or player already exists").Build());
+                return;
+            }
+
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
+
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Raid").Build());
+        }
+
         [Command("close raid")]
         public async Task CloseRaid()
         {
@@ -343,7 +509,52 @@ namespace Boudica.Commands
             int raidId = int.Parse(split[0]);
 
             MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid);
+            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeClosed = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            modifiedEmbed.Title = "This raid is now closed";
+            modifiedEmbed.Color = Color.Red;
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
+        }
+
+        [Command("forceclose raid")]
+        public async Task ForceCloseRaid([Remainder] string args)
+        {
+            string result = await CheckCloseRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid, true);
             if (exisingRaidResult == false) return;
 
             existingRaid.DateTimeClosed = DateTime.UtcNow;
