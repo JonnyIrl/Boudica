@@ -1,5 +1,6 @@
 ﻿using Boudica.Classes;
 using Boudica.Helpers;
+using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
@@ -16,10 +17,11 @@ namespace Boudica.Commands
     public class ARGCommands : ModuleBase
     {
         private readonly IConfiguration _config;
+        private readonly GuardianService _guardianService;
 
         public ARGCommands(IServiceProvider services)
         {
-            //_guardianService = services.GetRequiredService<GuardianService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
             //_itemService = services.GetRequiredService<ItemService>();
             //_eververseService = services.GetRequiredService<EververseService>();
             //_inventoryService = services.GetRequiredService<InventoryService>();
@@ -60,34 +62,49 @@ namespace Boudica.Commands
 
         //}
 
-        //[Command("leaderboard")]
-        //public async Task GetLeaderboard()
-        //{
-        //    List<Guardian> guardians = await _guardianService.GetLeaderboard();
-        //    if(guardians.Any() == false)
-        //    {
-        //        await ReplyAsync("There is nobody in the leaderboards... yet");
-        //        return;
-        //    }
+        [Command("leaderboard")]
+        public async Task GetLeaderboard()
+        {
+            List<Guardian> guardians = await _guardianService.GetLeaderboard();
+            if (guardians.Any() == false)
+            {
+                await ReplyAsync("There is nobody in the leaderboards... yet");
+                return;
+            }
+            ulong glimmerId = 0;
+#if DEBUG
+            glimmerId = 1009200271475347567;
+#else
+            glimmerId = 728197708074188802;
+#endif
+            bool parsedEmote = Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out Emote glimmerEmote);
 
-        //    var embed = new EmbedBuilder
-        //    {
-        //        Title = "Leaderboard",
-        //        Color = Color.Blue
-        //    };
+            var embed = new EmbedBuilder
+            {
+                Color = Color.Blue
+            };
 
-        //    StringBuilder stringBuilder = new StringBuilder();
-        //    int rank = 1;
-        //    foreach(Guardian guardian in guardians)
-        //    {
-        //        stringBuilder.AppendLine($"{GetRank(rank)} <@{guardian.UserId}>");
-        //        rank++;
-        //    }
-        //    embed.Description = stringBuilder.ToString();
+            StringBuilder stringBuilder = new StringBuilder();
+            int rank = 1;
+            foreach (Guardian guardian in guardians)
+            {
+                IGuildUser user = await Context.Guild.GetUserAsync(guardian.Id);
+                if (user == null) continue;
 
-        //    embed.WithFooter(footer => footer.Text = "Increase your rank by completing discord tasks and earning glimmer");
-        //    await ReplyAsync(embed: embed.Build());
-        //}
+                string userId = $"<@{guardian.Id}>";
+
+                if(parsedEmote == false)
+                    stringBuilder.AppendLine($"{GetRank(rank)}<@{guardian.Id}>\t{string.Format("{0:n0}", guardian.Glimmer)} Glimmer");
+                else
+                    stringBuilder.AppendLine($"{GetRank(rank).PadRight(6, ' ')} {userId.PadRight(12, ' ')} {glimmerEmote} {string.Format("{0:n0}", guardian.Glimmer)}");
+                rank++;
+            }
+
+            embed.AddField("Leaderboard", stringBuilder.ToString(), false);
+
+            embed.WithFooter(footer => footer.Text = "Increase your rank by creating/participating in activities, from reactions and [REDACTED]");
+            await ReplyAsync(embed: embed.Build());
+        }
 
         //[Command("createitem")]
         //public async Task Create([Remainder] string args)
@@ -114,34 +131,34 @@ namespace Boudica.Commands
         //    }
         //}
 
-        //private string GetRank(int rank)
-        //{
-        //    switch(rank)
-        //    {
-        //        case 1:
-        //            return "1st.";
-        //        case 2:
-        //            return "2nd.";
-        //        case 3:
-        //            return "3rd.";
-        //        case 4:
-        //            return "4th.";
-        //        case 5:
-        //            return "5th.";
-        //        case 6:
-        //            return "6th.";
-        //        case 7:
-        //            return "7th.";
-        //        case 8:
-        //            return "8th.";
-        //        case 9:
-        //            return "9th.";
-        //        case 10:
-        //            return "10th.";
-        //    }
+        private string GetRank(int rank)
+        {
+            switch (rank)
+            {
+                case 1:
+                    return "1st.";
+                case 2:
+                    return "2nd.";
+                case 3:
+                    return "3rd.";
+                case 4:
+                    return "4th.";
+                case 5:
+                    return "5th.";
+                case 6:
+                    return "6th.";
+                case 7:
+                    return "7th.";
+                case 8:
+                    return "8th.";
+                case 9:
+                    return "9th.";
+                case 10:
+                    return "10th.";
+            }
 
-        //    return "N/A";
-        //}
+            return "N/A";
+        }
 
 
         //[Command("inventory")]

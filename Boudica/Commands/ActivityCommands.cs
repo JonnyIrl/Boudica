@@ -17,16 +17,20 @@ namespace Boudica.Commands
     public class ActivityCommands : ModuleBase
     {
         private readonly ActivityService _activityService;
+        private readonly GuardianService _guardianService;
         public delegate void AddRemoveReactionDelegate(ulong userId, bool addReaction);
         public event AddRemoveReactionDelegate OnAddRemoveReaction;
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
+        private Emote _glimmerEmote;
 
         private const int CreatorPoints = 5;
         public ActivityCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
+            Emote.TryParse("<:misc_glimmer:728197708074188802>", out _glimmerEmote);
         }
 
         #region Raid
@@ -222,6 +226,8 @@ namespace Boudica.Commands
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("I couldn't create the raid because Jonny did something wrong!").Build());
                 return;
             }
+
+            await _guardianService.IncreaseGlimmerAsync(newRaid.CreatedByUserId, 3);
 
 
             var embed = new EmbedBuilder();
@@ -542,6 +548,11 @@ namespace Boudica.Commands
             });
 
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
+
+            Task.Run(async () =>
+            {
+                await CalculateGlimmerForRaid(existingRaid);
+            });
         }
 
         [Command("forceclose raid")]
@@ -980,6 +991,17 @@ namespace Boudica.Commands
 
             embed.AddField(title, sb.ToString().Trim());
             return embed;
+        }
+        private async Task CalculateGlimmerForRaid(Raid closedRaid)
+        {
+            if (closedRaid == null) return;
+            if (closedRaid.DateTimeClosed == DateTime.MinValue) return;
+            int increaseAmount = 1 * closedRaid.Players.Count;
+            foreach(ActivityUser user in closedRaid.Players)
+            {
+                await _guardianService.IncreaseGlimmerAsync(user.UserId, 1 * closedRaid.Players.Count);
+                Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
+            }
         }
         #endregion
 

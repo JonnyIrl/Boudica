@@ -92,6 +92,7 @@ class Program
             .AddSingleton<CommandHandler>()
             .AddScoped<ActivityService>()
             .AddScoped<InsultService>()
+            .AddScoped<GuardianService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
 
             .BuildServiceProvider();

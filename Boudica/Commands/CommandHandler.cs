@@ -25,6 +25,7 @@ namespace Boudica.Commands
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
         private readonly ActivityService _activityService;
+        private readonly GuardianService _guardianService;
         private char Prefix = ';';
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
@@ -33,6 +34,7 @@ namespace Boudica.Commands
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
+        private Emote _glimmerEmote;
 
         public CommandHandler(IServiceProvider services)
         {
@@ -42,6 +44,7 @@ namespace Boudica.Commands
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             _activityService = services.GetRequiredService<ActivityService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
             _services = services;
 
             // get prefix from the configuration file
@@ -61,6 +64,8 @@ namespace Boudica.Commands
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+
+            Emote.TryParse("<:misc_glimmer:728197708074188802>", out _glimmerEmote);
         }
 
         private async Task ModalSubmitted(SocketModal arg)
@@ -192,7 +197,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            if (reaction.Emote.Name == "🇸")
+            else if (reaction.Emote.Name == "🇸")
             {
                 var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
                 if (user == null || user.IsBot)
@@ -221,6 +226,18 @@ namespace Boudica.Commands
 
                 return;
             }
+
+            else if (reaction.Emote.Name == "misc_glimmer")
+            {
+                var originalMessage = await message.GetOrDownloadAsync();
+                if (originalMessage != null)
+                {
+                    ulong authorId = originalMessage.Author.Id;
+                    //Stop person adding increasing their own
+                    if(authorId != reaction.UserId)
+                        await _guardianService.IncreaseGlimmerAsync(authorId, 1);
+                }
+            }
         }
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
@@ -244,7 +261,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            if (reaction.Emote.Name == "🇸")
+            else if (reaction.Emote.Name == "🇸")
             {
                 lock (_lock)
                 {
@@ -262,6 +279,19 @@ namespace Boudica.Commands
                 ActivityResponse result = await TestRemoveSubFromActivityV2(message, user); //await RemoveSubFromActivityV2(message, reaction.UserId);
                 return;
             }
+
+            else if (reaction.Emote.Name == "misc_glimmer")
+            {
+                var originalMessage = await message.GetOrDownloadAsync();
+                if (originalMessage != null)
+                {
+                    ulong authorId = originalMessage.Author.Id;
+                    //Stop person decreasing their own
+                    if (authorId != reaction.UserId)
+                        await _guardianService.RemoveGlimmerAsync(authorId, 1);
+                }
+            }
+
         }
         private async Task<ActivityResponse> TestAddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
