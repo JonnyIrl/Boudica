@@ -34,7 +34,12 @@ namespace Boudica.Commands
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
-
+        private Emote _glimmerEmote = null;
+#if DEBUG
+        private const ulong glimmerId = 1009200271475347567;
+#else
+        private const ulong glimmerId = 728197708074188802;
+#endif
         public CommandHandler(IServiceProvider services)
         {
             // juice up the fields with these services
@@ -45,6 +50,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
             _services = services;
+            Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
 
             // get prefix from the configuration file
             Prefix = Char.Parse(_config["Prefix"]);
@@ -168,7 +174,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await TestAddPlayerToActivityV2(message, user);
+                ActivityResponse result = await AddPlayerToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -201,7 +207,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await TestAddSubstituteToActivityV2(message, user);
+                ActivityResponse result = await AddSubstituteToActivityV2(message, user);
                 if (result.Success == false)
                 {
                     var originalMessage = await message.GetOrDownloadAsync();
@@ -254,7 +260,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await TestRemovePlayerFromActivityV2(message, user); //await RemovePlayerFromActivityV2(message, reaction.UserId);
+                ActivityResponse result = await RemovePlayerFromActivityV2(message, user);
                 return;
             }
 
@@ -273,7 +279,7 @@ namespace Boudica.Commands
                 {
                     return;
                 }
-                ActivityResponse result = await TestRemoveSubFromActivityV2(message, user); //await RemoveSubFromActivityV2(message, reaction.UserId);
+                ActivityResponse result = await RemoveSubFromActivityV2(message, user);
                 return;
             }
 
@@ -290,7 +296,7 @@ namespace Boudica.Commands
             }
 
         }
-        private async Task<ActivityResponse> TestAddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -318,15 +324,23 @@ namespace Boudica.Commands
 
                 if (activityType.Activity == ActivityTypes.Raid)
                 {
-                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
                     if (existingRaid == null)
                     {
                         return activityResponse;
                     }
 
                     //Already joined
-                    if (existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    ActivityUser existingPlayer = existingRaid.Players.FirstOrDefault(x => x.UserId == user.Id);
+                    if (existingPlayer != null)
                     {
+                        //If the player hasn't already reacted then add them.
+                        if (existingPlayer.Reacted == false)
+                        {
+                            existingPlayer.Reacted = true;
+                            //Need to update the message to include the person has reacted.
+                            await UpdateRaidMessage(originalMessage, embed, existingRaid);
+                        }
                         activityResponse.Success = true;
                         return activityResponse;
                     }
@@ -345,7 +359,7 @@ namespace Boudica.Commands
                     }
 
                     //Now Add them to the Players list
-                    existingRaid.Players.Add(new ActivityUser(user.Id, user.Username));
+                    existingRaid.Players.Add(new ActivityUser(user.Id, user.Username, true));
                     existingRaid = await _activityService.UpdateRaidAsync(existingRaid);
                     if (existingRaid.Players.Count == existingRaid.MaxPlayerCount)
                     {
@@ -353,37 +367,14 @@ namespace Boudica.Commands
                         activityResponse.FullMessage = $"Raid Id {existingRaid.Id} is now full. Feel free to Sub or watch if a slot becomes available!";
                     }
 
-                    var modifiedEmbed = new EmbedBuilder();
-                    AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
-                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingRaid.Substitutes);
-
-                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                    await originalMessage.ModifyAsync(x =>
-                    {
-                        x.Embed = modifiedEmbed.Build();
-                    });
-
-                    if (existingRaid.Players.Count == existingRaid.MaxPlayerCount)
-                    {
-                        try
-                        {
-                            await originalMessage.ReplyAsync($"<@{existingRaid.CreatedByUserId}>, your Raid is now full!");
-                        }
-                        catch (Exception ex)
-                        {
-
-                        }
-                    }
+                    await UpdateRaidMessage(originalMessage, embed, existingRaid);
 
                     activityResponse.Success = true;
                     return activityResponse;
                 }
                 else if (activityType.Activity == ActivityTypes.Fireteam)
                 {
-                    MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
+                    Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
                     if (existingFireteam == null)
                     {
                         return activityResponse;
@@ -402,14 +393,22 @@ namespace Boudica.Commands
                         activityResponse.PreviousReaction = true;
                     }
                     //Already Joined
-                    else if (existingFireteam.Players.FirstOrDefault(x => x.UserId == user.Id) != null)
+                    ActivityUser existingPlayer = existingFireteam.Players.FirstOrDefault(x => x.UserId == user.Id);
+                    if (existingPlayer != null)
                     {
+                        //If the player hasn't already reacted then add them.
+                        if (existingPlayer.Reacted == false)
+                        {
+                            existingPlayer.Reacted = true;
+                            //Need to update the message to include the person has reacted.
+                            await UpdateFireteamMessage(originalMessage, embed, existingFireteam);
+                        }
                         activityResponse.Success = true;
                         return activityResponse;
                     }
 
                     //Now Add them to the Players list
-                    existingFireteam.Players.Add(new ActivityUser(user.Id, user.Username));
+                    existingFireteam.Players.Add(new ActivityUser(user.Id, user.Username, true));
                     existingFireteam = await _activityService.UpdateFireteamAsync(existingFireteam);
                     if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
                     {
@@ -417,30 +416,7 @@ namespace Boudica.Commands
                         activityResponse.FullMessage = $"Fireteam Id {existingFireteam.Id} is now full. Feel free to Sub or watch if a slot becomes available!";
                     }
 
-                    var modifiedEmbed = new EmbedBuilder();
-                    AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
-                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingFireteam.Substitutes);
-
-                    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
-
-                    await originalMessage.ModifyAsync(x =>
-                    {
-                        x.Embed = modifiedEmbed.Build();
-                    });
-
-                    if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
-                    {
-                        try
-                        {
-                            await originalMessage.ReplyAsync($"<@{existingFireteam.CreatedByUserId}>, your Fireteam is now full!");
-                        }
-                        catch (Exception ex)
-                        {
-
-                        }
-                    }
+                    await UpdateFireteamMessage(originalMessage, embed, existingFireteam);
 
                     activityResponse.Success = true;
                     return activityResponse;
@@ -450,7 +426,64 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-        private async Task<ActivityResponse> TestRemovePlayerFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+
+        private async Task UpdateRaidMessage(IUserMessage originalMessage, IEmbed? embed, Raid existingRaid)
+        {
+            var modifiedEmbed = new EmbedBuilder();
+            AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
+
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
+
+            await originalMessage.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            if (existingRaid.Players.Count == existingRaid.MaxPlayerCount)
+            {
+                try
+                {
+                    await originalMessage.ReplyAsync($"<@{existingRaid.CreatedByUserId}>, your Raid is now full!");
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+        }
+
+        private async Task UpdateFireteamMessage(IUserMessage originalMessage, IEmbed? embed, Fireteam existingFireteam)
+        {
+            var modifiedEmbed = new EmbedBuilder();
+            AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
+
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+
+            await originalMessage.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+            {
+                try
+                {
+                    await originalMessage.ReplyAsync($"<@{existingFireteam.CreatedByUserId}>, your Fireteam is now full!");
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+        }
+
+        private async Task<ActivityResponse> RemovePlayerFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -504,7 +537,7 @@ namespace Boudica.Commands
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -561,7 +594,7 @@ namespace Boudica.Commands
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -594,7 +627,7 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-        private async Task<ActivityResponse> TestRemoveSubFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        private async Task<ActivityResponse> RemoveSubFromActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -648,7 +681,7 @@ namespace Boudica.Commands
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -685,7 +718,7 @@ namespace Boudica.Commands
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -700,7 +733,7 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-        private async Task<ActivityResponse> TestAddSubstituteToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        private async Task<ActivityResponse> AddSubstituteToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             ActivityResponse activityResponse = new ActivityResponse(false, false);
             var originalMessage = await message.GetOrDownloadAsync();
@@ -754,11 +787,11 @@ namespace Boudica.Commands
 
                     var modifiedEmbed = new EmbedBuilder();
                     AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
-                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingRaid.Substitutes);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -796,11 +829,11 @@ namespace Boudica.Commands
 
                     var modifiedEmbed = new EmbedBuilder();
                     AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
-                    AddActivityUsersField(modifiedEmbed, "Substitutes", existingFireteam.Substitutes);
+                    AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
 
                     EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
                     EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+                    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
 
                     await originalMessage.ModifyAsync(x =>
                     {
@@ -817,6 +850,8 @@ namespace Boudica.Commands
         }
         private EmbedBuilder AddActivityUsersField(EmbedBuilder embed, string title, List<ActivityUser> activityUsers)
         {
+            const string PlayersTitle = "Players";
+            const string SubstitutesTitle = "Subs";
             if(activityUsers == null || activityUsers.Count == 0)
             {
                 embed.AddField(title, "-");
@@ -826,7 +861,10 @@ namespace Boudica.Commands
             StringBuilder sb = new StringBuilder();
             foreach(ActivityUser user in activityUsers)
             {
-                sb.AppendLine(user.DisplayName);
+                if(_glimmerEmote != null && title != SubstitutesTitle)
+                    sb.AppendLine($"{_glimmerEmote} {user.DisplayName}");
+                else 
+                    sb.AppendLine(user.DisplayName);
             }
 
             embed.AddField(title, sb.ToString().Trim());

@@ -25,12 +25,19 @@ namespace Boudica.Commands
         private Emoji _sEmoji = new Emoji("🇸");
         private Emote _glimmerEmote;
 
+#if DEBUG
+        private const ulong glimmerId = 1009200271475347567;
+#else
+        private const ulong glimmerId = 728197708074188802;
+#endif
+
         private const int CreatorPoints = 5;
         public ActivityCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
-            Emote.TryParse("<:misc_glimmer:728197708074188802>", out _glimmerEmote);
+            if (Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote) == false)
+                _glimmerEmote = null;
         }
 
         #region Raid
@@ -204,16 +211,16 @@ namespace Boudica.Commands
             }
 
             List<ActivityUser> addedUsers = await AddPlayersToNewActivity(args);
-            MongoDB.Models.Raid newRaid = new MongoDB.Models.Raid()
+            Raid newRaid = new Raid()
             {
                 DateTimeCreated = DateTime.UtcNow,
                 CreatedByUserId = Context.User.Id,
                 GuidId = Context.Guild.Id,
                 ChannelId = Context.Channel.Id,
                 MaxPlayerCount = 6,
-                Players = new List<MongoDB.Models.ActivityUser>()
+                Players = new List<ActivityUser>()
                 {
-                    new MongoDB.Models.ActivityUser(Context.User.Id, Context.User.Username)
+                    new ActivityUser(Context.User.Id, Context.User.Username, true)
                 }
             };
             if (addedUsers.Any())
@@ -227,25 +234,10 @@ namespace Boudica.Commands
                 return;
             }
 
-            await _guardianService.IncreaseGlimmerAsync(newRaid.CreatedByUserId, 3);
-
-
             var embed = new EmbedBuilder();
-            if (args.Contains("|"))
-                args = args.Substring(0, args.LastIndexOf("|"));
-
-            string[] split = args.Split('\n');
-            bool title = false;
-
             embed.WithColor(new Color(0, 255, 0));
             StringBuilder sb = new StringBuilder();
-            int startingPostion = title ? 1 : 0;
-
-            for (int i = startingPostion; i < split.Length; i++)
-            {
-                sb.AppendLine(split[i]);
-            }
-
+            sb.AppendLine(args);
             embed.WithAuthor(Context.User);
             sb.AppendLine();
             sb.AppendLine();
@@ -262,10 +254,7 @@ namespace Boudica.Commands
             AddActivityUsersField(embed, "Players", newRaid.Players);
             AddActivityUsersField(embed, "Subs", newRaid.Substitutes);
 
-            embed.Footer = new EmbedFooterBuilder()
-            {
-                Text = $"Raid Id {newRaid.Id}\nUse J to Join | Use S to Sub.\nA max of 6 players may join a raid"
-            };
+            EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
 
             IUserMessage newMessage;
             IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
@@ -307,7 +296,7 @@ namespace Boudica.Commands
             string[] split = result.Split(" ");
             int raidId = int.Parse(split[0]);
 
-            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
             bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
             if (existingRaidResult == false) return;
 
@@ -336,7 +325,7 @@ namespace Boudica.Commands
             modifiedEmbed.Description = description;
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             await message.ModifyAsync(x =>
             {
@@ -355,7 +344,7 @@ namespace Boudica.Commands
             string[] split = result.Split(" ");
             int raidId = int.Parse(split[0]);
 
-            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
             int oldPlayerCount = existingRaid.Players.Count;
             bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
             if (existingRaidResult == false) return;
@@ -403,7 +392,7 @@ namespace Boudica.Commands
             var embed = message.Embeds.FirstOrDefault();
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
             AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
 
@@ -487,7 +476,7 @@ namespace Boudica.Commands
             var embed = message.Embeds.FirstOrDefault();
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             AddActivityUsersField(modifiedEmbed, "Players", existingRaid.Players);
             AddActivityUsersField(modifiedEmbed, "Subs", existingRaid.Substitutes);
 
@@ -537,7 +526,7 @@ namespace Boudica.Commands
             var embed = message.Embeds.FirstOrDefault();
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             modifiedEmbed.Title = "This raid is now closed";
             modifiedEmbed.Color = Color.Red;
@@ -548,13 +537,13 @@ namespace Boudica.Commands
             });
 
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
-            Task.Run(async () =>
+            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.DateTimeClosed.Subtract(existingRaid.DateTimeCreated).TotalMinutes > 15 && existingRaid.Players.Count == existingRaid.MaxPlayerCount)
             {
-                var listOfReactions = await message.GetReactionUsersAsync(_jEmoji, 100).ToListAsync();
-                List<string> userNames = new List<string>();
-                listOfReactions.ForEach(x => userNames.AddRange(x.Where(x => x.IsBot == false).Select(x => x.Username)));
-                await CalculateGlimmerForRaid(existingRaid, userNames);
-            });
+                Task.Run(async () =>
+                {
+                    await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId);
+                });
+            }
         }
 
         [Command("forceclose raid")]
@@ -589,7 +578,7 @@ namespace Boudica.Commands
             var embed = message.Embeds.FirstOrDefault();
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             modifiedEmbed.Title = "This raid is now closed";
             modifiedEmbed.Color = Color.Red;
@@ -703,12 +692,25 @@ namespace Boudica.Commands
                 }
                 Task.Run(async () =>
                 {
-                    var listOfReactions = await message.GetReactionUsersAsync(_jEmoji, 100).ToListAsync();
-                    List<string> userNames = new List<string>();
-                    listOfReactions.ForEach(x => userNames.AddRange(x.Where(x => x.IsBot == false).Select(x => x.Mention.Replace("<@!", string.Empty).Replace(">", string.Empty))));
-                    await CalculateGlimmerForRaid(closedRaid, userNames);
+                    await CalculateGlimmerForActivity(closedRaid.Players, closedRaid.CreatedByUserId);
                 });
             }
+        }
+
+        [Command("reset all glimmer")]
+        public async Task ResetAllGlimmer()
+        {
+            if (Context.User.Id != 244209636897456129)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only Jonny can do this command.. loser").Build());
+                return;
+            }
+
+            Emoji failedEmote = new Emoji("❌");
+            Emoji successEmote = new Emoji("✅");
+
+            bool result = await _guardianService.ResetAllGlimmer();
+            await Context.Message.AddReactionAsync(result ? successEmote : failedEmote);
         }
         #endregion
 
@@ -737,16 +739,16 @@ namespace Boudica.Commands
             }
 
             List<ActivityUser> addedUsers = await AddPlayersToNewActivity(args, fireteamSize - 1);
-            MongoDB.Models.Fireteam newFireteam = new MongoDB.Models.Fireteam()
+            Fireteam newFireteam = new Fireteam()
             {
                 DateTimeCreated = DateTime.UtcNow,
                 CreatedByUserId = Context.User.Id,
                 GuidId = Context.Guild.Id,
                 ChannelId = Context.Channel.Id,
                 MaxPlayerCount = (byte)fireteamSize,
-                Players = new List<MongoDB.Models.ActivityUser>()
+                Players = new List<ActivityUser>()
                 {
-                    new MongoDB.Models.ActivityUser(Context.User.Id, Context.User.Username)
+                    new ActivityUser(Context.User.Id, Context.User.Username, true)
                 }
             };
 
@@ -761,28 +763,16 @@ namespace Boudica.Commands
                 return;
             }
 
-
             var embed = new EmbedBuilder();
-
-            string[] split = args.Split('\n');
-            bool title = false;
-
             embed.WithColor(new Color(0, 255, 0));
             StringBuilder sb = new StringBuilder();
-            int startingPostion = title ? 1 : 0;
-
-            for (int i = startingPostion; i < split.Length; i++)
-            {
-                sb.AppendLine(split[i]);
-            }
-
-            embed.WithAuthor(Context.User);
+            //Remove the number for the size of the fireteam from the string for the Description
+            sb.AppendLine(args.Substring(fireteamSize.ToString().Length + 1));
             sb.AppendLine();
             sb.AppendLine();
-
-            var user = Context.User;
-
             string description = sb.ToString();
+            embed.WithAuthor(Context.User);
+
             foreach (ActivityUser activityUser in addedUsers)
             {
                 description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
@@ -793,10 +783,7 @@ namespace Boudica.Commands
             AddActivityUsersField(embed, "Players", newFireteam.Players);
             AddActivityUsersField(embed, "Subs", newFireteam.Substitutes);
 
-            embed.Footer = new EmbedFooterBuilder()
-            {
-                Text = $"Fireteam Id {newFireteam.Id}\nUse J to Join | Use S to Sub.\nA max of {newFireteam.MaxPlayerCount} players may join this fireteam"
-            };
+            EmbedHelper.UpdateFooterOnEmbed(embed, newFireteam);
 
             IUserMessage newMessage;
 
@@ -823,7 +810,7 @@ namespace Boudica.Commands
             string[] split = result.Split(" ");
             int fireteamId = int.Parse(split[0]);
 
-            MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
             bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
             if (existingFireteamResult == false) return;
 
@@ -848,7 +835,7 @@ namespace Boudica.Commands
             modifiedEmbed.Description = description;
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             await message.ModifyAsync(x =>
             {
@@ -900,7 +887,7 @@ namespace Boudica.Commands
 
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             modifiedEmbed.Title = "This activity is now closed";
             modifiedEmbed.Color = Color.Red;
@@ -909,6 +896,15 @@ namespace Boudica.Commands
             {
                 x.Embed = modifiedEmbed.Build();
             });
+
+            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes > 15 && existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+            {
+                Task.Run(async () =>
+                {
+                    await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId);
+                });
+            }
+
 
             await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The Fireteam has been closed!").Build());
         }
@@ -1047,6 +1043,8 @@ namespace Boudica.Commands
         }
         private EmbedBuilder AddActivityUsersField(EmbedBuilder embed, string title, List<ActivityUser> activityUsers)
         {
+            const string PlayersTitle = "Players";
+            const string SubstitutesTitle = "Subs";
             if (activityUsers == null || activityUsers.Count == 0)
             {
                 embed.AddField(title, "-");
@@ -1056,25 +1054,33 @@ namespace Boudica.Commands
             StringBuilder sb = new StringBuilder();
             foreach (ActivityUser user in activityUsers)
             {
-                sb.AppendLine(user.DisplayName);
+                if (_glimmerEmote != null && title != SubstitutesTitle && user.Reacted)
+                    sb.AppendLine($"{_glimmerEmote} {user.DisplayName}");
+                else
+                    sb.AppendLine(user.DisplayName);
             }
 
             embed.AddField(title, sb.ToString().Trim());
             return embed;
         }
-        private async Task CalculateGlimmerForRaid(Raid closedRaid, List<string> userIds)
+        private async Task CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId)
         {
-            if (closedRaid == null) return;
-            //if (closedRaid.DateTimeClosed == DateTime.MinValue) return;
-            int increaseAmount = 1 * closedRaid.Players.Count;
-            foreach(ActivityUser user in closedRaid.Players)
+            if (activityUsers == null) return;
+            int increaseAmount = 1 * activityUsers.Count;
+            foreach(ActivityUser user in activityUsers)
             {
-                if (userIds.Contains(user.UserId.ToString()) == false && user.UserId != closedRaid.CreatedByUserId)
-                    continue;
-                await _guardianService.IncreaseGlimmerAsync(user.UserId, 1 * closedRaid.Players.Count);
+                if (user.UserId == creatorId)
+                {
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                }
+                else
+                {
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                }
                 Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
             }
         }
+
         #endregion
 
     }

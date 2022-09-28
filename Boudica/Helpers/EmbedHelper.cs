@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Boudica.MongoDB.Models;
+using Discord;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,16 +67,30 @@ namespace Boudica.Helpers
             modifiedEmbed.Color = embed.Color;
         }
 
-        public static void UpdateFooterOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        public static void UpdateFooterOnEmbed(EmbedBuilder modifiedEmbed, Raid raid)
         {
-            if (embed == null) return;
-            if (embed.Footer != null)
+            modifiedEmbed.Footer = new EmbedFooterBuilder()
             {
-                modifiedEmbed.Footer = new EmbedFooterBuilder()
-                {
-                    Text = embed.Footer.Value.ToString()
-                };
-            }
+                Text = $"Raid Id {raid.Id}\nUse J to Join | Use S to Sub.\nA max of 6 players may join a raid\n{GetGlimmerMessage(raid.Players)}"
+            };
+        }
+
+        public static void UpdateFooterOnEmbed(EmbedBuilder modifiedEmbed, Fireteam fireteam)
+        {
+            modifiedEmbed.Footer = new EmbedFooterBuilder()
+            {
+                Text = $"Fireteam Id {fireteam.Id}\nUse J to Join | Use S to Sub.\nA max of {fireteam.MaxPlayerCount} players may join a fireteam\n{GetGlimmerMessage(fireteam.Players)}"
+            };
+        }
+
+        private static string GetGlimmerMessage(List<ActivityUser> activityUsers)
+        {
+            if (activityUsers == null || activityUsers.Any() == false) return string.Empty;
+            StringBuilder sb = new StringBuilder();
+            if (activityUsers.Count(x => x.Reacted) <= 0) return string.Empty;
+            sb.AppendJoin(", ", activityUsers.Where(x => x.Reacted).Select(x => x.DisplayName));
+            sb.Append(" will get Glimmer for completing this activity.");
+            return sb.ToString();
         }
 
         public static void UpdateFieldsOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)

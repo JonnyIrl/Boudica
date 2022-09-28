@@ -49,5 +49,12 @@ namespace Boudica.Services
             UpdateResult result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Inc("Glimmer", count * -1), new UpdateOptions() { IsUpsert = true });
             return result.IsAcknowledged;
         }
+
+        public async Task<bool> ResetAllGlimmer()
+        {
+            var updateBuilder = Builders<Guardian>.Update;
+            UpdateResult result = await _guardianCollection.UpdateManyAsync(x => x.Id > 0, updateBuilder.Set("Glimmer", 0));
+            return result.IsAcknowledged;
+        }
     }
 }

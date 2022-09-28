@@ -85,24 +85,22 @@ namespace Boudica.Commands
             };
 
             StringBuilder stringBuilder = new StringBuilder();
-            int rank = 1;
             foreach (Guardian guardian in guardians)
             {
                 IGuildUser user = await Context.Guild.GetUserAsync(guardian.Id);
                 if (user == null) continue;
 
-                string userId = $"<@{guardian.Id}>";
+                string userId = $"{user.DisplayName}";
 
                 if(parsedEmote == false)
-                    stringBuilder.AppendLine($"{GetRank(rank)}<@{guardian.Id}>\t{string.Format("{0:n0}", guardian.Glimmer)} Glimmer");
+                    stringBuilder.AppendLine($"{userId} {string.Format("{0:n0}", guardian.Glimmer)} Glimmer");
                 else
-                    stringBuilder.AppendLine($"{GetRank(rank).PadRight(6, ' ')} {userId.PadRight(12, ' ')} {glimmerEmote} {string.Format("{0:n0}", guardian.Glimmer)}");
-                rank++;
+                    stringBuilder.AppendLine($"{userId} {glimmerEmote} {string.Format("{0:n0}", guardian.Glimmer)}");
             }
 
-            embed.AddField("Leaderboard", stringBuilder.ToString(), false);
+            embed.Description = stringBuilder.ToString();
 
-            embed.WithFooter(footer => footer.Text = "Increase your rank by creating/participating in activities, from reactions and [REDACTED]");
+            embed.WithFooter(footer => footer.Text = "Increase your Glimmer by creating and joining activities. Glimmer can be used in the Lightfall clan event.");
             await ReplyAsync(embed: embed.Build());
         }
 
