@@ -861,7 +861,7 @@ namespace Boudica.Commands
             StringBuilder sb = new StringBuilder();
             foreach(ActivityUser user in activityUsers)
             {
-                if(_glimmerEmote != null && title != SubstitutesTitle)
+                if(_glimmerEmote != null && title != SubstitutesTitle && user.Reacted)
                     sb.AppendLine($"{_glimmerEmote} {user.DisplayName}");
                 else 
                     sb.AppendLine(user.DisplayName);
