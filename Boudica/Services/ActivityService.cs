@@ -58,6 +58,11 @@ namespace Boudica.Services
         {
             return await (await _raidCollection.FindAsync(x => x.DateTimeClosed == DateTime.MinValue)).ToListAsync();
         }
+
+        public async Task<List<Raid>> FindAllClosedRaids()
+        {
+            return await (await _raidCollection.FindAsync(x => x.DateTimeClosed != DateTime.MinValue)).ToListAsync();
+        }
         #endregion
 
         #region Mongo Fireteam

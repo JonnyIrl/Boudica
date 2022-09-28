@@ -548,10 +548,12 @@ namespace Boudica.Commands
             });
 
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
-
             Task.Run(async () =>
             {
-                await CalculateGlimmerForRaid(existingRaid);
+                var listOfReactions = await message.GetReactionUsersAsync(_jEmoji, 100).ToListAsync();
+                List<string> userNames = new List<string>();
+                listOfReactions.ForEach(x => userNames.AddRange(x.Where(x => x.IsBot == false).Select(x => x.Username)));
+                await CalculateGlimmerForRaid(existingRaid, userNames);
             });
         }
 
@@ -639,6 +641,74 @@ namespace Boudica.Commands
 
             sb.Append("Are you all still ok for this raid?");
             await message.ReplyAsync(sb.ToString());
+        }
+
+        //[Command("test raid")]
+        //public async Task TestRaid([Remainder] string args)
+        //{
+        //    string result = await CheckCloseRaidCommandIsValid(args);
+        //    if (string.IsNullOrEmpty(result)) return;
+
+        //    string[] split = result.Split(" ");
+        //    int raidId = int.Parse(split[0]);
+
+        //    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+        //    if (existingRaid == null) return;
+
+        //    ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+        //    if (channel == null)
+        //    {
+        //        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+        //        return;
+        //    }
+        //    IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+        //    if (message == null)
+        //    {
+        //        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+        //        return;
+        //    }
+
+        //    Task.Run(async () =>
+        //    {
+        //        var listOfReactions = await message.GetReactionUsersAsync(_jEmoji, 100).ToListAsync();
+        //        List<string> userNames = new List<string>();
+        //        listOfReactions.ForEach(x => userNames.AddRange(x.Where(x => x.IsBot == false).Select(x => x.Mention.Replace("<@!", string.Empty).Replace(">", string.Empty))));
+        //        await CalculateGlimmerForRaid(existingRaid, userNames);
+        //    });
+        //}
+
+        [Command("backfill raids")]
+        public async Task TestRaid()
+        {
+            if (Context.User.Id != 244209636897456129) 
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Only Jonny can do this command.. loser").Build());    
+                return; 
+            }
+
+           List<Raid> closedRaids = await _activityService.FindAllClosedRaids();
+            if (closedRaids == null) return;
+
+            foreach (Raid closedRaid in closedRaids)
+            {
+                ITextChannel channel = await Context.Guild.GetTextChannelAsync(closedRaid.ChannelId);
+                if (channel == null)
+                {
+                    continue;
+                }
+                IUserMessage message = (IUserMessage)await channel.GetMessageAsync(closedRaid.MessageId, CacheMode.AllowDownload);
+                if (message == null)
+                {
+                    continue;
+                }
+                Task.Run(async () =>
+                {
+                    var listOfReactions = await message.GetReactionUsersAsync(_jEmoji, 100).ToListAsync();
+                    List<string> userNames = new List<string>();
+                    listOfReactions.ForEach(x => userNames.AddRange(x.Where(x => x.IsBot == false).Select(x => x.Mention.Replace("<@!", string.Empty).Replace(">", string.Empty))));
+                    await CalculateGlimmerForRaid(closedRaid, userNames);
+                });
+            }
         }
         #endregion
 
@@ -992,13 +1062,15 @@ namespace Boudica.Commands
             embed.AddField(title, sb.ToString().Trim());
             return embed;
         }
-        private async Task CalculateGlimmerForRaid(Raid closedRaid)
+        private async Task CalculateGlimmerForRaid(Raid closedRaid, List<string> userIds)
         {
             if (closedRaid == null) return;
-            if (closedRaid.DateTimeClosed == DateTime.MinValue) return;
+            //if (closedRaid.DateTimeClosed == DateTime.MinValue) return;
             int increaseAmount = 1 * closedRaid.Players.Count;
             foreach(ActivityUser user in closedRaid.Players)
             {
+                if (userIds.Contains(user.UserId.ToString()) == false && user.UserId != closedRaid.CreatedByUserId)
+                    continue;
                 await _guardianService.IncreaseGlimmerAsync(user.UserId, 1 * closedRaid.Players.Count);
                 Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
             }

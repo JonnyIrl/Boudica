@@ -34,7 +34,6 @@ namespace Boudica.Commands
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
-        private Emote _glimmerEmote;
 
         public CommandHandler(IServiceProvider services)
         {
@@ -64,8 +63,6 @@ namespace Boudica.Commands
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
-
-            Emote.TryParse("<:misc_glimmer:728197708074188802>", out _glimmerEmote);
         }
 
         private async Task ModalSubmitted(SocketModal arg)
