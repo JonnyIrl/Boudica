@@ -1075,7 +1075,7 @@ namespace Boudica.Commands
                 }
                 else
                 {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount);
                 }
                 Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
             }

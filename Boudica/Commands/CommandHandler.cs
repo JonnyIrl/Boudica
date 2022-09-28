@@ -339,6 +339,7 @@ namespace Boudica.Commands
                         {
                             existingPlayer.Reacted = true;
                             //Need to update the message to include the person has reacted.
+                            await _activityService.UpdateRaidAsync(existingRaid);
                             await UpdateRaidMessage(originalMessage, embed, existingRaid);
                         }
                         activityResponse.Success = true;
@@ -400,6 +401,7 @@ namespace Boudica.Commands
                         if (existingPlayer.Reacted == false)
                         {
                             existingPlayer.Reacted = true;
+                            await _activityService.UpdateFireteamAsync(existingFireteam);
                             //Need to update the message to include the person has reacted.
                             await UpdateFireteamMessage(originalMessage, embed, existingFireteam);
                         }
