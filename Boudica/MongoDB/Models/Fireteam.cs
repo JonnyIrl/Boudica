@@ -16,6 +16,7 @@ namespace Boudica.MongoDB.Models
         public ulong ChannelId { get; set; }
         public ulong MessageId { get; set; }
         public byte MaxPlayerCount { get; set; }
+        public bool AwardedGlimmer { get; set; }
         public DateTime DateTimeCreated { get; set; }
         public DateTime DateTimeClosed { get; set; }
         public List<ActivityUser> Players { get; set; }

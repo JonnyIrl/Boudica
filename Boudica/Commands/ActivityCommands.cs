@@ -536,7 +536,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
             if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.DateTimeClosed.Subtract(existingRaid.DateTimeCreated).TotalMinutes > 15 && existingRaid.Players.Count == existingRaid.MaxPlayerCount)
             {
                 Task.Run(async () =>
@@ -588,7 +588,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been closed!").Build());
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
         }
 
         [Command("alert raid")]
@@ -906,7 +906,7 @@ namespace Boudica.Commands
             }
 
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("The Fireteam has been closed!").Build());
+            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
         }
 
         private async Task<string> CheckEditFireteamCommandIsValid(string args)
@@ -1072,12 +1072,13 @@ namespace Boudica.Commands
                 if (user.UserId == creatorId)
                 {
                     await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
                 }
-                else
+                else if(user.Reacted)
                 {
                     await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount);
+                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
-                Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
             }
         }
 
