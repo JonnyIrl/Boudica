@@ -103,6 +103,13 @@ namespace Boudica.Commands
                 return;
             }
 
+            //Is a DM
+            //if(!(message.Channel is SocketGuildChannel socketGuildChannel))
+            //{
+                
+            //}
+            
+
             // sets the argument position away from the prefix we set
             var argPos = 0;
 
@@ -114,7 +121,6 @@ namespace Boudica.Commands
             }
 
             var context = new SocketCommandContext(_client, message);
-
             // execute command if one is found that matches
             await _commands.ExecuteAsync(context, argPos, _services);
         }
@@ -249,7 +255,17 @@ namespace Boudica.Commands
                     return;
                 }
 
-                await ActivityClosedReaction(message, user);
+                await ActivityClosedReactionSuccess(message, user);
+            }
+            else if (reaction.Emote.Name == "❌")
+            {
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+
+                await ActivityClosedReactionFail(message, user);
             }
         }
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
@@ -319,14 +335,6 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
-                #region Check Closed
-                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-                #endregion
-
-
                 ActivityType activityType = new ActivityType();
                 activityType.Parse(embed);
                 if (activityType.Activity == ActivityTypes.Unknown)
@@ -335,8 +343,10 @@ namespace Boudica.Commands
                 if (activityType.Activity == ActivityTypes.Raid)
                 {
                     Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
-                    if (existingRaid == null)
+                    if (existingRaid == null || existingRaid.AwardedGlimmer)
                     {
+                        //Set to success to let the reaction go through
+                        activityResponse.Success = true;
                         return activityResponse;
                     }
 
@@ -352,6 +362,13 @@ namespace Boudica.Commands
                             await _activityService.UpdateRaidAsync(existingRaid);
                             await UpdateRaidMessage(originalMessage, embed, existingRaid, true);
                         }
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //If the raid has been closed and new people try and join
+                    if(existingRaid.DateTimeClosed != DateTime.MinValue)
+                    {
                         activityResponse.Success = true;
                         return activityResponse;
                     }
@@ -386,8 +403,9 @@ namespace Boudica.Commands
                 else if (activityType.Activity == ActivityTypes.Fireteam)
                 {
                     Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(activityType.Id);
-                    if (existingFireteam == null)
+                    if (existingFireteam == null || existingFireteam.AwardedGlimmer)
                     {
+                        activityResponse.Success = true;
                         return activityResponse;
                     }
 
@@ -403,6 +421,13 @@ namespace Boudica.Commands
                             //Need to update the message to include the person has reacted.
                             await UpdateFireteamMessage(originalMessage, embed, existingFireteam, true);
                         }
+                        activityResponse.Success = true;
+                        return activityResponse;
+                    }
+
+                    //If the Fireteam has been closed and new people try and join
+                    if (existingFireteam.DateTimeClosed != DateTime.MinValue)
+                    {
                         activityResponse.Success = true;
                         return activityResponse;
                     }
@@ -862,9 +887,10 @@ namespace Boudica.Commands
             }
             return activityResponse;
         }
-        private async Task ActivityClosedReaction(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        private async Task ActivityClosedReactionSuccess(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
         {
             var originalMessage = await message.GetOrDownloadAsync();
+            if (originalMessage.Author.IsBot == false) return;
             var embeds = originalMessage.Embeds.ToList();
             if (embeds.Any() == false)
             {
@@ -875,18 +901,21 @@ namespace Boudica.Commands
             if (embed != null)
             {
                 string description = embed.Description;
+                if (description.Contains("did this activity get completed") == false)
+                    return;
                 string[] split = description.Split("has");
                 if (split.Length <= 0)
                 {
                     return;
                 }
+                string[] newDescriptionSplit = description.Split("<@");
                 //Raid
                 if(split[0].Contains("Raid"))
                 {
                     if(int.TryParse(split[0].Replace("Raid", string.Empty).Trim(), out int id))
                     {
                         Raid existingRaid = await _activityService.GetMongoRaidAsync(id);
-                        if (existingRaid == null || existingRaid.DateTimeClosed == DateTime.MinValue || existingRaid.AwardedGlimmer) return;
+                        if (existingRaid == null || existingRaid.DateTimeClosed == DateTime.MinValue || existingRaid.AwardedGlimmer || existingRaid.CreatedByUserId != user.Id) return;
                         Task.Run(async () =>
                         {
                             await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId);
@@ -896,7 +925,7 @@ namespace Boudica.Commands
                             sb.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
                             sb.Append(" received Glimmer for completing this activity.");
                             var modifiedEmbed = new EmbedBuilder();
-                            modifiedEmbed.Description = $"{description} {sb.ToString()}";
+                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
                             modifiedEmbed.Color = embed.Color;
                             await originalMessage.ModifyAsync(x =>
                             {
@@ -911,7 +940,7 @@ namespace Boudica.Commands
                     if (int.TryParse(split[0].Replace("Fireteam", string.Empty).Trim(), out int id))
                     {
                         Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(id);
-                        if (existingFireteam == null || existingFireteam.DateTimeClosed == DateTime.MinValue || existingFireteam.AwardedGlimmer) return;
+                        if (existingFireteam == null || existingFireteam.DateTimeClosed == DateTime.MinValue || existingFireteam.AwardedGlimmer || existingFireteam.CreatedByUserId != user.Id) return;
                         Task.Run(async () =>
                         {
                             await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId);
@@ -921,7 +950,73 @@ namespace Boudica.Commands
                             sb.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
                             sb.Append(" received Glimmer for completing this activity.");
                             var modifiedEmbed = new EmbedBuilder();
-                            modifiedEmbed.Description = $"{description} {sb.ToString()}";
+                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
+                            modifiedEmbed.Color = embed.Color;
+                            await originalMessage.ModifyAsync(x =>
+                            {
+                                x.Embed = modifiedEmbed.Build();
+                            });
+                        });
+                    }
+                }
+            }
+        }
+        private async Task ActivityClosedReactionFail(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
+        {
+            var originalMessage = await message.GetOrDownloadAsync();
+            if (originalMessage.Author.IsBot == false) return;
+            var embeds = originalMessage.Embeds.ToList();
+            if (embeds.Any() == false)
+            {
+                return;
+            }
+
+            var embed = embeds?.First();
+            if (embed != null)
+            {
+                string description = embed.Description;
+                if (description.Contains("did this activity get completed") == false)
+                    return;
+                string[] split = description.Split("has");
+                if (split.Length <= 0)
+                {
+                    return;
+                }
+                string[] newDescriptionSplit = description.Split("<@");
+                //Raid
+                if (split[0].Contains("Raid"))
+                {
+                    if (int.TryParse(split[0].Replace("Raid", string.Empty).Trim(), out int id))
+                    {
+                        Raid existingRaid = await _activityService.GetMongoRaidAsync(id);
+                        if (existingRaid == null || existingRaid.DateTimeClosed == DateTime.MinValue || existingRaid.AwardedGlimmer || existingRaid.CreatedByUserId != user.Id) return;
+                        Task.Run(async () =>
+                        {
+                            existingRaid.AwardedGlimmer = true;
+                            await _activityService.UpdateRaidAsync(existingRaid);
+                            var modifiedEmbed = new EmbedBuilder();
+                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} No Glimmer has been awarded as this activity did not complete.";
+                            modifiedEmbed.Color = embed.Color;
+                            await originalMessage.ModifyAsync(x =>
+                            {
+                                x.Embed = modifiedEmbed.Build();
+                            });
+                        });
+                    }
+                }
+                //Fireteam
+                else
+                {
+                    if (int.TryParse(split[0].Replace("Fireteam", string.Empty).Trim(), out int id))
+                    {
+                        Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(id);
+                        if (existingFireteam == null || existingFireteam.DateTimeClosed == DateTime.MinValue || existingFireteam.AwardedGlimmer || existingFireteam.CreatedByUserId != user.Id) return;
+                        Task.Run(async () =>
+                        {
+                            existingFireteam.AwardedGlimmer = true;
+                            await _activityService.UpdateFireteamAsync(existingFireteam);
+                            var modifiedEmbed = new EmbedBuilder();
+                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} No Glimmer has been awarded as this activity did not complete.";
                             modifiedEmbed.Color = embed.Color;
                             await originalMessage.ModifyAsync(x =>
                             {

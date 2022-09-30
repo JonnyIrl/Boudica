@@ -24,6 +24,7 @@ namespace Boudica.Commands
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
         private Emote _glimmerEmote;
+        private List<Emoji> _successFailEmotes = null;
 
 #if DEBUG
         private const ulong glimmerId = 1009200271475347567;
@@ -38,6 +39,13 @@ namespace Boudica.Commands
             _guardianService = services.GetRequiredService<GuardianService>();
             if (Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote) == false)
                 _glimmerEmote = null;
+
+            if(_successFailEmotes == null)
+            {
+                _successFailEmotes = new List<Emoji>();
+                _successFailEmotes.Add(new Emoji("✅"));
+                _successFailEmotes.Add(new Emoji("❌"));
+            }
         }
 
         #region Raid
@@ -535,15 +543,60 @@ namespace Boudica.Commands
             {
                 x.Embed = modifiedEmbed.Build();
             });
-
-            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
-            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.DateTimeClosed.Subtract(existingRaid.DateTimeCreated).TotalMinutes > 15 && existingRaid.Players.Count == existingRaid.MaxPlayerCount)
+   
+            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.DateTimeClosed.Subtract(existingRaid.DateTimeCreated).TotalMinutes > 15)
             {
-                Task.Run(async () =>
-                {
-                    await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId);
-                });
+                await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
             }
+            else
+            {
+                existingRaid.AwardedGlimmer = true;
+                await _activityService.UpdateRaidAsync(existingRaid);
+                await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+            }
+        }
+
+        [Command("test close raid")]
+        public async Task TestCloseRaid([Remainder] string args)
+        {
+            string result = await CheckCloseRaidCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int raidId = int.Parse(split[0]);
+
+            MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeClosed = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
         }
 
         [Command("forceclose raid")]
@@ -854,13 +907,13 @@ namespace Boudica.Commands
             string[] split = result.Split(" ");
             int fireteamId = int.Parse(split[0]);
 
-            MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
             bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
             if (existingFireteamResult == false) return;
 
             if (existingFireteam.DateTimeClosed == DateTime.MinValue)
             {
-                existingFireteam.DateTimeClosed = DateTime.Now;
+                existingFireteam.DateTimeClosed = DateTime.UtcNow;
                 await _activityService.UpdateFireteamAsync(existingFireteam);
             }
 
@@ -897,16 +950,139 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes > 15 && existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+            double testTime = existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes;
+            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes > 15)
             {
-                Task.Run(async () =>
-                {
-                    await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId);
-                });
+                await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
+            }
+            else
+            {
+                existingFireteam.AwardedGlimmer = true;
+                await _activityService.UpdateFireteamAsync(existingFireteam);
+                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
+            }      
+        }
+
+        [Command("test close fireteam")]
+        public async Task TestCloseFireteam([Remainder] string args)
+        {
+            string result = await CheckCloseFireteamCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int fireteamId = int.Parse(split[0]);
+
+            MongoDB.Models.Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+            if (existingFireteamResult == false) return;
+
+            if (existingFireteam.DateTimeClosed == DateTime.MinValue)
+            {
+                existingFireteam.DateTimeClosed = DateTime.Now;
+                await _activityService.UpdateFireteamAsync(existingFireteam);
             }
 
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingFireteam.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            if (embed?.Title == "This activity is now closed")
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
+                return;
+            }
+
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
+        }
+
+        [Command("remove player fireteam")]
+        public async Task RemovePlayerFromFireteam([Remainder] string args)
+        {
+            string result = await CheckEditFireteamCommandIsValid(args);
+            if (string.IsNullOrEmpty(result)) return;
+
+            string[] split = result.Split(" ");
+            int fireteamId = int.Parse(split[0]);
+
+            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            int oldPlayerCount = existingFireteam.Players.Count;
+            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+            if (existingFireteamResult == false) return;
+
+            if (Context.Guild.Id != existingFireteam.GuidId)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+            ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingFireteam.ChannelId);
+            if (channel == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
+
+            List<ActivityUser> usersToRemove = await AddPlayersToNewActivity(args);
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser userToRemove in usersToRemove)
+            {
+                IGuildUser guildUser = await Context.Guild.GetUserAsync(userToRemove.UserId);
+                if (guildUser != null)
+                {
+                    sb.Append($"<@{userToRemove.UserId}>");
+                    existingFireteam.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                    await message.RemoveReactionAsync(_jEmoji, guildUser);
+                }
+            }
+
+            if (oldPlayerCount == existingFireteam.Players.Count)
+            {
+                await message.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Could not find player to remove from Fireteam {existingFireteam.Id}").Build());
+                return;
+            }
+
+            await _activityService.UpdateFireteamAsync(existingFireteam);
+
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+            AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
+
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Fireteam").Build());
         }
 
         private async Task<string> CheckEditFireteamCommandIsValid(string args)
@@ -969,15 +1145,15 @@ namespace Boudica.Commands
             return args;
         }
 
-        private async Task<bool> CheckExistingFireteamIsValid(MongoDB.Models.Fireteam existingRaid)
+        private async Task<bool> CheckExistingFireteamIsValid(Fireteam existingFireteam)
         {
-            if (existingRaid == null)
+            if (existingFireteam == null)
             {
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a Fireteam with that Id").Build());
                 return false;
             }
 
-            if (existingRaid.CreatedByUserId != Context.User.Id)
+            if (existingFireteam.CreatedByUserId != Context.User.Id)
             {
                 IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
                 if (guildUser != null)
