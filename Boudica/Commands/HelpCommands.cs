@@ -17,23 +17,48 @@ namespace Boudica.Commands
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "Here's a list of commands!";
             builder.Description = $"\n";
-            builder.AddField("Create Raid", $"{Prefix}create raid some text to describe your raid");
-            builder.AddField("Create Raid with existing Players", $"{Prefix}create raid some text to describe your raid @Person1 @Person2");
-            builder.AddField("Edit Raid", $"{Prefix}edit raid Id some new text here");
-            builder.AddField("Close Raid", $"{Prefix}close raid Id");
-            builder.AddField("Rollcall Raid", $"{Prefix}alert/roll call/rollcall raid Id - This will @ all the members of the Raid to make sure they are still good to raid.");
-            builder.AddField("Create Fireteam", $"{Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam");
-            builder.AddField("Create Fireteam with existing Players", $"{Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam @Person1 @Person2");
-            builder.AddField("Edit Fireteam", $"{Prefix}edit fireteam Id some new text here");
-            builder.AddField("Close Fireteam", $"{Prefix}close fireteam Id");
-            builder.AddField("Leaderboard", $"{Prefix}leaderboard");
-            builder.AddField("Insult", $"{Prefix}insult @Somebody");
-            builder.AddField("Compliment", $"{Prefix}compliment @Somebody");
-            builder.AddField("Joke", $"{Prefix}joke");
-            builder.AddField("Coinflip", $"{Prefix}coinflip heads (or tails)");
-            builder.AddField("Magic 8 Ball", $"{Prefix}ask whatever question you may have");
+            builder.AddField("Raid Commands", RaidCommands());
+            builder.AddField("Fireteam Commands", FireteamCommands());
+            builder.AddField("Other Commands", MiscCommands());
             builder.WithColor(Color.Green);
             await ReplyAsync(null, false, builder.Build());
+        }
+
+        private string RaidCommands()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"- Create Raid: {Prefix}create raid some text to describe your raid");
+            sb.AppendLine($"- Create Raid with existing Players: {Prefix}create raid some text to describe your raid @Person1 @Person2");
+            sb.AppendLine($"- Edit Raid: {Prefix}edit raid (Id Number) some new text here");
+            sb.AppendLine($"- Add Player to Raid: {Prefix}add player raid (Id number) @Player");
+            sb.AppendLine($"- Remove Player from Raid: {Prefix}remove player raid (Id number) @Player");
+            sb.AppendLine($"- Close Raid: {Prefix}close raid (Id number)");
+            sb.AppendLine($"- Rollcall Raid: {Prefix}alert/roll call/rollcall raid (Id number) - This will @ all the members of the Raid to make sure they are still good to raid.");
+            return sb.ToString();
+        }
+
+        private string FireteamCommands()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"- Create Fireteam: {Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam");
+            sb.AppendLine($"- Create Fireteam with existing Players: {Prefix}create fireteam (the number of players between 2 and 6 inclusive) some text to describe your fireteam @Person1 @Person2");
+            sb.AppendLine($"- Edit Fireteam: {Prefix}edit fireteam (Id number) some new text here");
+            sb.AppendLine($"- Add Player to Fireteam: Work in progress..");
+            sb.AppendLine($"- Remove Player from Fireteam: {Prefix}remove player fireteam (Id number) @Player");
+            sb.AppendLine($"- Close Fireteam: {Prefix}close fireteam (Id number)");
+            return sb.ToString();
+        }
+
+        private string MiscCommands()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"- Glimmer Leaderboard: {Prefix}leaderboard");
+            sb.AppendLine($"- Insult Somebody: {Prefix}insult @Somebody");
+            sb.AppendLine($"- Compliment Somebody: {Prefix}compliment @Somebody");
+            sb.AppendLine($"- Random Joke: {Prefix}joke");
+            sb.AppendLine($"- Coinflip: {Prefix}coinflip - Or if you want to guess you can include heads (or tails)");
+            sb.AppendLine($"- Magic 8 Ball: {Prefix}ask whatever question you may have");
+            return sb.ToString();
         }
     }
 }
