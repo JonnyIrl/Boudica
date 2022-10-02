@@ -26,6 +26,25 @@ namespace Boudica.Commands
         private Emote _glimmerEmote;
         private List<Emoji> _successFailEmotes = null;
 
+        private const ulong RaidChannel = 530529729321631785;
+        private const ulong RaidRole = 1026031969135501453;
+
+        private const ulong DungeonChannel = 530529123349823528;
+        private const ulong DungeonRole = 1025791763748757505;
+
+        private const ulong VanguardChannel = 530530338099691530;
+        private const ulong VanguardRole = 1023254447436087437;
+
+        private const ulong CrucibleChannel = 530529088620724246;
+        private const ulong CrucibleRole = 1025515888381800480;
+
+        private const ulong GambitChannel = 552184673749696512;
+        private const ulong GambitRole = 1025089006582644766;
+
+        private const ulong MiscChannel = 530528672172736515;
+        private const ulong MiscRole = 1025804943673790494;
+
+
 #if DEBUG
         private const ulong glimmerId = 1009200271475347567;
 #else
@@ -265,7 +284,7 @@ namespace Boudica.Commands
             EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
 
             IUserMessage newMessage;
-            IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+            IRole role = GetRoleForChannel(Context.Channel.Id);
             if (role != null)
             {
                 // this will reply with the embed
@@ -544,7 +563,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
    
-            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.DateTimeClosed.Subtract(existingRaid.DateTimeCreated).TotalMinutes > 15)
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
             {
                 await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
             }
@@ -839,9 +858,15 @@ namespace Boudica.Commands
             EmbedHelper.UpdateFooterOnEmbed(embed, newFireteam);
 
             IUserMessage newMessage;
-
-            newMessage = await ReplyAsync(null, false, embed.Build());
-
+            IRole role = GetRoleForChannel(Context.Channel.Id);
+            if (role != null)
+            {
+                newMessage = await ReplyAsync(role.Mention, false, embed.Build());
+            }
+            else
+            {
+                newMessage = await ReplyAsync(null, false, embed.Build());
+            }
 
             newFireteam.MessageId = newMessage.Id;
             await _activityService.UpdateFireteamAsync(newFireteam);
@@ -950,8 +975,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            double testTime = existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes;
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.DateTimeClosed.Subtract(existingFireteam.DateTimeCreated).TotalMinutes > 15)
+            if (existingFireteam.DateTimeClosed != DateTime.MinValue)
             {
                 await (await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build())).AddReactionsAsync(_successFailEmotes);
             }
@@ -1257,7 +1281,26 @@ namespace Boudica.Commands
                 }
             }
         }
+        private IRole GetRoleForChannel(ulong channelId)
+        {
+            switch(channelId)
+            {
+                case RaidChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == RaidRole);
+                case VanguardChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == VanguardRole);
+                case CrucibleChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == CrucibleRole);
+                case GambitChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == GambitRole);
+                case MiscChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == MiscRole);
+                case DungeonChannel:
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == DungeonRole);
+            }
 
+            return null;
+        }
         #endregion
 
     }

@@ -65,7 +65,7 @@ namespace Boudica.Commands
         [Command("leaderboard")]
         public async Task GetLeaderboard()
         {
-            List<Guardian> guardians = await _guardianService.GetLeaderboard();
+            List<Guardian> guardians = await _guardianService.GetLeaderboard(Context.User.Id);
             if (guardians.Any() == false)
             {
                 await ReplyAsync("There is nobody in the leaderboards... yet");
@@ -90,7 +90,8 @@ namespace Boudica.Commands
                 IGuildUser user = await Context.Guild.GetUserAsync(guardian.Id);
                 if (user == null) continue;
 
-                string userId = $"{user.DisplayName}";
+                //Bold the person who issued the command
+                string userId = user.Id == Context.User.Id ? $"**{user.DisplayName}**" : $"{user.DisplayName}";
 
                 if(parsedEmote == false)
                     stringBuilder.AppendLine($"{userId} {string.Format("{0:n0}", guardian.Glimmer)} Glimmer");
