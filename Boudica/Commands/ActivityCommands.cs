@@ -1271,12 +1271,12 @@ namespace Boudica.Commands
             {
                 if (user.UserId == creatorId)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
                 }
                 else if(user.Reacted)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
             }

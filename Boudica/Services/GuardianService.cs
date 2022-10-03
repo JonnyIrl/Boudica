@@ -41,14 +41,17 @@ namespace Boudica.Services
             return leaderboardList;
         }
 
-        public async Task<bool> IncreaseGlimmerAsync(ulong userId, int count)
+        public async Task<bool> IncreaseGlimmerAsync(ulong userId, string username, int count)
         {
             if (userId <= 0) throw new ArgumentNullException("Id must be provided to update");
             var builder = Builders<Guardian>.Filter;
             var updateBuilder = Builders<Guardian>.Update;
             var filter = builder.Eq(x => x.Id, userId);
             Console.WriteLine($"Increasing Glimmer for {userId} by {count}");
-            UpdateResult result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Inc("Glimmer", count), new UpdateOptions() { IsUpsert = true });
+            UpdateResult result = await _guardianCollection.UpdateOneAsync(filter, 
+                updateBuilder.SetOnInsert("Id", userId)
+                .Set("Username", username)
+                .Inc("Glimmer", count), new UpdateOptions() { IsUpsert = true });
             return result.IsAcknowledged;
         }
 

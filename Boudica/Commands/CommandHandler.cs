@@ -262,7 +262,14 @@ namespace Boudica.Commands
                     ulong authorId = originalMessage.Author.Id;
                     //Stop person adding increasing their own
                     if (authorId != reaction.UserId)
-                        await _guardianService.IncreaseGlimmerAsync(authorId, 1);
+                    {
+                        var user = await reaction.Channel.GetUserAsync(authorId) as SocketGuildUser;
+                        if (user == null || user.IsBot)
+                        {
+                            return;
+                        }
+                        await _guardianService.IncreaseGlimmerAsync(user.Id, user.DisplayName, 1);
+                    }
                 }
             }
             else if (reaction.Emote.Name == "✅")
@@ -1053,12 +1060,12 @@ namespace Boudica.Commands
             {
                 if (user.UserId == creatorId)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount + 3);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
                 }
                 else if (user.Reacted)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, increaseAmount);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
             }

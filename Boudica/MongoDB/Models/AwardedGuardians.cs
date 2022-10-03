@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Boudica.MongoDB.Models
 {
-    public class Guardian
+    public class AwardedGuardians
     {
         [BsonId]
         public ulong Id { get; set; }
-        public int Glimmer { get; set; }
-        public string Username { get; set; }
+        public ulong AwardedGuardiansId { get; set; }
+        public DateTime DateTimeLastAwarded { get; set; }
     }
 }

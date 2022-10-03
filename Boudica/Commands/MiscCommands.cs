@@ -19,11 +19,13 @@ namespace Boudica.Commands
         private const string ReverseUnoCard = "Reverse uno card";
 
         private readonly InsultService _insultService;
+        private readonly AwardedGuardianService awardedGuardianService;
 
         private const int CreatorPoints = 5;
         public MiscCommands(IServiceProvider services)
         {
             _insultService = services.GetRequiredService<InsultService>();
+            awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
         }
 
         [Command("insult")]
