@@ -27,22 +27,22 @@ namespace Boudica.Commands
         private List<Emoji> _successFailEmotes = null;
 
         private const ulong RaidChannel = 530529729321631785;
-        private const ulong RaidRole = 1026031969135501453;
+        private const string RaidRole = "Raid Fanatics";
 
         private const ulong DungeonChannel = 530529123349823528;
-        private const ulong DungeonRole = 1025791763748757505;
+        private const string DungeonRole = "Dungeon Challengers";
 
         private const ulong VanguardChannel = 530530338099691530;
-        private const ulong VanguardRole = 1023254447436087437;
+        private const string VanguardRole = "Nightfall Enthusiasts";
 
         private const ulong CrucibleChannel = 530529088620724246;
-        private const ulong CrucibleRole = 1025515888381800480;
+        private const string CrucibleRole = "Crucible Contenders";
 
         private const ulong GambitChannel = 552184673749696512;
-        private const ulong GambitRole = 1025089006582644766;
+        private const string GambitRole = "Gambit Hustlers";
 
         private const ulong MiscChannel = 530528672172736515;
-        private const ulong MiscRole = 1025804943673790494;
+        private const string MiscRole = "Activity Aficionados";
 
 
 #if DEBUG
@@ -1281,22 +1281,32 @@ namespace Boudica.Commands
                 }
             }
         }
+
+        [Command("test")]
+        public async Task TestCommand([Remainder] string args)
+        {
+            var roles = Context.Guild.Roles.ToList();
+            var raidFanatics = roles.FirstOrDefault(x => x.Id == 1026381799183630336);
+            var newRole = Context.Guild.GetRole(1026381799183630336);
+            int breakHere = 0;
+        }
+
         private IRole GetRoleForChannel(ulong channelId)
         {
             switch(channelId)
             {
                 case RaidChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == RaidRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
                 case VanguardChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == VanguardRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
                 case CrucibleChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == CrucibleRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
                 case GambitChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == GambitRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
                 case MiscChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == MiscRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
                 case DungeonChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Id == DungeonRole);
+                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
             }
 
             return null;

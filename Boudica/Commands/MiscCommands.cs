@@ -155,7 +155,6 @@ namespace Boudica.Commands
             }
         }
 
-
         [Command("coinflip", RunMode =RunMode.Async)]
         public async Task CoinflipCommand()
         {

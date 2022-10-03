@@ -35,6 +35,24 @@ namespace Boudica.Commands
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
         private Emote _glimmerEmote = null;
+
+        private const ulong RaidChannel = 530529729321631785;
+        private const string RaidRole = "Raid Fanatics";
+
+        private const ulong DungeonChannel = 530529123349823528;
+        private const string DungeonRole = "Dungeon Challengers";
+
+        private const ulong VanguardChannel = 530530338099691530;
+        private const string VanguardRole = "Nightfall Enthusiasts";
+
+        private const ulong CrucibleChannel = 530529088620724246;
+        private const string CrucibleRole = "Crucible Contenders";
+
+        private const ulong GambitChannel = 552184673749696512;
+        private const string GambitRole = "Gambit Hustlers";
+
+        private const ulong MiscChannel = 530528672172736515;
+        private const string MiscRole = "Activity Aficionados";
 #if DEBUG
         private const ulong glimmerId = 1009200271475347567;
 #else
@@ -587,7 +605,7 @@ namespace Boudica.Commands
                     {
                         try
                         {
-                            IRole role = user.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+                            IRole role = GetRoleForChannel(user, originalMessage.Channel.Id);
                             if (role != null)
                             {
                                 await originalMessage.ReplyAsync(role.Mention + " A slot has now opened up!");
@@ -644,7 +662,7 @@ namespace Boudica.Commands
                     {
                         try
                         {
-                            IRole role = user.Guild.Roles.FirstOrDefault(x => x.Name == "Raid Fanatics");
+                            IRole role = GetRoleForChannel(user, originalMessage.Channel.Id);
                             if (role != null)
                             {
                                 await originalMessage.ReplyAsync(role.Mention + " A slot has now opened up!");
@@ -1066,6 +1084,27 @@ namespace Boudica.Commands
 
             embed.AddField(title, sb.ToString().Trim());
             return embed;
+        }
+
+        private IRole GetRoleForChannel(SocketGuildUser user, ulong channelId)
+        {
+            switch (channelId)
+            {
+                case RaidChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
+                case VanguardChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
+                case CrucibleChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+                case GambitChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
+                case MiscChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
+                case DungeonChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
+            }
+
+            return null;
         }
     }
 
