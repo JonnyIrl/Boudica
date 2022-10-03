@@ -1285,12 +1285,8 @@ namespace Boudica.Commands
         [Command("test")]
         public async Task TestCommand([Remainder] string args)
         {
-            var roles = Context.Guild.Roles.ToList();
-            var raidFanatics = roles.FirstOrDefault(x => x.Id == 1026381799183630336);
-            var newRole = Context.Guild.GetRole(1026381799183630336);
-            int breakHere = 0;
-        }
 
+        }
         private IRole GetRoleForChannel(ulong channelId)
         {
             switch(channelId)
