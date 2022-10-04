@@ -1,5 +1,6 @@
 ﻿using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -13,23 +14,40 @@ namespace Boudica.Services
     {
         private readonly IMongoDBContext _mongoDBContext;
         protected IMongoCollection<AwardedGuardians> _awardedGuardiansCollection;
+        private SettingsService _settingsService;
+        private GuardianService _guardianService;
+        private readonly int AwardedGlimmerAmount = 3;
 
-        public AwardedGuardianService(IMongoDBContext mongoDBContext)
+        public AwardedGuardianService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
             _mongoDBContext = mongoDBContext;
             _awardedGuardiansCollection = _mongoDBContext.GetCollection<AwardedGuardians>(typeof(AwardedGuardians).Name);
+            _settingsService = services.GetRequiredService<SettingsService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
+
+            int parsedDbAmount = _settingsService.GetValueNumber("AwardedGlimmerAmount").Result;
+            if (parsedDbAmount > 0) AwardedGlimmerAmount = parsedDbAmount;
         }
 
-        public async Task<bool> CanAwardGlimmerToGuardian(ulong targetGuardianId)
+        public async Task<Tuple<bool, string>> CanAwardGlimmerToGuardian(ulong userId, ulong targetGuardianId)
         {
+            AwardedGuardians userAwardedResult = await (await _awardedGuardiansCollection.FindAsync(x => x.Id == userId)).FirstOrDefaultAsync();
+            //Make sure person only awards once per day
+            if(userAwardedResult != null && userAwardedResult.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)
+                return new Tuple<bool, string>(false, "You can only award once per day");
             AwardedGuardians result = await (await _awardedGuardiansCollection.FindAsync(x => x.AwardedGuardiansId == targetGuardianId)).FirstOrDefaultAsync();
-            if (result == null) return true;
-            //Only award person once per day
-            if (result.DateTimeLastAwarded.Date == DateTime.UtcNow.Date) return false;
-            return true;
+            if (result == null) 
+                return new Tuple<bool, string>(true, string.Empty);
+            //Only award person once per day.
+            if (result.DateTimeLastAwarded.Date == DateTime.UtcNow.Date) 
+                return new Tuple<bool, string>(false, "This player has already been awarded glimmer today");
+            //Can't award same person twice in a row.
+            if (userAwardedResult != null && userAwardedResult.AwardedGuardiansId == targetGuardianId) 
+                return new Tuple<bool, string>(false, "You cannot award the same player glimmer for 2 consecutive days");
+            return new Tuple<bool, string>(true, string.Empty);
         }
 
-        public async Task<bool> AwardGuardian(ulong userId, ulong awardedGuardianId)
+        public async Task<bool> AwardGuardian(ulong userId, ulong awardedGuardianId, string userName)
         {
             if (userId <= 0 || awardedGuardianId <= 0) throw new ArgumentNullException("Id must be provided to update");
             var builder = Builders<AwardedGuardians>.Filter;
@@ -38,10 +56,16 @@ namespace Boudica.Services
 
             Console.WriteLine($"Awarding Glimmer from {userId} to {awardedGuardianId}");
             UpdateResult result = await _awardedGuardiansCollection.UpdateOneAsync(filter, 
-                updateBuilder.Set("Id", userId)
+                updateBuilder
+                .Set("Id", userId)
                 .Set("AwardedGuardiansId", awardedGuardianId)
-                .Set("DateTimeLastAwarded", DateTime.UtcNow), new UpdateOptions() { IsUpsert = true });
-            return result.IsAcknowledged;
+                .Set("DateTimeLastAwarded", DateTime.UtcNow), 
+                new UpdateOptions() { IsUpsert = true });
+            bool success = result.IsAcknowledged;
+            if (!success) return false;
+
+            //success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount);
+            return success;
         }
 
     }

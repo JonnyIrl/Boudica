@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Boudica.Commands
@@ -18,10 +19,12 @@ namespace Boudica.Commands
     {
         private readonly IConfiguration _config;
         private readonly GuardianService _guardianService;
+        private readonly AwardedGuardianService _awardedGuardianService;
 
         public ARGCommands(IServiceProvider services)
         {
             _guardianService = services.GetRequiredService<GuardianService>();
+            _awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
             //_itemService = services.GetRequiredService<ItemService>();
             //_eververseService = services.GetRequiredService<EververseService>();
             //_inventoryService = services.GetRequiredService<InventoryService>();
@@ -103,6 +106,81 @@ namespace Boudica.Commands
 
             embed.WithFooter(footer => footer.Text = "Increase your Glimmer by creating and joining activities. Glimmer can be used in the Lightfall clan event.");
             await ReplyAsync(embed: embed.Build());
+        }
+
+        [Command("award")]
+        public async Task AwardPlayer([Remainder] string args)
+        {
+            ActivityUser user = await GetFirstMentionedUser(args);
+            if(user == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;award @User").Build());
+                return;
+            }
+
+            if(user.UserId == Context.User.Id)
+            {
+                //Reverse Uno
+                await ReplyAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
+                await Task.Delay(500);
+                await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
+                await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
+                return;
+            }
+
+            Tuple<bool, string> canAwardPlayer = await _awardedGuardianService.CanAwardGlimmerToGuardian(Context.User.Id, user.UserId);
+            if(canAwardPlayer.Item1 == false)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply(canAwardPlayer.Item2).Build());
+                return;
+            }
+
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName);
+            await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+        }
+
+        private async Task<ActivityUser> GetFirstMentionedUser(string args)
+        {
+            string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
+            List<ActivityUser> activityUsers = new List<ActivityUser>();
+            if (sanitisedSplit.Contains("@") == false) return null;
+            string[] users = sanitisedSplit.Split('@');
+            foreach (string user in users)
+            {
+                string sanitisedUser = string.Empty;
+                int space = user.IndexOf(' ');
+                if (space == -1)
+                    sanitisedUser = user.Trim();
+                else
+                {
+                    sanitisedUser = user.Substring(0, space).Trim();
+                }
+                if (string.IsNullOrEmpty(sanitisedUser)) continue;
+                if (IsDigitsOnly(sanitisedUser) == false) continue;
+
+                if (ulong.TryParse(sanitisedUser, out ulong userId))
+                {
+                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
+                    if (guildUser != null)
+                    {
+                        if (activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
+                            return new ActivityUser(userId, guildUser.DisplayName);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        bool IsDigitsOnly(string str)
+        {
+            foreach (char c in str)
+            {
+                if (c < '0' || c > '9')
+                    return false;
+            }
+
+            return true;
         }
 
         //[Command("createitem")]
