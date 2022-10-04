@@ -53,6 +53,7 @@ namespace Boudica.Commands
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"- Glimmer Leaderboard: {Prefix}leaderboard");
+            sb.AppendLine($"- Award Player: {Prefix}award @Somebody");
             sb.AppendLine($"- Insult Somebody: {Prefix}insult @Somebody");
             sb.AppendLine($"- Compliment Somebody: {Prefix}compliment @Somebody");
             sb.AppendLine($"- Random Joke: {Prefix}joke");
