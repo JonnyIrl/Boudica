@@ -108,7 +108,7 @@ namespace Boudica.Commands
             await ReplyAsync(embed: embed.Build());
         }
 
-        [Command("award", RunMode = RunMode.Async)]
+        [Command("award")]
         public async Task AwardPlayer([Remainder] string args)
         {
             ActivityUser user = await GetFirstMentionedUser(args);
