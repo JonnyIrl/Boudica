@@ -54,7 +54,7 @@ namespace Boudica.Services
             var updateBuilder = Builders<AwardedGuardians>.Update;
             var filter = builder.Eq(x => x.Id, userId);
 
-            Console.WriteLine($"Awarding Glimmer from {userId} to {awardedGuardianId}");
+            Console.WriteLine($"Awarding {AwardedGlimmerAmount} Glimmer from {userId} to {awardedGuardianId}");
             UpdateResult result = await _awardedGuardiansCollection.UpdateOneAsync(filter, 
                 updateBuilder
                 .Set("Id", userId)
@@ -64,7 +64,7 @@ namespace Boudica.Services
             bool success = result.IsAcknowledged;
             if (!success) return false;
 
-            //success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount);
+            success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount);
             return success;
         }
 
