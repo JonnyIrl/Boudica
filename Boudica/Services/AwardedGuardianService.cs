@@ -47,7 +47,7 @@ namespace Boudica.Services
             return new Tuple<bool, string>(true, string.Empty);
         }
 
-        public async Task<bool> AwardGuardian(ulong userId, ulong awardedGuardianId, string userName)
+        public async Task<bool> AwardGuardian(ulong userId, ulong awardedGuardianId, string userName, int multiplier = 1)
         {
             if (userId <= 0 || awardedGuardianId <= 0) throw new ArgumentNullException("Id must be provided to update");
             var builder = Builders<AwardedGuardians>.Filter;
@@ -64,7 +64,7 @@ namespace Boudica.Services
             bool success = result.IsAcknowledged;
             if (!success) return false;
 
-            success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount);
+            success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount * multiplier);
             return success;
         }
 

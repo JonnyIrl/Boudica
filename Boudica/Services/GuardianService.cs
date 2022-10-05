@@ -62,7 +62,14 @@ namespace Boudica.Services
             var updateBuilder = Builders<Guardian>.Update;
             var filter = builder.Eq(x => x.Id, userId);
             Console.WriteLine($"Decreasing Glimmer for {userId} by {count}");
-            UpdateResult result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Inc("Glimmer", count * -1), new UpdateOptions() { IsUpsert = true });
+            Guardian existingGuardian = await _guardianCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+            UpdateResult result;
+            if (existingGuardian == null || (existingGuardian.Glimmer - count) < 0)
+            {
+                result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Set("Glimmer", 0), new UpdateOptions() { IsUpsert = true });
+            }
+            else
+                result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Inc("Glimmer", count * -1), new UpdateOptions() { IsUpsert = true });
             return result.IsAcknowledged;
         }
 

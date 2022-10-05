@@ -139,6 +139,28 @@ namespace Boudica.Commands
             await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
         }
 
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        [Command("supersub")]
+        public async Task AwardSuperSubPlayer([Remainder] string args)
+        {
+            ActivityUser user = await GetFirstMentionedUser(args);
+            if (user == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;supersub @User").Build());
+                return;
+            }
+
+            if (user.UserId == Context.User.Id)
+            {
+                await _guardianService.RemoveGlimmerAsync(user.UserId, 9);
+                await ReplyAsync($"<@{user.UserId}>, you have lost 9 glimmer!");
+                return;
+            }
+
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 2);
+            await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
+        }
+
         private async Task<ActivityUser> GetFirstMentionedUser(string args)
         {
             string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);

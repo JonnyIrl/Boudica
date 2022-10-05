@@ -183,6 +183,12 @@ namespace Boudica.Commands
                 return;
             }
 
+            if(result.ErrorReason.Contains("permission"))
+            {
+                await context.Channel.SendMessageAsync($"You don't have permission to use this command!");
+                return;
+            }
+
 
             // failure scenario, let's let the user know
             await context.Channel.SendMessageAsync($"Sorry, ... something went wrong, blame Jonny!");
