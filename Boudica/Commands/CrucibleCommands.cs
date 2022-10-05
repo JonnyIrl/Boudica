@@ -17,15 +17,25 @@ namespace Boudica.Commands
         {
             "Altar of Flame",
             "Bannerfall",
-            "Convergence",
+            "Burnout",
+            "Cathedral of Dusk",
+            "Disjunction",
             "Distant Shore",
-            "Eternity",
             "Endless Vale",
-            "The Burnout",
-            "The Dead Cliffs",
+            "Eternity",
+            "Exodus Blue",
+            "Fragment",
             "Javelin-4",
             "Midtown",
-            "Wormhaven"
+            "Pacifica",
+            "Radiant Cliffs",
+            "Rusted Lands",
+            "The Dead Cliffs",
+            "The Fortress",
+            "Twilight Gap",
+            "Vostok",
+            "Widow’s Court",          
+            "Wormhaven",      
         };
     }
 }
