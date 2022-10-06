@@ -19,7 +19,7 @@ namespace Boudica.MongoDB.Models
         public ulong GuidId { get; set; }
         public ulong ChannelId { get; set; }
         public ulong LastMessageId { get; set; }
-        public EmbedBuilder Embed { get; set; }
+        public CronEmbedAttributes EmbedAttributes { get; set; }
     }
 
     public class CronRecurringAttribute

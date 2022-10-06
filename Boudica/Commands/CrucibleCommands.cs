@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Boudica.Services;
+using Discord.Commands;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,11 +9,18 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    public class CrucibleCommands
+    public class CrucibleCommands : ModuleBase
     {
+        private CronService _cronService;
         public CrucibleCommands(IServiceProvider services)
         {
+            _cronService = services.GetRequiredService<CronService>();
+        }
 
+        [Command("create trials task")]
+        public async Task CreateTrialsTask()
+        {
+            await _cronService.CreateTrialsTask();
         }
 
         private List<string> TrialsMaps = new List<string>()

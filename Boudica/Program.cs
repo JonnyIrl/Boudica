@@ -95,6 +95,7 @@ class Program
             .AddScoped<GuardianService>()
             .AddScoped<AwardedGuardianService>()
             .AddScoped<SettingsService>()
+            .AddScoped<CronService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
 
             .BuildServiceProvider();
