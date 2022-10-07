@@ -19,7 +19,11 @@ namespace Boudica.Services
         public TrialsService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
             _mongoDBContext = mongoDBContext;
+#if DEBUG
+            _trialsCollection = _mongoDBContext.GetCollection<TrialsVote>("TrialsVoteTest");
+#else
             _trialsCollection = _mongoDBContext.GetCollection<TrialsVote>(typeof(TrialsVote).Name);
+#endif
         }
 
         public async Task<bool> CreateWeeklyTrialsVote()
@@ -58,6 +62,20 @@ namespace Boudica.Services
             var updateBuilder = Builders<TrialsVote>.Update;
             await _trialsCollection.FindOneAndReplaceAsync(x => x.Id == trialsVote.Id, trialsVote);
             return trialsVote;
+        }
+
+        public async Task<List<PlayerVote>> GetWinningTrialsGuesses(string correctEmojiName)
+        {
+            TrialsVote trialsVote = await GetThisWeeksVote();
+            if (trialsVote == null) return null;
+            return trialsVote.PlayerVotes.Where(x => x.VotedEmoteName == correctEmojiName).OrderBy(x => x.DateTimeVoted).ToList();
+        }
+
+        public async Task<List<PlayerVote>> GetAllTrialsGuesses()
+        {
+            TrialsVote trialsVote = await GetThisWeeksVote();
+            if (trialsVote == null) return null;
+            return trialsVote.PlayerVotes.OrderBy(x => x.DateTimeVoted).ToList();
         }
 
 

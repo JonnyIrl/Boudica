@@ -16,12 +16,15 @@ namespace Boudica.Commands
     {
         private CronService _cronService;
         private readonly TrialsService _trialsService;
+        private readonly GuardianService _guardianService;
         private List<Emoji> _alphabetList;
 
         public CrucibleCommands(IServiceProvider services)
         {
             _cronService = services.GetRequiredService<CronService>();
             _trialsService = services.GetRequiredService<TrialsService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
+
             PopulateAlphabetList();
         }
 
@@ -112,7 +115,65 @@ namespace Boudica.Commands
         }
 
 
+        [Command("confirm trials map")]
+        public async Task ConfirmTrialsMap([Remainder] string args)
+        {
+            if (Context.User.Id != 244209636897456129) return;
+            if (Emoji.TryParse(args, out Emoji confirmedEmoji) == false)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find emoji").Build());
+                return;
+            }
 
+            int index = _alphabetList.IndexOf(confirmedEmoji);
+            if (index == -1)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find emoji in list").Build());
+                return;
+            }
+
+            string trialsMap = TrialsMaps[index];
+            List<PlayerVote> winningPlayerVotes = await _trialsService.GetWinningTrialsGuesses(confirmedEmoji.Name);
+            if (winningPlayerVotes == null)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find trials vote").Build());
+                return;
+            }
+            else if (winningPlayerVotes.Count == 0)
+            {
+                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}. Better luck next week!").Build());
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append($"Congratulations to <@{winningPlayerVotes[0].Id}>, you were first to guess the correct map **{trialsMap}**!");
+                sb.AppendLine("");
+                sb.AppendJoin(", ", winningPlayerVotes.Select(x => x.Username));
+                sb.Append(" have been awarded 5 Glimmer for guessing correctly, everyone else has received 1 Glimmer for entering!");
+
+                List<PlayerVote> allPlayerVotes = await _trialsService.GetAllTrialsGuesses();
+                List<PlayerVote> oneGlimmerPlayers = new List<PlayerVote>();
+                foreach(PlayerVote playerVote in allPlayerVotes)
+                {
+                    if (winningPlayerVotes.FirstOrDefault(x => x.Id == playerVote.Id) != null)
+                        continue;
+
+                    oneGlimmerPlayers.Add(playerVote);
+                }
+
+                foreach(PlayerVote playerVote in oneGlimmerPlayers)
+                {
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 1);
+                }
+
+                foreach (PlayerVote playerVote in winningPlayerVotes)
+                {
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 5);
+                }
+
+                await ReplyAsync(sb.ToString());
+            }
+        }
 
         //TODO
         //public string GetLastWeeksMap()
