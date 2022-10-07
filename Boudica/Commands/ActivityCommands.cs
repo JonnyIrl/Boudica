@@ -1282,17 +1282,17 @@ namespace Boudica.Commands
             }
         }
 
-        [Command("test")]
-        public async Task TestCommand([Remainder] string args)
-        {
-            //await ReplyAsync("https://media.giphy.com/media/72HahsJD4atSE/giphy.gif", false, EmbedHelper.CreateInfoReply("Test").Build());
-        }
+        //[Command("test")]
+        //public async Task TestCommand([Remainder] string args)
+        //{
+        //    //await ReplyAsync("https://media.giphy.com/media/72HahsJD4atSE/giphy.gif", false, EmbedHelper.CreateInfoReply("Test").Build());
+        //}
 
-        [Command("test")]
-        public async Task TestCommand()
-        {
-            //await ReplyAsync("https://media.giphy.com/media/72HahsJD4atSE/giphy.gif");
-        }
+        //[Command("test")]
+        //public async Task TestCommand()
+        //{
+        //    //await ReplyAsync("https://media.giphy.com/media/72HahsJD4atSE/giphy.gif");
+        //}
         private IRole GetRoleForChannel(ulong channelId)
         {
             switch(channelId)

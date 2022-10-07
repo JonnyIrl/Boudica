@@ -12,5 +12,6 @@ namespace Boudica.MongoDB
         public string MongoDebugDatabaseName { get; set; }
         public string MongoReleaseConnectionString { get; set; }
         public string MongoReleaseDatabaseName { get; set; }
+        public string GiphyApiKey { get; set; }
     }
 }

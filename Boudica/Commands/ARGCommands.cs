@@ -1,9 +1,12 @@
 ﻿using Boudica.Classes;
 using Boudica.Helpers;
+using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Commands;
+using GiphyDotNet.Manager;
+using GiphyDotNet.Model.Parameters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -20,11 +23,15 @@ namespace Boudica.Commands
         private readonly IConfiguration _config;
         private readonly GuardianService _guardianService;
         private readonly AwardedGuardianService _awardedGuardianService;
+        private readonly GifService _gifService;
+        private readonly Giphy _giphy;
 
-        public ARGCommands(IServiceProvider services)
+        public ARGCommands(IServiceProvider services, IConfiguration configuration)
         {
             _guardianService = services.GetRequiredService<GuardianService>();
             _awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
+            _gifService = services.GetRequiredService<GifService>();
+            _giphy = new Giphy(configuration[nameof(Mongosettings.GiphyApiKey)]);
             //_itemService = services.GetRequiredService<ItemService>();
             //_eververseService = services.GetRequiredService<EververseService>();
             //_inventoryService = services.GetRequiredService<InventoryService>();
@@ -62,6 +69,29 @@ namespace Boudica.Commands
         //    }
 
         //    await ReplyAsync("Invalid command, example is ;increase glimmer 50 @Person");
+
+        //}
+
+        //[Command("rat")]
+        //public async Task RatGif()
+        //{
+        //    SpamGif usersLastGif = await _gifService.Get(Context.User.Id);
+        //    if (usersLastGif != null && usersLastGif.DateTimeLastUsed.Date == DateTime.UtcNow.Date)
+        //    {
+        //        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only use the gif command once per day!").Build());
+        //        return;
+        //    }
+
+        //    var gifresult = await _giphy.RandomGif(new RandomParameter()
+        //    {
+        //        Tag = "rat rodent"
+        //    });
+
+        //    if (gifresult != null && gifresult.Data != null && gifresult.Data.Url != null)
+        //    { 
+        //        await ReplyAsync(gifresult?.Data?.Url);
+        //        await _gifService.UpsertUsersSpamGif(Context.User.Id, Context.User.Username);
+        //    }
 
         //}
 

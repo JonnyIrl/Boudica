@@ -26,14 +26,14 @@ namespace Boudica.Services
 
         public CronService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
-            _mongoDBContext = mongoDBContext;
-            _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
-            _client = services.GetRequiredService<DiscordSocketClient>();
-            PopulateAlphabetList();
-            if (_actionTimer == null)
-            {
-                _actionTimer = new Timer(TimerElapsed, null, ThirtySeconds, FiveMinutes);
-            }
+            //_mongoDBContext = mongoDBContext;
+            //_cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
+            //_client = services.GetRequiredService<DiscordSocketClient>();
+            //PopulateAlphabetList();
+            //if (_actionTimer == null)
+            //{
+            //    _actionTimer = new Timer(TimerElapsed, null, ThirtySeconds, FiveMinutes);
+            //}
         }
 
         private void PopulateAlphabetList()
@@ -47,7 +47,7 @@ namespace Boudica.Services
             _alphabetList.Add(new Emoji("🇫"));
             _alphabetList.Add(new Emoji("🇬"));
             _alphabetList.Add(new Emoji("🇭"));
-            _alphabetList.Add(new Emoji("ℹ️"));
+            _alphabetList.Add(new Emoji("🇮"));
             _alphabetList.Add(new Emoji("🇰"));
             _alphabetList.Add(new Emoji("🇱"));
             _alphabetList.Add(new Emoji("🇲"));
@@ -98,8 +98,8 @@ namespace Boudica.Services
                     string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
                     embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
                     embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
-
                     IUserMessage message = await channel.SendMessageAsync(null, false, embed.Build());
+                    await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
                 }
             }
             catch (Exception ex)
@@ -165,7 +165,6 @@ namespace Boudica.Services
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString() };
             return cronEmbedAttributes;
         }
-
         private List<string> TrialsMaps = new List<string>()
         {
             "Altar of Flame",

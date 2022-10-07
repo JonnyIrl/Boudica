@@ -26,6 +26,7 @@ namespace Boudica.Commands
         private readonly IServiceProvider _services;
         private readonly ActivityService _activityService;
         private readonly GuardianService _guardianService;
+        private readonly TrialsService _trialsService;
         private char Prefix = ';';
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
@@ -35,7 +36,9 @@ namespace Boudica.Commands
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
         private Emote _glimmerEmote = null;
+        private List<Emoji> _alphabetList;
 
+        #region Ids
         private const ulong RaidChannel = 530529729321631785;
         private const string RaidRole = "Raid Fanatics";
 
@@ -53,6 +56,8 @@ namespace Boudica.Commands
 
         private const ulong MiscChannel = 530528672172736515;
         private const string MiscRole = "Activity Aficionados";
+        #endregion
+
 #if DEBUG
         private const ulong glimmerId = 1009200271475347567;
 #else
@@ -67,8 +72,10 @@ namespace Boudica.Commands
             _client = services.GetRequiredService<DiscordSocketClient>();
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _trialsService = services.GetRequiredService<TrialsService>();
             _services = services;
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
+            PopulateAlphabetList();
 
             // get prefix from the configuration file
             Prefix = Char.Parse(_config["Prefix"]);
@@ -87,6 +94,35 @@ namespace Boudica.Commands
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+        }
+
+        private void PopulateAlphabetList()
+        {
+            _alphabetList = new List<Emoji>();
+            _alphabetList.Add(new Emoji("🇦"));
+            _alphabetList.Add(new Emoji("🇧"));
+            _alphabetList.Add(new Emoji("🇨"));
+            _alphabetList.Add(new Emoji("🇩"));
+            _alphabetList.Add(new Emoji("🇪"));
+            _alphabetList.Add(new Emoji("🇫"));
+            _alphabetList.Add(new Emoji("🇬"));
+            _alphabetList.Add(new Emoji("🇭"));
+            _alphabetList.Add(new Emoji("🇮"));
+            _alphabetList.Add(new Emoji("🇰"));
+            _alphabetList.Add(new Emoji("🇱"));
+            _alphabetList.Add(new Emoji("🇲"));
+            _alphabetList.Add(new Emoji("🇳"));
+            _alphabetList.Add(new Emoji("🇴"));
+            _alphabetList.Add(new Emoji("🇵"));
+            _alphabetList.Add(new Emoji("🇶"));
+            _alphabetList.Add(new Emoji("🇷"));
+            _alphabetList.Add(new Emoji("🇹"));
+            _alphabetList.Add(new Emoji("🇺"));
+            _alphabetList.Add(new Emoji("🇻"));
+            _alphabetList.Add(new Emoji("🇼"));
+            _alphabetList.Add(new Emoji("🇽"));
+            _alphabetList.Add(new Emoji("🇾"));
+            _alphabetList.Add(new Emoji("🇿"));
         }
 
         private async Task ModalSubmitted(SocketModal arg)
@@ -197,6 +233,8 @@ namespace Boudica.Commands
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
+            if (reaction.UserId == 1016602395528151050 || reaction.UserId == 994334270480986233) return;
+
             if (reaction.Emote.Name == "🇯")
             {
                 var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
@@ -297,6 +335,21 @@ namespace Boudica.Commands
                 }
 
                 await ActivityClosedReactionFail(message, user);
+            }
+            else if (_alphabetList.Contains(reaction.Emote))
+            {
+                var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
+                if (user == null || user.IsBot)
+                {
+                    return;
+                }
+
+                var originalMessage = await message.GetOrDownloadAsync();
+                if (originalMessage == null) return;
+
+                bool result = await _trialsService.AddPlayersVote(user.Id, user.Username, reaction.Emote.Name);
+                if(result)
+                    await originalMessage.ReplyAsync($"<@{user.Id}>, your vote has been counted and locked in.");
             }
         }
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
