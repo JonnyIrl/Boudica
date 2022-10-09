@@ -114,7 +114,6 @@ namespace Boudica.Commands
             });
         }
 
-
         [Command("confirm trials map")]
         public async Task ConfirmTrialsMap([Remainder] string args)
         {

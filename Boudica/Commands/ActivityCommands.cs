@@ -747,26 +747,26 @@ namespace Boudica.Commands
                 return; 
             }
 
-           List<Raid> closedRaids = await _activityService.FindAllClosedRaids();
-            if (closedRaids == null) return;
+           //List<Raid> closedRaids = await _activityService.FindAllClosedRaids();
+           // if (closedRaids == null) return;
 
-            foreach (Raid closedRaid in closedRaids)
-            {
-                ITextChannel channel = await Context.Guild.GetTextChannelAsync(closedRaid.ChannelId);
-                if (channel == null)
-                {
-                    continue;
-                }
-                IUserMessage message = (IUserMessage)await channel.GetMessageAsync(closedRaid.MessageId, CacheMode.AllowDownload);
-                if (message == null)
-                {
-                    continue;
-                }
-                Task.Run(async () =>
-                {
-                    await CalculateGlimmerForActivity(closedRaid.Players, closedRaid.CreatedByUserId);
-                });
-            }
+           // foreach (Raid closedRaid in closedRaids)
+           // {
+           //     ITextChannel channel = await Context.Guild.GetTextChannelAsync(closedRaid.ChannelId);
+           //     if (channel == null)
+           //     {
+           //         continue;
+           //     }
+           //     IUserMessage message = (IUserMessage)await channel.GetMessageAsync(closedRaid.MessageId, CacheMode.AllowDownload);
+           //     if (message == null)
+           //     {
+           //         continue;
+           //     }
+           //     Task.Run(async () =>
+           //     {
+           //         await CalculateGlimmerForActivity(closedRaid.Players, closedRaid.CreatedByUserId);
+           //     });
+           //}
         }
 
         [Command("reset all glimmer")]
@@ -778,11 +778,22 @@ namespace Boudica.Commands
                 return;
             }
 
-            Emoji failedEmote = new Emoji("❌");
-            Emoji successEmote = new Emoji("✅");
+            //Emoji failedEmote = new Emoji("❌");
+            //Emoji successEmote = new Emoji("✅");
 
-            bool result = await _guardianService.ResetAllGlimmer();
-            await Context.Message.AddReactionAsync(result ? successEmote : failedEmote);
+            //bool result = await _guardianService.ResetAllGlimmer();
+            //await Context.Message.AddReactionAsync(result ? successEmote : failedEmote);
+        }
+
+        [Command("test method")]
+        public async Task TestMethod()
+        {
+            if (Context.User.Id != 244209636897456129) return;
+
+            bool result = await _activityService.CreatedRaidThisWeek(Context.User.Id);
+            result = await _activityService.CreatedFireteamThisWeek(Context.User.Id);
+            int breakHere = 0;
+
         }
         #endregion
 

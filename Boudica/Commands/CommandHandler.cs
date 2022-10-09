@@ -346,6 +346,9 @@ namespace Boudica.Commands
 
                 var originalMessage = await message.GetOrDownloadAsync();
                 if (originalMessage == null) return;
+                if (originalMessage.Embeds == null || originalMessage.Embeds.Any() == false) return;
+                var embed = originalMessage.Embeds.First();
+                if (embed.Title.Contains("closed")) return;
 
                 bool result = await _trialsService.AddPlayersVote(user.Id, user.Username, reaction.Emote.Name);
                 if(result)
@@ -1002,12 +1005,18 @@ namespace Boudica.Commands
                         if (existingRaid == null || existingRaid.DateTimeClosed == DateTime.MinValue || existingRaid.AwardedGlimmer || existingRaid.CreatedByUserId != user.Id) return;
                         Task.Run(async () =>
                         {
-                            await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId);
+                            Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId, true);
                             existingRaid.AwardedGlimmer = true;
                             await _activityService.UpdateRaidAsync(existingRaid);
                             StringBuilder sb = new StringBuilder();
                             sb.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
-                            sb.Append(" received Glimmer for completing this activity.");
+                            sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                            if(glimmerResult.Item2)
+                            {
+                                string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
+                                if (string.IsNullOrEmpty(creatorName) == false)
+                                    sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                            }
                             var modifiedEmbed = new EmbedBuilder();
                             modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
                             modifiedEmbed.Color = embed.Color;
@@ -1027,12 +1036,18 @@ namespace Boudica.Commands
                         if (existingFireteam == null || existingFireteam.DateTimeClosed == DateTime.MinValue || existingFireteam.AwardedGlimmer || existingFireteam.CreatedByUserId != user.Id) return;
                         Task.Run(async () =>
                         {
-                            await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId);
+                            Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId, false);
                             existingFireteam.AwardedGlimmer = true;
                             await _activityService.UpdateFireteamAsync(existingFireteam);
                             StringBuilder sb = new StringBuilder();
                             sb.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
-                            sb.Append(" received Glimmer for completing this activity.");
+                            sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                            if (glimmerResult.Item2)
+                            {
+                                string creatorName = existingFireteam.Players.FirstOrDefault(x => x.UserId == existingFireteam.CreatedByUserId)?.DisplayName;
+                                if (string.IsNullOrEmpty(creatorName) == false)
+                                    sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                            }
                             var modifiedEmbed = new EmbedBuilder();
                             modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
                             modifiedEmbed.Color = embed.Color;
@@ -1111,16 +1126,31 @@ namespace Boudica.Commands
                 }
             }
         }
-        private async Task CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId)
+        private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
         {
-            if (activityUsers == null) return;
-            int increaseAmount = 1 * activityUsers.Count;
+            if (activityUsers == null) return new Tuple<int, bool>(-1, false);
+            int increaseAmount = 1 * activityUsers.Count(x => x.Reacted);
+            bool awardedThisWeek = false;
             foreach (ActivityUser user in activityUsers)
             {
                 if (user.UserId == creatorId)
-                {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
-                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
+                {  
+                    if(isRaid)
+                        awardedThisWeek = await CreatedRaidThisWeek(creatorId);
+                    else 
+                        awardedThisWeek = await CreatedFireteamThisWeek(creatorId);
+
+                    //Give bonus of 3 for first activity each week.
+                    if (awardedThisWeek == false)
+                    {
+                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
+                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
+                    }
+                    else
+                    {
+                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
+                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
+                    }
                 }
                 else if (user.Reacted)
                 {
@@ -1128,7 +1158,20 @@ namespace Boudica.Commands
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
             }
+
+            return new Tuple<int, bool>(increaseAmount, awardedThisWeek);
         }
+
+        private async Task<bool> CreatedRaidThisWeek(ulong userId)
+        {
+            return await _activityService.CreatedRaidThisWeek(userId);
+        }
+
+        private async Task<bool> CreatedFireteamThisWeek(ulong userId)
+        {
+            return await _activityService.CreatedFireteamThisWeek(userId);
+        }
+
         private EmbedBuilder AddActivityUsersField(EmbedBuilder embed, string title, List<ActivityUser> activityUsers)
         {
             const string PlayersTitle = "Players";

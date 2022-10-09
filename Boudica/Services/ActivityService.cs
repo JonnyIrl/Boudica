@@ -63,6 +63,12 @@ namespace Boudica.Services
         {
             return await (await _raidCollection.FindAsync(x => x.DateTimeClosed != DateTime.MinValue)).ToListAsync();
         }
+
+        public async Task<bool> CreatedRaidThisWeek(ulong userId)
+        {
+            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
+            return await (_raidCollection.Find(x => x.DateTimeCreated >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+        }
         #endregion
 
         #region Mongo Fireteam
@@ -95,11 +101,27 @@ namespace Boudica.Services
             if (fireteamId <= 0) throw new ArgumentNullException("Id must be provided to update");
             return await (await _fireteamCollection.FindAsync(x => x.Id == fireteamId)).FirstOrDefaultAsync();
         }
+
+        public async Task<bool> CreatedFireteamThisWeek(ulong userId)
+        {
+            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
+            return await (_fireteamCollection.Find(x => x.DateTimeCreated >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+        }
+
         public async Task<IList<Fireteam>> FindAllOpenFireteams()
         {
             return await (await _fireteamCollection.FindAsync(x => x.DateTimeClosed == DateTime.MinValue)).ToListAsync();
         }
         #endregion
+    }
+
+    public static class DateTimeExtensions
+    {
+        public static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek)
+        {
+            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
+            return dt.AddDays(-1 * diff).Date;
+        }
     }
 
 }
