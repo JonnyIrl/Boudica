@@ -1011,7 +1011,7 @@ namespace Boudica.Commands
                             StringBuilder sb = new StringBuilder();
                             sb.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
                             sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
-                            if(glimmerResult.Item2)
+                            if(glimmerResult.Item2 == false)
                             {
                                 string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
                                 if (string.IsNullOrEmpty(creatorName) == false)
@@ -1042,7 +1042,8 @@ namespace Boudica.Commands
                             StringBuilder sb = new StringBuilder();
                             sb.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
                             sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
-                            if (glimmerResult.Item2)
+                            //AwardedThisWeek = false
+                            if (glimmerResult.Item2 == false)
                             {
                                 string creatorName = existingFireteam.Players.FirstOrDefault(x => x.UserId == existingFireteam.CreatedByUserId)?.DisplayName;
                                 if (string.IsNullOrEmpty(creatorName) == false)
