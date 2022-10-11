@@ -98,6 +98,7 @@ class Program
             .AddSingleton<CronService>()
             .AddScoped<GifService>()
             .AddScoped<TrialsService>()
+            .AddScoped<HiringService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
 
             .BuildServiceProvider();
