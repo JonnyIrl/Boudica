@@ -187,7 +187,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 2);
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 2, true);
             await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
         }
 
