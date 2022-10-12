@@ -37,6 +37,11 @@ namespace Boudica.Services
             return null;
         }
 
+        public async Task<List<Recruiter>> FindAllRecruits()
+        {
+            return await _recruiterCollection.Find(x => x .ProbationPassed == false).ToListAsync();
+        }
+
         public async Task<Recruiter> InsertNewRecruit(IGuildUser recruiter, IGuildUser recruit)
         {
             if (recruiter == null || recruit == null) return null;
@@ -46,6 +51,13 @@ namespace Boudica.Services
             Recruiter newRecruiter = new Recruiter(recruiter, recruit);
             await _recruiterCollection.InsertOneAsync(newRecruiter);
             return newRecruiter;
+        }
+
+        public async Task<bool> UpdateProbationPassed(Recruit recruit)
+        {
+            var updateBuilder = Builders<Recruiter>.Update;
+            var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruit.Id, updateBuilder.Set(x => x.ProbationPassed, true));
+            return updateResult.ModifiedCount > 0;
         }
 
         public async Task<bool> UpdateRecruit(Recruit recruit)

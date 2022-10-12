@@ -213,7 +213,7 @@ namespace Boudica.Commands
                 if (ulong.TryParse(sanitisedUser, out ulong userId))
                 {
                     IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null)
+                    if (guildUser != null && guildUser.IsBot == false)
                     {
                         if (activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
                             return new ActivityUser(userId, guildUser.DisplayName);

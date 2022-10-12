@@ -17,6 +17,7 @@ namespace Boudica.MongoDB.Models
         public ulong GuildId { get; set; }
         public Recruit Recruit { get; set; }
         public DateTime RecruitedDateTime { get; set; }
+        public bool ProbationPassed { get; set; }
 
         public Recruiter(IGuildUser recruiter, IGuildUser recruit)
         {

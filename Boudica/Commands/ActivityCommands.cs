@@ -1227,7 +1227,7 @@ namespace Boudica.Commands
                 {
                     if (userId == Context.User.Id) continue;
                     IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null)
+                    if (guildUser != null && guildUser.IsBot == false)
                     {
                         if(activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
                             activityUsers.Add(new ActivityUser(userId, guildUser.DisplayName));

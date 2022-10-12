@@ -35,11 +35,11 @@ namespace Boudica.Services
             //Make sure person only awards once per day
             if(userAwardedResult != null && userAwardedResult.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)
                 return new Tuple<bool, string>(false, "You can only award once per day");
-            AwardedGuardians result = await (await _awardedGuardiansCollection.FindAsync(x => x.AwardedGuardiansId == targetGuardianId)).FirstOrDefaultAsync();
-            if (result == null) 
+            List<AwardedGuardians> results = await (await _awardedGuardiansCollection.FindAsync(x => x.AwardedGuardiansId == targetGuardianId)).ToListAsync();
+            if (results.Any() == false) 
                 return new Tuple<bool, string>(true, string.Empty);
             //Only award person once per day.
-            if (result.DateTimeLastAwarded.Date == DateTime.UtcNow.Date) 
+            if (results.Any(x => x.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)) 
                 return new Tuple<bool, string>(false, "This player has already been awarded glimmer today");
             //Can't award same person twice in a row.
             if (userAwardedResult != null && userAwardedResult.AwardedGuardiansId == targetGuardianId) 
