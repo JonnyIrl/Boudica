@@ -53,6 +53,20 @@ namespace Boudica.Services
             return newRecruiter;
         }
 
+        public async Task<bool> UpdateCreatedPost(ulong recruitId)
+        {
+            var updateBuilder = Builders<Recruiter>.Update;
+            var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruitId, updateBuilder.Set(x => x.Recruit.RecruitChecklist.CreatedPost, true), new UpdateOptions() { IsUpsert = false });
+            return updateResult.ModifiedCount > 0;
+        }
+
+        public async Task<bool> UpdateJoinedPost(ulong recruitId)
+        {
+            var updateBuilder = Builders<Recruiter>.Update;
+            var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruitId, updateBuilder.Set(x => x.Recruit.RecruitChecklist.CreatedPost, true), new UpdateOptions() { IsUpsert = false });
+            return updateResult.ModifiedCount > 0;
+        }
+
         public async Task<bool> UpdateProbationPassed(Recruit recruit)
         {
             var updateBuilder = Builders<Recruiter>.Update;

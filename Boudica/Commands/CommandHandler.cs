@@ -27,6 +27,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly GuardianService _guardianService;
         private readonly TrialsService _trialsService;
+        private readonly HiringService _hiringService;
         private char Prefix = ';';
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
@@ -73,6 +74,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
             _trialsService = services.GetRequiredService<TrialsService>();
+            _hiringService = services.GetRequiredService<HiringService>();
             _services = services;
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
             PopulateAlphabetList();
@@ -1135,7 +1137,9 @@ namespace Boudica.Commands
             foreach (ActivityUser user in activityUsers)
             {
                 if (user.UserId == creatorId)
-                {  
+                {
+                    await _hiringService.UpdateCreatedPost(user.UserId);
+
                     if(isRaid)
                         awardedThisWeek = await CreatedRaidThisWeek(creatorId);
                     else 
@@ -1155,6 +1159,7 @@ namespace Boudica.Commands
                 }
                 else if (user.Reacted)
                 {
+                    await _hiringService.UpdateJoinedPost(user.UserId);
                     await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
