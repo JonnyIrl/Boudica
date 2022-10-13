@@ -69,6 +69,20 @@ namespace Boudica.Services
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
             return await (_raidCollection.Find(x => x.DateTimeCreated >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
         }
+        public async Task<Raid> FindMostRecentCompletedRaidForUser(ulong userId)
+        {
+            return await _raidCollection
+                .Find(x => x.AwardedGlimmer && x.Players.FirstOrDefault(y => y.UserId == userId) != null, new FindOptions())
+                .SortByDescending(x => x.Id)
+                .FirstOrDefaultAsync();
+        }
+        public async Task<bool> RecruitCreatedPost(ulong userId)
+        {
+            bool createdRaid = await _raidCollection.Find(x => x.AwardedGlimmer && x.CreatedByUserId == userId).AnyAsync();
+            if (createdRaid) return true;
+
+            return await _fireteamCollection.Find(x => x.AwardedGlimmer && x.CreatedByUserId == userId).AnyAsync();
+        }
         #endregion
 
         #region Mongo Fireteam
@@ -111,6 +125,14 @@ namespace Boudica.Services
         public async Task<IList<Fireteam>> FindAllOpenFireteams()
         {
             return await (await _fireteamCollection.FindAsync(x => x.DateTimeClosed == DateTime.MinValue)).ToListAsync();
+        }
+
+        public async Task<Fireteam> FindMostRecentCompletedFireteamForUser(ulong userId)
+        {
+            return await _fireteamCollection
+                .Find(x => x.AwardedGlimmer && x.Players.FirstOrDefault(y => y.UserId == userId) != null, new FindOptions())
+                .SortByDescending(x => x.Id)
+                .FirstOrDefaultAsync();
         }
         #endregion
     }

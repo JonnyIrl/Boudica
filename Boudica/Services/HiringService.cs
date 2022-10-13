@@ -60,11 +60,13 @@ namespace Boudica.Services
             return updateResult.ModifiedCount > 0;
         }
 
-        public async Task<bool> UpdateJoinedPost(ulong recruitId)
+        public async Task<bool> UpdateJoinedPost(ulong recruitId, DateTime dateTimeLastJoined)
         {
             var updateBuilder = Builders<Recruiter>.Update;
-            var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruitId, updateBuilder.Set(x => x.Recruit.RecruitChecklist.CreatedPost, true)
-                //.Set(x => x.Recruit.RecruitChecklist.DateTimeLastActivityJoined, DateTime.UtcNow)
+            var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruitId,             
+                updateBuilder
+                .Set(x => x.Recruit.RecruitChecklist.CreatedPost, true)
+                .Set(x => x.Recruit.RecruitChecklist.DateTimeLastActivityJoined, dateTimeLastJoined)
                 , new UpdateOptions() { IsUpsert = false });
             return updateResult.ModifiedCount > 0;
         }

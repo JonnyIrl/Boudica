@@ -1140,7 +1140,7 @@ namespace Boudica.Commands
                 {
                     await _hiringService.UpdateCreatedPost(user.UserId);
 
-                    if(isRaid)
+                    if (isRaid)
                         awardedThisWeek = await CreatedRaidThisWeek(creatorId);
                     else 
                         awardedThisWeek = await CreatedFireteamThisWeek(creatorId);
@@ -1159,7 +1159,7 @@ namespace Boudica.Commands
                 }
                 else if (user.Reacted)
                 {
-                    await _hiringService.UpdateJoinedPost(user.UserId);
+                    await _hiringService.UpdateJoinedPost(user.UserId, DateTime.UtcNow);
                     await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
                     Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                 }
