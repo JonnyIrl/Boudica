@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Enums
 {
-    public enum WeaponElementType
+    public enum ElementType
     {
         Arc,
         Solar,

@@ -15,12 +15,22 @@ namespace Boudica.Services
     public class CronService
     {
         private readonly Timer _actionTimer;
+        private readonly TrialsService _trialsService;
         private const int FiveMinutes = 300000;
-        private const int ThirtySeconds = 30000;
+        private const int ThirtySeconds = 10000;
 
         private readonly IMongoDBContext _mongoDBContext;
         private readonly DiscordSocketClient _client;
         protected IMongoCollection<CronTask> _cronTaskCollection;
+        private const string CrucibleRole = "Crucible Contenders";
+#if DEBUG
+        private const ulong GuildId = 958852217186713680;
+        private const ulong ChannelId = 1014433494216228905;
+        
+#else
+        private const ulong GuildId = 530462081636368395;
+        private const ulong ChannelId = 530529088620724246;
+#endif
 
         private List<Emoji> _alphabetList;
 
@@ -28,11 +38,12 @@ namespace Boudica.Services
         {
             //_mongoDBContext = mongoDBContext;
             //_cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
+            //_trialsService = services.GetRequiredService<TrialsService>();
             //_client = services.GetRequiredService<DiscordSocketClient>();
             //PopulateAlphabetList();
             //if (_actionTimer == null)
             //{
-            //    _actionTimer = new Timer(TimerElapsed, null, ThirtySeconds, FiveMinutes);
+            //    _actionTimer = new Timer(TimerElapsed, null, ThirtySeconds, ThirtySeconds);
             //}
         }
 
@@ -70,12 +81,13 @@ namespace Boudica.Services
             try
             {
                 List<CronTask> tasks = await GetTasksToAction();
-                if(tasks.Count == 0)
+                if (tasks.Count == 0)
                 {
                     Console.WriteLine("No tasks to be sent");
+                    return;
                 }
 
-                foreach(CronTask task in tasks)
+                foreach (CronTask task in tasks)
                 {
                     SocketGuild guild = _client.GetGuild(task.GuidId);
                     if (guild == null)
@@ -85,7 +97,7 @@ namespace Boudica.Services
                         continue;
                     }
                     SocketTextChannel channel = guild.GetTextChannel(task.ChannelId);
-                    if(channel == null)
+                    if (channel == null)
                     {
                         task.DateTimeLastTriggered = DateTime.UtcNow;
                         await MarkTaskAsProcessed(task);
@@ -98,8 +110,45 @@ namespace Boudica.Services
                     string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
                     embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
                     embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
-                    IUserMessage message = await channel.SendMessageAsync(null, false, embed.Build());
-                    await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
+
+
+                    task.DateTimeLastTriggered = DateTime.UtcNow;
+                    await MarkTaskAsProcessed(task);
+
+                    if (task.Name == "TrialsVote")
+                    {
+                        IUserMessage message;
+                        IRole role = guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+                        if (role != null)
+                        {
+                            message = await channel.SendMessageAsync(role.Mention, false, embed.Build());
+                        }
+                        else
+                        {
+                            message = await channel.SendMessageAsync(null, false, embed.Build());
+                            task.LastMessageId = message.Id;
+                            await MarkTaskAsProcessed(task);
+                        }
+
+                        await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
+                    }
+                    else if(task.Name == "TrialsVoteLock")
+                    {
+                        CronTask trialsVoteTask = await _cronTaskCollection.Find(x => x.Name == "TrialsVote").FirstOrDefaultAsync();
+                        if (trialsVoteTask == null) return;
+
+                        IUserMessage message = (IUserMessage) await channel.GetMessageAsync(trialsVoteTask.LastMessageId);
+                        if (message == null) return;
+                        task.LastMessageId = message.Id;
+                        await MarkTaskAsProcessed(task);
+
+                        await message.ModifyAsync(x =>
+                        {
+                            x.Embed = embed.Build();
+                        });
+
+                    }
+
                 }
             }
             catch (Exception ex)
@@ -113,11 +162,12 @@ namespace Boudica.Services
             DateTime utcNow = DateTime.UtcNow;
             List<CronTask> tasks = await _cronTaskCollection.Find(x => true).ToListAsync();
             tasks.RemoveAll(x =>
+                x.DateTimeLastTriggered.Day == utcNow.Day ||
                 //Find Daily tasks that need to be run
-                (x.RecurringAttribute.RecurringDaily && utcNow > x.TriggerDateTime && x.DateTimeLastTriggered.Day != utcNow.Day && utcNow.TimeOfDay >= x.TriggerDateTime.TimeOfDay)
+                (x.RecurringAttribute.RecurringDaily && utcNow < x.TriggerDateTime || x.DateTimeLastTriggered.Day == utcNow.Day || utcNow.TimeOfDay < x.TriggerDateTime.TimeOfDay)
                 ||
                 //Find Weekly tasks that need to be run
-                x.RecurringAttribute.RecurringWeekly && utcNow.Subtract(x.DateTimeLastTriggered).TotalDays >= 7 && utcNow.TimeOfDay >= x.TriggerDateTime.TimeOfDay && utcNow.Day == x.TriggerDateTime.Day);
+                x.RecurringAttribute.RecurringWeekly && utcNow.Subtract(x.DateTimeLastTriggered).TotalDays < 7 || utcNow.TimeOfDay < x.TriggerDateTime.TimeOfDay || utcNow.Day != x.TriggerDateTime.Day);
             return tasks;
         }
 
@@ -139,13 +189,36 @@ namespace Boudica.Services
                     RecurringWeekly = true,
                     DayOfWeek = DayOfWeek.Friday
                 };
-                task.TriggerDateTime = DateTime.ParseExact("2022-10-07 09:00:00", "yyyy-MM-dd HH:mm:ss", null);
+                task.TriggerDateTime = DateTime.ParseExact("2022-10-14 09:00:00", "yyyy-MM-dd HH:mm:ss", null);
                 task.Name = "TrialsVote";
                 task.EmbedAttributes = CreateTrialsVoteEmbedAttributes();
-                task.GuidId = 958852217186713680;
-                task.ChannelId = 1014433494216228905;
+                task.GuidId = GuildId;
+                task.ChannelId = ChannelId;
                 await _cronTaskCollection.InsertOneAsync(task);
                 return await _cronTaskCollection.Find(x => x.Name == "TrialsVote").FirstOrDefaultAsync() != null;
+            }
+
+            return false;
+        }
+
+        public async Task<bool> CreateTrialsLockTask()
+        {
+            CronTask existingTask = await _cronTaskCollection.Find(x => x.Name == "TrialsVoteLock").FirstOrDefaultAsync();
+            if (existingTask == null)
+            {
+                CronTask task = new CronTask();
+                task.RecurringAttribute = new CronRecurringAttribute()
+                {
+                    RecurringWeekly = true,
+                    DayOfWeek = DayOfWeek.Friday
+                };
+                task.TriggerDateTime = DateTime.ParseExact("2022-10-14 17:55:00", "yyyy-MM-dd HH:mm:ss", null);
+                task.Name = "TrialsVoteLock";
+                task.EmbedAttributes = CreateTrialsVoteLockAttributes();
+                task.GuidId = GuildId;
+                task.ChannelId = ChannelId;
+                await _cronTaskCollection.InsertOneAsync(task);
+                return await _cronTaskCollection.Find(x => x.Name == "TrialsVoteLock").FirstOrDefaultAsync() != null;
             }
 
             return false;
@@ -158,11 +231,27 @@ namespace Boudica.Services
             cronEmbedAttributes.ColorCode = "21,142,2";
             StringBuilder sb = new StringBuilder();
 
-            for(int i = 0; i < TrialsMaps.Count; i++)
+            for (int i = 0; i < TrialsMaps.Count; i++)
             {
-                sb.AppendLine($"{_alphabetList[i]} {TrialsMaps[i]}");
+                sb.AppendLine($"{_alphabetList[i]} - {TrialsMaps[i]}");
             }
-            cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString() };
+            cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
+            return cronEmbedAttributes;
+        }
+
+        private CronEmbedAttributes CreateTrialsVoteLockAttributes()
+        {
+            CronEmbedAttributes cronEmbedAttributes = new CronEmbedAttributes();
+            cronEmbedAttributes.Title = "Trials Voting has now ended";
+            cronEmbedAttributes.Description = "";
+            cronEmbedAttributes.ColorCode = "237,34,19";
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = 0; i < TrialsMaps.Count; i++)
+            {
+                sb.AppendLine($"{_alphabetList[i]} - {TrialsMaps[i]}");
+            }
+            cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
         }
         private List<string> TrialsMaps = new List<string>()
@@ -173,7 +262,7 @@ namespace Boudica.Services
             "Cathedral of Dusk",
             "Disjunction",
             "Distant Shore",
-            "Endless Vale",
+            //"Endless Vale",
             "Eternity",
             "Exodus Blue",
             "Fragment",

@@ -366,6 +366,13 @@ namespace Boudica.Commands
             await ReplyAsync(null, false, embedBuilder.Build());
         }
 
+        [Command("testmethod")]
+        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        public async Task TestMethod()
+        {
+            bool result = await _activityService.CreatedRaidThisWeek(850688118113173515);
+            int breakHere = 0;
+        }
 
         private async Task<List<IGuildUser>> GetTaggedRecruiterAndRecruit(string args)
         {

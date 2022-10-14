@@ -18,6 +18,7 @@ namespace Boudica.Commands
         private readonly TrialsService _trialsService;
         private readonly GuardianService _guardianService;
         private List<Emoji> _alphabetList;
+        private const string CrucibleRole = "Crucible Contenders";
 
         public CrucibleCommands(IServiceProvider services)
         {
@@ -75,9 +76,20 @@ namespace Boudica.Commands
             string[] rgb = attributes.ColorCode.Split(",");
             embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
             embed.AddField(attributes.EmbedFieldBuilder) ;
-            IUserMessage message = await ReplyAsync(null, false, embed.Build());
+
+            IUserMessage message;
+            IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+            if (role != null)
+            {
+                message = await ReplyAsync(role.Mention, false, embed.Build());
+            }
+            else
+            {
+                message = await ReplyAsync(null, false, embed.Build());
+            }
 
             await _trialsService.UpdateMessageId(message.Id);
+            await message.PinAsync();
             await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
         }
 
@@ -102,15 +114,18 @@ namespace Boudica.Commands
                 await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
                 return;
             }
-            
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.Color = Color.Red;
-            embedBuilder.Title = "Trials Voting is now closed";
-            embedBuilder.Description = string.Empty;
+
+            EmbedBuilder embed = new EmbedBuilder();
+            CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
+            embed.Title = attributes.Title;
+            embed.Description = attributes.Description;
+            string[] rgb = attributes.ColorCode.Split(",");
+            embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+            embed.AddField(attributes.EmbedFieldBuilder);
 
             await message.ModifyAsync(x =>
             {
-                x.Embed = embedBuilder.Build();
+                x.Embed = embed.Build();
             });
         }
 
@@ -195,15 +210,30 @@ namespace Boudica.Commands
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
         }
+        private CronEmbedAttributes CreateTrialsVoteLockAttributes()
+        {
+            CronEmbedAttributes cronEmbedAttributes = new CronEmbedAttributes();
+            cronEmbedAttributes.Title = "Trials Voting has now ended";
+            cronEmbedAttributes.Description = "";
+            cronEmbedAttributes.ColorCode = "237,34,19";
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = 0; i < TrialsMaps.Count; i++)
+            {
+                sb.AppendLine($"{_alphabetList[i]} - {TrialsMaps[i]}");
+            }
+            cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
+            return cronEmbedAttributes;
+        }
         private List<string> TrialsMaps = new List<string>()
         {
             "Altar of Flame",
-            //"Bannerfall",
+            "Bannerfall",
             "Burnout",
             "Cathedral of Dusk",
             "Disjunction",
             "Distant Shore",
-            "Endless Vale",
+            //"Endless Vale",
             "Eternity",
             "Exodus Blue",
             "Fragment",

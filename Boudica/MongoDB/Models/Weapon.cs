@@ -11,7 +11,7 @@ namespace Boudica.MongoDB.Models
     {
         public WeaponType WeaponType { get; set; }
         public WeaponArchtype WeaponArchtype { get; set; }
-        public WeaponElementType WeaponElementType { get; set; }
+        public ElementType WeaponElementType { get; set; }
         public bool IsExotic { get; set; }
 
 
@@ -36,8 +36,7 @@ namespace Boudica.MongoDB.Models
             Random random = new Random();
             return kineticWeapons[random.Next(0, kineticWeapons.Count)];
         }
-
-        public WeaponType GetSpecialWeapon(bool isExotic)
+        public WeaponType GetSpecialWeapon(bool isExotic, WeaponType kineticType)
         {
             List<WeaponType> specialWeapons = new List<WeaponType>()
             {
@@ -62,9 +61,14 @@ namespace Boudica.MongoDB.Models
             }
 
             Random random = new Random();
-            return specialWeapons[random.Next(0, specialWeapons.Count)];
-        }
+            WeaponType randomWeaponType = specialWeapons[random.Next(0, specialWeapons.Count)];
+            while(randomWeaponType == kineticType)
+            {
+                randomWeaponType = specialWeapons[random.Next(0, specialWeapons.Count)];
+            }
 
+            return randomWeaponType;
+        }
         public WeaponType GetHeavyWeapon(bool isExotic)
         {
             List<WeaponType> heavyWeapons = new List<WeaponType>()
@@ -86,6 +90,54 @@ namespace Boudica.MongoDB.Models
 
             Random random = new Random();
             return heavyWeapons[random.Next(0, heavyWeapons.Count)];
+        }
+    }
+
+    public static partial class Extensions
+    {
+        public static string ToName(this WeaponType weaponType)
+        {
+            switch (weaponType)
+            {
+                case WeaponType.AutoRifle:
+                    return "Auto Rifle";
+                case WeaponType.HandCannon:
+                    return "Hand Cannon";
+                case WeaponType.PulseRifle:
+                    return "Pulse Rifle";
+                case WeaponType.ScoutRifle:
+                    return "Scout Rifle";
+                case WeaponType.FusionRifle:
+                    return "Fustion Rifle";
+                case WeaponType.SniperRifle:
+                    return "Sniper Rifle";
+                case WeaponType.Shotgun:
+                    return "Shotgun";
+                case WeaponType.MachineGun:
+                    return "Machine Gun";
+                case WeaponType.RocketLauncher:
+                    return "Rocket Launcher";
+                case WeaponType.Sidearm:
+                    return "Sidearm";
+                case WeaponType.Sword:
+                    return "Sword";
+                case WeaponType.SpecialGrenadeLauncher:
+                    return "Special Grendade Launcher";
+                case WeaponType.GrenadeLauncher:
+                    return "Grenade Launcher";
+                case WeaponType.TraceRifle:
+                    return "Trace Rifle";
+                case WeaponType.LinearFusionRifle:
+                    return "Linear Fusion Rifle";
+                case WeaponType.SMG:
+                    return "SMG";
+                case WeaponType.Bow:
+                    return "Bow";
+                case WeaponType.Glaive:
+                    return "Glaive";
+            }
+
+            return string.Empty;
         }
     }
 }

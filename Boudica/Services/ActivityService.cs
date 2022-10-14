@@ -67,7 +67,7 @@ namespace Boudica.Services
         public async Task<bool> CreatedRaidThisWeek(ulong userId)
         {
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
-            return await (_raidCollection.Find(x => x.DateTimeCreated >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+            return await (_raidCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
         }
         public async Task<Raid> FindMostRecentCompletedRaidForUser(ulong userId)
         {
@@ -119,7 +119,7 @@ namespace Boudica.Services
         public async Task<bool> CreatedFireteamThisWeek(ulong userId)
         {
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
-            return await (_fireteamCollection.Find(x => x.DateTimeCreated >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+            return await (_fireteamCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
         }
 
         public async Task<IList<Fireteam>> FindAllOpenFireteams()
