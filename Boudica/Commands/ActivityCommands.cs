@@ -158,7 +158,7 @@ namespace Boudica.Commands
             return args;
         }
 
-        private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid, bool forceClose)
+        private async Task<bool> CheckExistingRaidIsValid(Raid existingRaid, bool forceCommand)
         {
             if (existingRaid == null)
             {
@@ -172,7 +172,7 @@ namespace Boudica.Commands
                 return false;
             }
 
-            if (forceClose)
+            if (forceCommand)
             {
                 IGuildUser guildUser = await Context.Guild.GetCurrentUserAsync();
                 if (guildUser != null)
@@ -373,7 +373,7 @@ namespace Boudica.Commands
 
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
             int oldPlayerCount = existingRaid.Players.Count;
-            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, true);
             if (existingRaidResult == false) return;
 
             if (Context.Guild.Id != existingRaid.GuidId)
@@ -394,16 +394,19 @@ namespace Boudica.Commands
                 return;
             }
 
-            List<ActivityUser> usersToRemove = await AddPlayersToNewActivity(args);
+            List<ActivityUser> usersToRemove = await AddPlayersToNewActivity(args, 5, true);
             StringBuilder sb = new StringBuilder();
             foreach (ActivityUser userToRemove in usersToRemove)
             {
-                IGuildUser guildUser = await Context.Guild.GetUserAsync(userToRemove.UserId);
-                if (guildUser != null)
+                if (existingRaid.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId) != null)
                 {
+                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userToRemove.UserId);
                     sb.Append($"<@{userToRemove.UserId}>");
                     existingRaid.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
-                    await message.RemoveReactionAsync(_jEmoji, guildUser);
+                    if (guildUser != null)
+                    {
+                        await message.RemoveReactionAsync(_jEmoji, guildUser);
+                    }
                 }
             }
 
@@ -442,7 +445,7 @@ namespace Boudica.Commands
 
             MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
             int oldPlayerCount = existingRaid.Players.Count;
-            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, true);
             if (existingRaidResult == false) return;
 
             if (Context.Guild.Id != existingRaid.GuidId)
@@ -632,6 +635,7 @@ namespace Boudica.Commands
             if (exisingRaidResult == false) return;
 
             existingRaid.DateTimeClosed = DateTime.UtcNow;
+            existingRaid.AwardedGlimmer = true;
             await _activityService.UpdateRaidAsync(existingRaid);
 
             ITextChannel channel = await Context.Guild.GetTextChannelAsync(existingRaid.ChannelId);
@@ -1204,7 +1208,7 @@ namespace Boudica.Commands
 
             return true;
         }
-        private async Task<List<ActivityUser>> AddPlayersToNewActivity(string args, int maxCount = 5)
+        private async Task<List<ActivityUser>> AddPlayersToNewActivity(string args, int maxCount = 5, bool removePlayer = false)
         {
             string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
             List<ActivityUser> activityUsers = new List<ActivityUser>();
@@ -1226,11 +1230,18 @@ namespace Boudica.Commands
                 if (ulong.TryParse(sanitisedUser, out ulong userId))
                 {
                     if (userId == Context.User.Id) continue;
-                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null && guildUser.IsBot == false)
+                    if (removePlayer)
                     {
-                        if(activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
-                            activityUsers.Add(new ActivityUser(userId, guildUser.DisplayName));
+                        activityUsers.Add(new ActivityUser(userId, string.Empty));
+                    }
+                    else
+                    {
+                        IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
+                        if (guildUser != null && guildUser.IsBot == false)
+                        {
+                            if (activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
+                                activityUsers.Add(new ActivityUser(userId, guildUser.DisplayName));
+                        }
                     }
                 }               
             }
