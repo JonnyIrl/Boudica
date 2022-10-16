@@ -285,7 +285,7 @@ namespace Boudica.Commands
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannel(Context.Channel.Id);
-            if (role != null)
+            if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
             {
                 // this will reply with the embed
                 newMessage = await ReplyAsync(role.Mention, false, embed.Build());
@@ -870,7 +870,7 @@ namespace Boudica.Commands
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannel(Context.Channel.Id);
-            if (role != null)
+            if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount)
             {
                 newMessage = await ReplyAsync(role.Mention, false, embed.Build());
             }
