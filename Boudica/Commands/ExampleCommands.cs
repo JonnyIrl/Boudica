@@ -1,6 +1,5 @@
 ﻿using Boudica.Enums;
 using Discord;
-using Discord.Commands;
 using Discord.Interactions;
 using System;
 using System.Collections.Generic;
@@ -18,24 +17,6 @@ namespace Boudica.Commands
         public ExampleCommands(CommandHandler handler)
         {
             _handler = handler;
-        }
-
-
-        [Command("hello")]
-        public async Task HelloCommand()
-        {
-            // initialize empty string builder for reply
-            var sb = new StringBuilder();
-
-            // get user info from the Context
-            var user = Context.User;
-
-            // build out the reply
-            sb.AppendLine($"You are -> []");
-            sb.AppendLine("I must now say, World!");
-
-            // send simple string reply
-            await ReplyAsync(sb.ToString());
         }
 
         [SlashCommand("8ball", "find your answer!")]
@@ -62,30 +43,5 @@ namespace Boudica.Commands
         }
 
 
-        [SlashCommand("create", "Select your activity")]
-        public async Task TestSlashCommand(Enums.ActivityType activityType, RaidName raidName, DateTime when, string description)
-        {
-            switch(activityType)
-            {
-                case Enums.ActivityType.Fireteam:
-                    break;
-                case Enums.ActivityType.Raid:
-                     await Test2(raidName, when, description);
-                    break;
-            }
-
-            await RespondAsync();
-            
-        }
-
-        [SlashCommand("raid", "raidraid")]
-        private async Task Test2(RaidName raidName, DateTime when, string description)
-        {
-            RaidName selectedRaidName = raidName;
-            DateTime raidDateTime = when;
-            string result = description;
-
-            int breakHere = 0;
-        }
     }
 }
