@@ -19,7 +19,7 @@ namespace Boudica.Commands
             _handler = handler;
         }
 
-        [SlashCommand("8ball", "find your answer!")]
+        [SlashCommand("ask", "Ask a question to find your answer!")]
         public async Task AskEightBall(string question)
         {
             // now to create a list of possible replies
@@ -35,11 +35,6 @@ namespace Boudica.Commands
 
             // reply with the answer
             await RespondAsync($"You asked: **{question}**, and your answer is: **{answer}**");
-            IUserMessage message = await GetOriginalResponseAsync();
-            if (message != null)
-            {
-                await message.ModifyAsync(x => x.Content = "This is a modified text");
-            }
         }
 
 

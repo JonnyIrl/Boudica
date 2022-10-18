@@ -16,14 +16,13 @@ using System.Threading.Tasks;
 namespace Boudica.Commands
 {
     [Group("create", "Create an activity")]
-    public class ActivityCommands : ActivityHelper
+    public class CreateActivityCommands : ActivityHelper
     {  
-        public ActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
+        public CreateActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
 
         }
 
-        #region Mongo Raid
         [SlashCommand("raid", "Create a Raid")]
         public async Task CreateRaidCommand(string raidDescription)
         {
@@ -113,9 +112,6 @@ namespace Boudica.Commands
             });
         }
 
-        #endregion
-
-        #region Fireteam
         [SlashCommand("fireteam", "Create a Fireteam")]
         public async Task CreateFireteamCommand(int fireteamSize, string args)
         {
@@ -249,8 +245,6 @@ namespace Boudica.Commands
 
             return null;
         }
-        #endregion
-
     }
 
     [Group("edit", "Edit an activity")]
@@ -649,64 +643,18 @@ namespace Boudica.Commands
 
             await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Raid").Build());
         }
-
-        [SlashCommand("alert", "Alert all members of an activity")]
-        public async Task AlertActivity(Enums.ActivityType activityType, int id)
-        {
-            switch (activityType)
-            {
-                case Enums.ActivityType.Raid:
-                    await AlertRaid(id);
-                    return;
-                case Enums.ActivityType.Fireteam:
-                    await AlertFireteam(id);
-                    return;
-            }
-
-            await RespondAsync(embed: EmbedHelper.CreateFailedReply("Something went wrong, ensure you choose Raid or Fireteam and supply a valid id").Build());
-        }
-        private async Task AlertRaid(int raidId)
-        {
-            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool exisingRaidResult = await CheckCanAlertRaid(existingRaid);
-            if (exisingRaidResult == false) return;
-
-            existingRaid.DateTimeAlerted = DateTime.UtcNow;
-            await _activityService.UpdateRaidAsync(existingRaid);
-
-            ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
-                return;
-            }
-
-            StringBuilder sb = new StringBuilder();
-            foreach (ActivityUser player in existingRaid.Players)
-            {
-                if (player.UserId == Context.User.Id) continue;
-                sb.Append($"<@{player.UserId}> ");
-            }
-
-            sb.Append("Are you all still ok for this raid?");
-            await message.ReplyAsync(sb.ToString());
-            await RespondAsync("Success", ephemeral: true);
-        }
-        private async Task AlertFireteam(int fireteamId)
+        public async Task AddPlayerToFireteam(int fireteamId, string playersToAdd)
         {
             Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-            bool exisingRaidResult = await CheckCanAlertFireteam(existingFireteam);
-            if (exisingRaidResult == false) return;
+            int oldPlayerCount = existingFireteam.Players.Count;
+            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+            if (existingFireteamResult == false) return;
 
-            existingFireteam.DateTimeAlerted = DateTime.UtcNow;
-            await _activityService.UpdateFireteamAsync(existingFireteam);
-
+            if (Context.Guild.Id != existingFireteam.GuidId)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+                return;
+            }
             ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
             if (channel == null)
             {
@@ -716,94 +664,77 @@ namespace Boudica.Commands
             IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
             if (message == null)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
                 return;
             }
 
+            if (existingFireteam.Players.Count == existingFireteam.MaxPlayerCount)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This fireteam is already full!").Build());
+                return;
+            }
+
+            List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
             StringBuilder sb = new StringBuilder();
-            foreach (ActivityUser player in existingFireteam.Players)
+            foreach (ActivityUser userToRemove in usersToAdd)
             {
-                if (player.UserId == Context.User.Id) continue;
-                sb.Append($"<@{player.UserId}> ");
+                IGuildUser guildUser = Context.Guild.GetUser(userToRemove.UserId);
+                if (guildUser != null)
+                {
+
+                    ActivityUser existingUser = existingFireteam.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId);
+                    //Already added
+                    if (existingUser != null)
+                    {
+                        continue;
+                    }
+                    else if (existingFireteam.Players.Count < existingFireteam.MaxPlayerCount)
+                    {
+                        sb.Append($"<@{userToRemove.UserId}>");
+                        existingFireteam.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
+                    }
+                }
             }
 
-            sb.Append("Are you all still ok for this activity?");
-            await message.ReplyAsync(sb.ToString());
-            await RespondAsync("Success", ephemeral: true);
-        }
-        private async Task<bool> CheckCanAlertRaid(Raid existingRaid)
-        {
-
-            if (existingRaid == null)
+            if (oldPlayerCount == existingFireteam.Players.Count)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
-                return false;
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not find player to add to Fireteam {existingFireteam.Id} or player already exists").Build());
+                return;
             }
 
-            if (existingRaid.DateTimeClosed != DateTime.MinValue)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
-                return false;
-            }
-            if (existingRaid.CreatedByUserId != Context.User.Id)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only the person who created the Raid can alert the players").Build());
-                return false;
-            }
+            await _activityService.UpdateFireteamAsync(existingFireteam);
 
-            if (existingRaid.DateTimeAlerted.Date == DateTime.UtcNow.Date)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only roll call/rollcall/alert once per day").Build());
-                return false;
-            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+            AddActivityUsersField(modifiedEmbed, "Players", existingFireteam.Players);
+            AddActivityUsersField(modifiedEmbed, "Subs", existingFireteam.Substitutes);
 
-            return true;
-        }
-        private async Task<bool> CheckCanAlertFireteam(Fireteam existingFireteam)
-        {
-
-            if (existingFireteam == null)
+            await message.ModifyAsync(x =>
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
-                return false;
-            }
+                x.Embed = modifiedEmbed.Build();
+            });
 
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
-                return false;
-            }
-            if (existingFireteam.CreatedByUserId != Context.User.Id)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only the person who created the Fireteam can alert the players").Build());
-                return false;
-            }
-
-            if (existingFireteam.DateTimeAlerted.Date == DateTime.UtcNow.Date)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only alert once per day").Build());
-                return false;
-            }
-
-            return true;
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Fireteam").Build());
         }
 
         [SlashCommand("remove-player", "Remove a player from an activity")]
         public async Task RemovePlayerFromFireteam(Enums.ActivityType activityType, int id, string playersToRemove)
         {
-            switch(activityType)
+            switch (activityType)
             {
                 case Enums.ActivityType.Raid:
                     await RemovePlayerFromRaid(id, playersToRemove);
-                        return;
+                    return;
                 case Enums.ActivityType.Fireteam:
                     await RemovePlayerFromFireteam(id, playersToRemove);
-                        return;
+                    return;
             }
 
             await RespondAsync(embed: EmbedHelper.CreateFailedReply("Something went wrong, ensure you choose Raid or Fireteam and supply a valid id along with players to remove").Build());
         }
-
         public async Task RemovePlayerFromRaid(int raidId, string playersToRemove)
         {
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
@@ -943,6 +874,226 @@ namespace Boudica.Commands
             }
 
             return null;
+        }
+
+        [SlashCommand("alert", "Alert all members of an activity")]
+        public async Task AlertActivity(Enums.ActivityType activityType, int id)
+        {
+            switch (activityType)
+            {
+                case Enums.ActivityType.Raid:
+                    await AlertRaid(id);
+                    return;
+                case Enums.ActivityType.Fireteam:
+                    await AlertFireteam(id);
+                    return;
+            }
+
+            await RespondAsync(embed: EmbedHelper.CreateFailedReply("Something went wrong, ensure you choose Raid or Fireteam and supply a valid id").Build());
+        }
+        private async Task AlertRaid(int raidId)
+        {
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckCanAlertRaid(existingRaid);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeAlerted = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser player in existingRaid.Players)
+            {
+                if (player.UserId == Context.User.Id) continue;
+                sb.Append($"<@{player.UserId}> ");
+            }
+
+            sb.Append("Are you all still ok for this raid?");
+            await message.ReplyAsync(sb.ToString());
+            await RespondAsync("Success", ephemeral: true);
+        }
+        private async Task AlertFireteam(int fireteamId)
+        {
+            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            bool exisingRaidResult = await CheckCanAlertFireteam(existingFireteam);
+            if (exisingRaidResult == false) return;
+
+            existingFireteam.DateTimeAlerted = DateTime.UtcNow;
+            await _activityService.UpdateFireteamAsync(existingFireteam);
+
+            ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
+            if (channel == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser player in existingFireteam.Players)
+            {
+                if (player.UserId == Context.User.Id) continue;
+                sb.Append($"<@{player.UserId}> ");
+            }
+
+            sb.Append("Are you all still ok for this activity?");
+            await message.ReplyAsync(sb.ToString());
+            await RespondAsync("Success", ephemeral: true);
+        }
+        private async Task<bool> CheckCanAlertRaid(Raid existingRaid)
+        {
+
+            if (existingRaid == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
+                return false;
+            }
+            if (existingRaid.CreatedByUserId != Context.User.Id)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only the person who created the Raid can alert the players").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeAlerted.Date == DateTime.UtcNow.Date)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only roll call/rollcall/alert once per day").Build());
+                return false;
+            }
+
+            return true;
+        }
+        private async Task<bool> CheckCanAlertFireteam(Fireteam existingFireteam)
+        {
+
+            if (existingFireteam == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                return false;
+            }
+
+            if (existingFireteam.DateTimeClosed != DateTime.MinValue)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
+                return false;
+            }
+            if (existingFireteam.CreatedByUserId != Context.User.Id)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only the person who created the Fireteam can alert the players").Build());
+                return false;
+            }
+
+            if (existingFireteam.DateTimeAlerted.Date == DateTime.UtcNow.Date)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only alert once per day").Build());
+                return false;
+            }
+
+            return true;
+        }
+        
+        [SlashCommand("list-open-raids", "List all open Raids")]
+        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        public async Task ListOpenRaids()
+        {
+            await DeferAsync();
+
+            IList<Raid> openRaids = await _activityService.FindAllOpenRaids();
+            openRaids = openRaids.OrderBy(x => x.DateTimeCreated).ToList();
+            if (openRaids == null || openRaids.Count == 0)
+            {
+                await ReplyAsync("There are no open raids!");
+                return;
+            }
+
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            StringBuilder sb = new StringBuilder();
+            embedBuilder.WithTitle("Below is a list of open raids. The command to close the raid is at the beginning of each.");
+            foreach (Raid openRaid in openRaids)
+            {
+                if (openRaid.GuidId != Context.Guild.Id)
+                    continue;
+                ITextChannel channel = Context.Guild.GetTextChannel(openRaid.ChannelId);
+                if (channel == null) continue;
+                IMessage message = await channel.GetMessageAsync(openRaid.MessageId);
+                if (message == null) continue;
+
+                double daysOld = Math.Round(DateTime.UtcNow.Subtract(openRaid.DateTimeCreated).TotalDays, 0);
+                sb.AppendLine($"/close raid {openRaid.Id} | {daysOld} days open | Created By <@{openRaid.CreatedByUserId}> |\n{message.Embeds.First().Description}\n\n");
+            }
+
+            if (sb.Length == 0)
+            {
+                await ReplyAsync("There are no open raids!");
+                return;
+            }
+
+            embedBuilder.Description = sb.ToString();
+            embedBuilder.WithDescription(sb.ToString());
+            await RespondAsync(embed: embedBuilder.Build());
+        }
+
+        [SlashCommand("list-open-fireteams", "List all open Fireteams")]
+        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        public async Task ListOpenFireteams()
+        {
+            await DeferAsync();
+
+            IList<Fireteam> openFireteams = await _activityService.FindAllOpenFireteams();
+            openFireteams = openFireteams.OrderBy(x => x.DateTimeCreated).ToList();
+            if (openFireteams == null || openFireteams.Count == 0)
+            {
+                await ReplyAsync("There are no open fireteams!");
+                return;
+            }
+
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            StringBuilder sb = new StringBuilder();
+            embedBuilder.WithTitle("Below is a list of open Fireteam. The command to close the fireteam is at the beginning of each.");
+            foreach (Fireteam openFireteam in openFireteams)
+            {
+                if (openFireteam.GuidId != Context.Guild.Id)
+                    continue;
+                ITextChannel channel = Context.Guild.GetTextChannel(openFireteam.ChannelId);
+                if (channel == null) continue;
+                IMessage message = await channel.GetMessageAsync(openFireteam.MessageId);
+                if (message == null) continue;
+
+                double daysOld = Math.Round(DateTime.UtcNow.Subtract((DateTime)openFireteam?.DateTimeCreated).TotalDays, 0);
+                sb.AppendLine($"/close fireteam {openFireteam.Id} | {daysOld} days open | Created By <@{openFireteam.CreatedByUserId}> |\n{message.Embeds.First().Description}\n\n");
+            }
+
+            if (sb.Length == 0)
+            {
+                await ReplyAsync("There are no open fireteams!");
+                return;
+            }
+
+            embedBuilder.Description = sb.ToString();
+            embedBuilder.WithDescription(sb.ToString());
+            await RespondAsync(embed: embedBuilder.Build());
         }
     }
 }

@@ -4,7 +4,8 @@ using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
 using GiphyDotNet.Manager;
 using GiphyDotNet.Model.Parameters;
 using Microsoft.Extensions.Configuration;
@@ -18,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    public class ARGCommands : ModuleBase
+    public class ARGCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly IConfiguration _config;
         private readonly GuardianService _guardianService;
@@ -95,7 +96,7 @@ namespace Boudica.Commands
 
         //}
 
-        [Command("leaderboard")]
+        [SlashCommand("leaderboard", "Display current glimmer leaderboard")]
         public async Task GetLeaderboard()
         {
             List<Guardian> guardians = await _guardianService.GetLeaderboard(Context.User.Id);
@@ -120,7 +121,7 @@ namespace Boudica.Commands
             StringBuilder stringBuilder = new StringBuilder();
             foreach (Guardian guardian in guardians)
             {
-                IGuildUser user = await Context.Guild.GetUserAsync(guardian.Id);
+                IGuildUser user = Context.Guild.GetUser(guardian.Id);
                 if (user == null) continue;
 
                 //Bold the person who issued the command
@@ -138,13 +139,21 @@ namespace Boudica.Commands
             await ReplyAsync(embed: embed.Build());
         }
 
-        [Command("award")]
-        public async Task AwardPlayer([Remainder] string args)
+        [SlashCommand("award", "Award a player with 3 Glimmer daily")]
+        public async Task AwardPlayer(SocketGuildUser guildUser, string reasonForAward = null)
         {
-            ActivityUser user = await GetFirstMentionedUser(args);
+            if (guildUser == null || guildUser.IsBot)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /award @User").Build());
+                return;
+            }
+
+            await DeferAsync();
+
+            ActivityUser user = new ActivityUser(guildUser.Id, guildUser.DisplayName);
             if(user == null)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;award @User").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /award @User").Build());
                 return;
             }
 
@@ -154,7 +163,7 @@ namespace Boudica.Commands
                 await ReplyAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
                 await Task.Delay(500);
                 await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
-                await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
+                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
                 return;
             }
 
@@ -166,99 +175,35 @@ namespace Boudica.Commands
             }
 
             await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName);
-            await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+            await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
         }
 
         [RequireUserPermission(GuildPermission.KickMembers)]
-        [Command("supersub")]
-        public async Task AwardSuperSubPlayer([Remainder] string args)
+        [SlashCommand("supersub", "Award a PLayer with 6 Glimmer for being a Super Sub!")]
+        public async Task AwardSuperSubPlayer(SocketGuildUser guildUser, string reason = null)
         {
-            ActivityUser user = await GetFirstMentionedUser(args);
+            if(guildUser == null || guildUser.IsBot)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /supersub @User").Build());
+                return;
+            }
+            ActivityUser user = new ActivityUser(guildUser.Id, guildUser.DisplayName);
             if (user == null)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;supersub @User").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /supersub @User").Build());
                 return;
             }
 
             if (user.UserId == Context.User.Id)
             {
                 await _guardianService.RemoveGlimmerAsync(user.UserId, 9);
-                await ReplyAsync($"<@{user.UserId}>, you have lost 9 glimmer!");
+                await RespondAsync($"<@{user.UserId}>, you have lost 9 glimmer!");
                 return;
             }
 
             await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 2, true);
-            await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
-        }
-
-        private async Task<ActivityUser> GetFirstMentionedUser(string args)
-        {
-            string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
-            List<ActivityUser> activityUsers = new List<ActivityUser>();
-            if (sanitisedSplit.Contains("@") == false) return null;
-            string[] users = sanitisedSplit.Split('@');
-            foreach (string user in users)
-            {
-                string sanitisedUser = string.Empty;
-                int space = user.IndexOf(' ');
-                if (space == -1)
-                    sanitisedUser = user.Trim();
-                else
-                {
-                    sanitisedUser = user.Substring(0, space).Trim();
-                }
-                if (string.IsNullOrEmpty(sanitisedUser)) continue;
-                if (IsDigitsOnly(sanitisedUser) == false) continue;
-
-                if (ulong.TryParse(sanitisedUser, out ulong userId))
-                {
-                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null && guildUser.IsBot == false)
-                    {
-                        if (activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
-                            return new ActivityUser(userId, guildUser.DisplayName);
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        bool IsDigitsOnly(string str)
-        {
-            foreach (char c in str)
-            {
-                if (c < '0' || c > '9')
-                    return false;
-            }
-
-            return true;
-        }
-
-        //[Command("createitem")]
-        //public async Task Create([Remainder] string args)
-        //{
-        //    if (args == null || args.Contains("item") == false)
-        //    {
-        //        await ReplyAsync("Invalid command, example is ;create item itemJson");
-        //        return;
-        //    }
-        //    var split = args.Split("item");
-        //    await CreateItem(split[split.Length - 1]);
-        //}
-
-        //private async Task CreateItem(string itemJson)
-        //{
-        //    bool result = await _itemService.CreateItem(itemJson);
-        //    if(result)
-        //    {
-        //        await ReplyAsync(embed: EmbedHelper.CreateSuccessReply("Item was created!").Build());
-        //    }
-        //    else
-        //    {
-        //        await ReplyAsync(embed: EmbedHelper.CreateFailedReply("Failed to create item!").Build());
-        //    }
-        //}
+            await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
+        }    
 
         private string GetRank(int rank)
         {
