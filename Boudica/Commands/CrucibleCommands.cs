@@ -66,7 +66,7 @@ namespace Boudica.Commands
             bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
             if(createdTrialsVote == false)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
             }
 
             EmbedBuilder embed = new EmbedBuilder();
@@ -85,7 +85,7 @@ namespace Boudica.Commands
             }
             else
             {
-                message = await ReplyAsync(null, false, embed.Build());
+                message = await RespondAsync(embed: embed.Build());
             }
 
             await _trialsService.UpdateMessageId(message.Id);
@@ -101,17 +101,17 @@ namespace Boudica.Commands
             TrialsVote trialsVote = await _trialsService.LockTrialsVote();
             if (trialsVote == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Failed to lock").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to lock").Build());
                 return;
             }
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("Voting is now closed").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Voting is now closed").Build());
             
 
             IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(trialsVote.MessageId, CacheMode.AllowDownload);
             if (message == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
                 return;
             }
 
@@ -135,14 +135,14 @@ namespace Boudica.Commands
             if (Context.User.Id != 244209636897456129) return;
             if (Emoji.TryParse(args, out Emoji confirmedEmoji) == false)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find emoji").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find emoji").Build());
                 return;
             }
 
             int index = _alphabetList.IndexOf(confirmedEmoji);
             if (index == -1)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find emoji in list").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find emoji in list").Build());
                 return;
             }
 
@@ -150,12 +150,12 @@ namespace Boudica.Commands
             List<PlayerVote> winningPlayerVotes = await _trialsService.GetWinningTrialsGuesses(confirmedEmoji.Name);
             if (winningPlayerVotes == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find trials vote").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find trials vote").Build());
                 return;
             }
             else if (winningPlayerVotes.Count == 0)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}. Better luck next week!").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}. Better luck next week!").Build());
             }
             else
             {

@@ -44,7 +44,7 @@ namespace Boudica.Commands
             sb.AppendLine("**Add Warning to Recruit**  ;recruit warn @NewJoiner");
             sb.AppendLine("**Add Note to Recruit**  ;recruit note @NewJoiner This player posted an offensive gif");
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply(sb.ToString()).Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply(sb.ToString()).Build());
         }
 
         [Command("new recruit")]
@@ -54,13 +54,13 @@ namespace Boudica.Commands
             List<IGuildUser> guildUsers = await GetTaggedRecruiterAndRecruit(args);
             if(guildUsers == null || guildUsers.Count != 2)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. ;new recruit @Recruiter @NewPerson").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. ;new recruit @Recruiter @NewPerson").Build());
                 return;
             }
 
             if(guildUsers[1].Id == Context.User.Id)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, you cannot recruit yourself").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, you cannot recruit yourself").Build());
                 return;
             }
             const int recruiterIndex = 0;
@@ -68,18 +68,18 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(guildUsers[recruitIndex].Id);
             if(existingRecruiter != null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{existingRecruiter.Recruit.DisplayName} has already been recruited by {existingRecruiter.DisplayName}").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{existingRecruiter.Recruit.DisplayName} has already been recruited by {existingRecruiter.DisplayName}").Build());
                 return;
             }
 
             Recruiter newRecruiter = await _hiringService.InsertNewRecruit(guildUsers[recruiterIndex], guildUsers[recruitIndex]);
             if(newRecruiter == null || newRecruiter.Id == Guid.Empty)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Failed to insert new recruit.. it's not your fault, it's Jonny's").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to insert new recruit.. it's not your fault, it's Jonny's").Build());
                 return;
             }
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the ;recruit progress <@{newRecruiter.Recruit.Id}>").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the ;recruit progress <@{newRecruiter.Recruit.Id}>").Build());
         }
 
         [Command("recruit progress")]
@@ -89,7 +89,7 @@ namespace Boudica.Commands
             IGuildUser recruit = await GetTaggedRecruit(args);
             if (recruit == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit progress @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit progress @Recruit").Build());
                 return;
             }
 
@@ -97,12 +97,12 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
             EmbedBuilder embedBuilder = CreateEmbedForRecruit(existingRecruiter);
-            await ReplyAsync(null, false, embedBuilder.Build());
+            await RespondAsync(embed: embedBuilder.Build());
         }
 
         [Command("all recruit progress")]
@@ -112,7 +112,7 @@ namespace Boudica.Commands
             List<Recruiter> allRecruiters = await _hiringService.FindAllRecruits();
             if (allRecruiters == null || allRecruiters.Count == 0)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"There are currently no recruits").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"There are currently no recruits").Build());
                 return;
             }
 
@@ -120,7 +120,7 @@ namespace Boudica.Commands
             foreach (Recruiter recruiter in allRecruiters)
             {
                 EmbedBuilder embedBuilder = CreateEmbedForRecruit(recruiter);
-                await ReplyAsync(null, false, embedBuilder.Build());
+                await RespondAsync(embed: embedBuilder.Build());
                 await Task.Delay(150);
             }
         }
@@ -183,7 +183,7 @@ namespace Boudica.Commands
             IGuildUser recruit = await GetTaggedRecruit(args);
             if (recruit == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
                 return;
             }
 
@@ -191,7 +191,7 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -199,7 +199,7 @@ namespace Boudica.Commands
                  existingRecruiter.Recruit.RecruitChecklist.JoinedPost == false ||
                  DateTime.UtcNow.Subtract(existingRecruiter.Recruit.RecruitChecklist.DateTimeJoined).TotalDays < 30)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not completed all their tasks").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not completed all their tasks").Build());
                 return;
             }
             bool result = await _hiringService.UpdateProbationPassed(existingRecruiter.Recruit);
@@ -207,12 +207,12 @@ namespace Boudica.Commands
             {
                 await _guardianService.IncreaseGlimmerAsync(existingRecruiter.UserId, existingRecruiter.DisplayName, 50);
                 await _guardianService.IncreaseGlimmerAsync(existingRecruiter.Recruit.Id, existingRecruiter.Recruit.DisplayName, 50);
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded 50 Glimmer and {existingRecruiter.DisplayName} has earned 50 Glimmer for recruiting this player.").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded 50 Glimmer and {existingRecruiter.DisplayName} has earned 50 Glimmer for recruiting this player.").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
         }
 
@@ -224,7 +224,7 @@ namespace Boudica.Commands
             IGuildUser recruit = await GetTaggedRecruit(args);
             if (recruit == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
                 return;
             }
 
@@ -232,7 +232,7 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -240,12 +240,12 @@ namespace Boudica.Commands
             bool result = await _hiringService.UpdateRecruit(existingRecruiter.Recruit);
             if(result)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("Increased warning count successfully").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Increased warning count successfully").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
         }
 
@@ -256,21 +256,21 @@ namespace Boudica.Commands
             IGuildUser recruit = await GetTaggedRecruit(args);
             if (recruit == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
                 return;
             }
 
             string note = args.Replace($"<@{recruit.Id}>", string.Empty).Trim();
             if(string.IsNullOrWhiteSpace(note))
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Supply a note about a recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Supply a note about a recruit").Build());
                 return;
             }
 
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -278,12 +278,12 @@ namespace Boudica.Commands
             bool result = await _hiringService.UpdateRecruit(existingRecruiter.Recruit);
             if (result)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("Added note successfully").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Added note successfully").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
         }
 
@@ -324,7 +324,7 @@ namespace Boudica.Commands
 
             embedBuilder.Description = sb.ToString();
             embedBuilder.WithDescription(sb.ToString());
-            await ReplyAsync(null, false, embedBuilder.Build());
+            await RespondAsync(embed: embedBuilder.Build());
         }
 
         [Command("list open fireteams")]
@@ -363,7 +363,7 @@ namespace Boudica.Commands
 
             embedBuilder.Description = sb.ToString();
             embedBuilder.WithDescription(sb.ToString());
-            await ReplyAsync(null, false, embedBuilder.Build());
+            await RespondAsync(embed: embedBuilder.Build());
         }
 
         [Command("testmethod")]

@@ -92,6 +92,14 @@ namespace Boudica.Commands
             _client.ModalSubmitted += ModalSubmitted;
         }
 
+        public void AddPlayerToManualEmoteList(ulong userId)
+        {
+            lock (_lock)
+            {
+                _manualRemovedReactionList.Add(userId);
+            }
+        }
+
         private void PopulateAlphabetList()
         {
             _alphabetList = new List<Emoji>();

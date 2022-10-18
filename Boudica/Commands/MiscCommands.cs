@@ -33,7 +33,7 @@ namespace Boudica.Commands
         {
             if (args == null || (args.Contains("@") == false))
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
                 return;
             }
 
@@ -46,7 +46,7 @@ namespace Boudica.Commands
                     Insult usersLastInsult = await _insultService.Get(Context.User.Id);
                     if(usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.Date == DateTime.UtcNow.Date)
                     {
-                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
                         return;
                     }
 
@@ -54,24 +54,24 @@ namespace Boudica.Commands
                     if (insult.Contains(ReverseUnoCard))
                     {
                         insult = insult.Replace("{userId}", $"<@{Context.User.Id}>");
-                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{insult}").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{insult}").Build());
                     }
                     else
                     {
-                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"<@{userId}> {insult}").Build());
                     }
 
                     await _insultService.UpsertUsersInsult(Context.User.Id);
                 }
                 else
                 {
-                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
                     return;
                 }
             }
             catch (Exception ex)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;insult @SpecificUser").Build());
             }
         }
 
@@ -81,7 +81,7 @@ namespace Boudica.Commands
         {
             if (args == null || (args.Contains("@") == false))
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
                 return;
             }
 
@@ -93,34 +93,34 @@ namespace Boudica.Commands
                 {
                     if (userId == Context.User.Id)
                     {
-                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{userId}> self praise is no praise, sorry not sorry!").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateFailedReply($"<@{userId}> self praise is no praise, sorry not sorry!").Build());
                     }
                     else
                     {
                         string compliment = Compliments.GetRandomCompliment();
-                        await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"<@{userId}> {compliment}").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"<@{userId}> {compliment}").Build());
                     }
 
                 }
                 else
                 {
-                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
                     return;
                 }
             }
             catch (Exception ex)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;compliment @SpecificUser").Build());
             }
         }
 
         [Command("joke")]
         public async Task JokeCommand()
         {
-            //await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
+            //await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
             //return;
             string joke = Jokes.GetRandomJoke();
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{joke}").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{joke}").Build());
         }
 
         [Command("shush")]
@@ -128,7 +128,7 @@ namespace Boudica.Commands
         {
             if (args == null || (args.Contains("@") == false))
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
                 return;
             }
 
@@ -142,18 +142,18 @@ namespace Boudica.Commands
                     if (guildUser != null)
                     {
                         await guildUser.SetTimeOutAsync(TimeSpan.FromSeconds(30));
-                        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"With great power comes great responsibility. You have been timed out for 30 seconds get rekd!").Build());
+                        await RespondAsync(embed: EmbedHelper.CreateFailedReply($"With great power comes great responsibility. You have been timed out for 30 seconds get rekd!").Build());
                     }
                 }
                 else
                 {
-                    await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
                     return;
                 }
             }
             catch (Exception ex)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, supply a single users name like ;shush @SpecificUser").Build());
             }
         }
 

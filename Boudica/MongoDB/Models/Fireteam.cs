@@ -19,6 +19,7 @@ namespace Boudica.MongoDB.Models
         public bool AwardedGlimmer { get; set; }
         public DateTime DateTimeCreated { get; set; }
         public DateTime DateTimeClosed { get; set; }
+        public DateTime DateTimeAlerted { get; set; }
         public List<ActivityUser> Players { get; set; }
         public List<ActivityUser> Substitutes { get; set; }
 

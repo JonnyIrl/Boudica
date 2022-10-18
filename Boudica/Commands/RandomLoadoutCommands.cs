@@ -87,7 +87,7 @@ namespace Boudica.Commands
             else
                 embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.SpecialWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()}", true);
 
-            await ReplyAsync(null, false, embed.Build());
+            await RespondAsync(embed: embed.Build());
         }
 
 

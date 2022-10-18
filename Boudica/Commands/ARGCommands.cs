@@ -78,7 +78,7 @@ namespace Boudica.Commands
         //    SpamGif usersLastGif = await _gifService.Get(Context.User.Id);
         //    if (usersLastGif != null && usersLastGif.DateTimeLastUsed.Date == DateTime.UtcNow.Date)
         //    {
-        //        await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("You can only use the gif command once per day!").Build());
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only use the gif command once per day!").Build());
         //        return;
         //    }
 
@@ -144,7 +144,7 @@ namespace Boudica.Commands
             ActivityUser user = await GetFirstMentionedUser(args);
             if(user == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;award @User").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;award @User").Build());
                 return;
             }
 
@@ -161,7 +161,7 @@ namespace Boudica.Commands
             Tuple<bool, string> canAwardPlayer = await _awardedGuardianService.CanAwardGlimmerToGuardian(Context.User.Id, user.UserId);
             if(canAwardPlayer.Item1 == false)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply(canAwardPlayer.Item2).Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply(canAwardPlayer.Item2).Build());
                 return;
             }
 
@@ -176,7 +176,7 @@ namespace Boudica.Commands
             ActivityUser user = await GetFirstMentionedUser(args);
             if (user == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;supersub @User").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like ;supersub @User").Build());
                 return;
             }
 

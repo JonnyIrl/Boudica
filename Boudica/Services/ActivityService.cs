@@ -20,8 +20,13 @@ namespace Boudica.Services
         public ActivityService(IMongoDBContext mongoDBContext)
         {
             _mongoDBContext = mongoDBContext;
+#if DEBUG
+            _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(typeof(MongoDB.Models.Raid).Name + "Test");
+            _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(typeof(MongoDB.Models.Fireteam).Name + "Test");
+#else
             _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(typeof(MongoDB.Models.Raid).Name);
             _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(typeof(MongoDB.Models.Fireteam).Name);
+#endif
         }
 
         #region MongoDB Raid
@@ -83,9 +88,9 @@ namespace Boudica.Services
 
             return await _fireteamCollection.Find(x => x.AwardedGlimmer && x.CreatedByUserId == userId).AnyAsync();
         }
-        #endregion
+#endregion
 
-        #region Mongo Fireteam
+#region Mongo Fireteam
         public async Task<MongoDB.Models.Fireteam> CreateFireteamAsync(MongoDB.Models.Fireteam fireteam)
         {
             if (fireteam.CreatedByUserId <= 0) throw new ArgumentNullException("CreatedByUserId must be provided");
@@ -134,7 +139,7 @@ namespace Boudica.Services
                 .SortByDescending(x => x.Id)
                 .FirstOrDefaultAsync();
         }
-        #endregion
+#endregion
     }
 
     public static class DateTimeExtensions

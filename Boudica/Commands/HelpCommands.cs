@@ -21,7 +21,7 @@ namespace Boudica.Commands
             builder.AddField("Fireteam Commands", FireteamCommands());
             builder.AddField("Other Commands", MiscCommands());
             builder.WithColor(Color.Green);
-            await ReplyAsync(null, false, builder.Build());
+            await RespondAsync(embed: builder.Build());
         }
 
         private string RaidCommands()
