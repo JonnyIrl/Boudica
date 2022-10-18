@@ -44,13 +44,13 @@ namespace Boudica.Commands
         //{
         //    if (args == null || args.Contains("glimmer") == false)
         //    {
-        //        await ReplyAsync("Invalid command, example is ;increase glimmer 50 @Person");
+        //        await RespondAsync("Invalid command, example is ;increase glimmer 50 @Person");
         //        return;
         //    }
         //    var split = args.Split(" ");
         //    if (split.Length < 3) 
         //    {
-        //        await ReplyAsync("Invalid command, example is ;increase glimmer 50 @Person");
+        //        await RespondAsync("Invalid command, example is ;increase glimmer 50 @Person");
         //        return;
         //    }
 
@@ -64,12 +64,12 @@ namespace Boudica.Commands
         //        }
         //        else
         //        {
-        //            await ReplyAsync("Invalid command, example is ;increase glimmer 50 @Person");
+        //            await RespondAsync("Invalid command, example is ;increase glimmer 50 @Person");
         //            return;
         //        }
         //    }
 
-        //    await ReplyAsync("Invalid command, example is ;increase glimmer 50 @Person");
+        //    await RespondAsync("Invalid command, example is ;increase glimmer 50 @Person");
 
         //}
 
@@ -90,7 +90,7 @@ namespace Boudica.Commands
 
         //    if (gifresult != null && gifresult.Data != null && gifresult.Data.Url != null)
         //    { 
-        //        await ReplyAsync(gifresult?.Data?.Url);
+        //        await RespondAsync(gifresult?.Data?.Url);
         //        await _gifService.UpsertUsersSpamGif(Context.User.Id, Context.User.Username);
         //    }
 
@@ -102,7 +102,7 @@ namespace Boudica.Commands
             List<Guardian> guardians = await _guardianService.GetLeaderboard(Context.User.Id);
             if (guardians.Any() == false)
             {
-                await ReplyAsync("There is nobody in the leaderboards... yet");
+                await RespondAsync("There is nobody in the leaderboards... yet");
                 return;
             }
             ulong glimmerId = 0;
@@ -136,7 +136,7 @@ namespace Boudica.Commands
             embed.Description = stringBuilder.ToString();
 
             embed.WithFooter(footer => footer.Text = "Increase your Glimmer by creating and joining activities. Glimmer can be used in the Lightfall clan event.");
-            await ReplyAsync(embed: embed.Build());
+            await RespondAsync(embed: embed.Build());
         }
 
         [SlashCommand("award", "Award a player with 3 Glimmer daily")]
@@ -160,7 +160,7 @@ namespace Boudica.Commands
             if(user.UserId == Context.User.Id)
             {
                 //Reverse Uno
-                await ReplyAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
+                await RespondAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
                 await Task.Delay(500);
                 await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
                 await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
@@ -241,18 +241,18 @@ namespace Boudica.Commands
         //    Guardian guardian = await _guardianService.Get(Context.User.Id);
         //    if(guardian == null)
         //    {
-        //        await ReplyAsync("Could not find Guardian.. blame Jonny");
+        //        await RespondAsync("Could not find Guardian.. blame Jonny");
         //        return;
         //    }
 
         //    List<Item> inventoryItems = await _inventoryService.GetAllItems(Context.User.Id);
         //    if(inventoryItems == null || inventoryItems.Any() == false)
         //    {
-        //        await ReplyAsync(embed: EmbedHelper.CreateFailedReply("You don't have anything in your inventory. You can buy items from Eververse!").Build());
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("You don't have anything in your inventory. You can buy items from Eververse!").Build());
         //        return;
         //    }
 
-        //    await ReplyAsync(embed: CreateInventoryBuilder(inventoryItems, guardian.Glimmer).Build());
+        //    await RespondAsync(embed: CreateInventoryBuilder(inventoryItems, guardian.Glimmer).Build());
 
         //}
 
@@ -260,7 +260,7 @@ namespace Boudica.Commands
         //public async Task Eververse()
         //{
         //    List<Eververse> allItems = await _eververseService.GetAll();
-        //    await ReplyAsync(embed: CreateEververseBuilder(allItems).Build());
+        //    await RespondAsync(embed: CreateEververseBuilder(allItems).Build());
         //}
 
         //[Command("eververse")]
@@ -269,7 +269,7 @@ namespace Boudica.Commands
         //    if (args != null && args.Contains("primary"))
         //    {
         //        List<Eververse> primaryItems = await _eververseService.GetAllPrimaryWeapons();
-        //        IUserMessage message = await ReplyAsync(embed: CreateEververseBuilder(primaryItems).Build());
+        //        IUserMessage message = await RespondAsync(embed: CreateEververseBuilder(primaryItems).Build());
         //        return;
         //    }
 
@@ -279,25 +279,25 @@ namespace Boudica.Commands
         //        int.TryParse(split[split.Length - 1], out int itemId);
         //        if(itemId == 0)
         //        {
-        //            await ReplyAsync(embed: EmbedHelper.CreateFailedReply("Incorrect item id or command issued. The command should appear like ;eververse buy 1").Build());
+        //            await RespondAsync(embed: EmbedHelper.CreateFailedReply("Incorrect item id or command issued. The command should appear like ;eververse buy 1").Build());
         //            return;
         //        }
 
         //        ResponseResult responseResult = await _eververseService.PurchaseItem(Context.User.Id, itemId);
         //        if(responseResult.Success == false)
         //        {
-        //            await ReplyAsync(embed: EmbedHelper.CreateFailedReply(responseResult.Message).Build());
+        //            await RespondAsync(embed: EmbedHelper.CreateFailedReply(responseResult.Message).Build());
         //            return;
         //        }
         //        else
         //        {
-        //            await ReplyAsync(embed: EmbedHelper.CreateSuccessReply(responseResult.Message).Build());
+        //            await RespondAsync(embed: EmbedHelper.CreateSuccessReply(responseResult.Message).Build());
         //            return;
         //        }
 
 
         //        List<Eververse> primaryItems = await _eververseService.GetAllPrimaryWeapons();
-        //        IUserMessage message = await ReplyAsync(embed: CreateEververseBuilder(primaryItems).Build());
+        //        IUserMessage message = await RespondAsync(embed: CreateEververseBuilder(primaryItems).Build());
         //        return;
         //    }
 

@@ -32,7 +32,6 @@ namespace Boudica.Commands
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
         private object _lock = new object();
-        //private char SlashPrefix = '/';
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
@@ -145,6 +144,12 @@ namespace Boudica.Commands
         {
             // register modules that are public and inherit ModuleBase<T>.
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
+
+            //SocketGuild guild = _client.GetGuild(GuildId);
+            //if (guild.IsSynced == false)
+            //{
+            //    await guild.DownloadUsersAsync();
+            //}
 
             // process the InteractionCreated payloads to execute Interactions commands
             _client.InteractionCreated += HandleInteraction;

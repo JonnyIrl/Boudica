@@ -83,20 +83,13 @@ namespace Boudica.Commands
             if (role != null)
             {
                 // this will reply with the embed
-                await Context.Interaction.ModifyOriginalResponseAsync(message =>
-                {
-                    message.Embed = embed.Build();
-                    message.Content = role.Mention;
-                });
+                await RespondAsync(role.Mention, embed: embed.Build());
                 newMessage = await GetOriginalResponseAsync();
             }
             else
             {
                 // this will reply with the embed
-                await Context.Interaction.ModifyOriginalResponseAsync(message =>
-                {
-                    message.Embed = embed.Build();
-                });
+                await RespondAsync(embed: embed.Build());
                 newMessage = await GetOriginalResponseAsync();
             }
 
@@ -113,15 +106,13 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]
-        public async Task CreateFireteamCommand(int fireteamSize, string args)
+        public async Task CreateFireteamCommand(int fireteamSize, string description)
         {
-            if (args == null)
+            if (string.IsNullOrEmpty(description))
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command arguments, supply the total slots and a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());
                 return;
             }
-
-            string[] sizeSplit = args.Split(" ");
 
             if (fireteamSize > 6 || fireteamSize <= 1)
             {
@@ -129,13 +120,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            if (string.IsNullOrEmpty(args.Remove(0, 1)))
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command arguments, you must supply a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());
-                return;
-            }
-
-            List<ActivityUser> addedUsers = AddPlayersToNewActivity(args, fireteamSize - 1);
+            List<ActivityUser> addedUsers = AddPlayersToNewActivity(description, fireteamSize - 1);
             Fireteam newFireteam = new Fireteam()
             {
                 DateTimeCreated = DateTime.UtcNow,
@@ -164,18 +149,18 @@ namespace Boudica.Commands
             embed.WithColor(new Color(0, 255, 0));
             StringBuilder sb = new StringBuilder();
             //Remove the number for the size of the fireteam from the string for the Description
-            sb.AppendLine(args);
+            sb.AppendLine(description);
             sb.AppendLine();
             sb.AppendLine();
-            string description = sb.ToString();
+            string result = sb.ToString();
             embed.WithAuthor(Context.User);
 
             foreach (ActivityUser activityUser in addedUsers)
             {
-                description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
+                result = result.Replace($"<@{activityUser.UserId}>", string.Empty);
             }
-            description = description.Trim();
-            embed.Description = description;
+            result = result.Trim();
+            embed.Description = result;
 
             AddActivityUsersField(embed, "Players", newFireteam.Players);
             AddActivityUsersField(embed, "Subs", newFireteam.Substitutes);
@@ -561,11 +546,14 @@ namespace Boudica.Commands
             {
                 case Enums.ActivityType.Raid:
                     await AddPlayerToRaid(id, playersToAdd);
-                    break;
+                    return;
 
                 case Enums.ActivityType.Fireteam:
-                    break;
+                    await AddPlayerToFireteam(id, playersToAdd);
+                    return;
             }
+
+            await RespondAsync("Something went wrong", ephemeral: true);
         }
         public async Task AddPlayerToRaid(int raidId, string playersToAdd)
         {
@@ -641,7 +629,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Raid").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Raid | {modifiedEmbed.Description}").Build());
         }
         public async Task AddPlayerToFireteam(int fireteamId, string playersToAdd)
         {
@@ -717,11 +705,11 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Fireteam").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been added to the Fireteam | {modifiedEmbed.Description}").Build());
         }
 
         [SlashCommand("remove-player", "Remove a player from an activity")]
-        public async Task RemovePlayerFromFireteam(Enums.ActivityType activityType, int id, string playersToRemove)
+        public async Task RemovePlayer(Enums.ActivityType activityType, int id, string playersToRemove)
         {
             switch (activityType)
             {
@@ -800,7 +788,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Raid").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Raid {existingRaid.Id}").Build());
         }
         private async Task RemovePlayerFromFireteam(int fireteamId, string playersToRemove)
         {
@@ -862,7 +850,7 @@ namespace Boudica.Commands
                 x.Embed = modifiedEmbed.Build();
             });
 
-            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Fireteam").Build());
+            await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Fireteam {existingFireteam.Id}").Build());
             await RespondAsync("Success", ephemeral: true);
 
         }
@@ -990,13 +978,13 @@ namespace Boudica.Commands
 
             if (existingFireteam == null)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Fireteam with that Id").Build());
                 return false;
             }
 
             if (existingFireteam.DateTimeClosed != DateTime.MinValue)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Raid is already closed").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
                 return false;
             }
             if (existingFireteam.CreatedByUserId != Context.User.Id)
@@ -1024,7 +1012,7 @@ namespace Boudica.Commands
             openRaids = openRaids.OrderBy(x => x.DateTimeCreated).ToList();
             if (openRaids == null || openRaids.Count == 0)
             {
-                await ReplyAsync("There are no open raids!");
+                await RespondAsync("There are no open raids!");
                 return;
             }
 
@@ -1046,7 +1034,7 @@ namespace Boudica.Commands
 
             if (sb.Length == 0)
             {
-                await ReplyAsync("There are no open raids!");
+                await RespondAsync("There are no open raids!");
                 return;
             }
 
@@ -1065,7 +1053,7 @@ namespace Boudica.Commands
             openFireteams = openFireteams.OrderBy(x => x.DateTimeCreated).ToList();
             if (openFireteams == null || openFireteams.Count == 0)
             {
-                await ReplyAsync("There are no open fireteams!");
+                await RespondAsync("There are no open fireteams!");
                 return;
             }
 
@@ -1087,7 +1075,7 @@ namespace Boudica.Commands
 
             if (sb.Length == 0)
             {
-                await ReplyAsync("There are no open fireteams!");
+                await RespondAsync("There are no open fireteams!");
                 return;
             }
 

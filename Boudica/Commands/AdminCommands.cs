@@ -126,9 +126,11 @@ namespace Boudica.Commands
             foreach (Recruiter recruiter in allRecruiters)
             {
                 EmbedBuilder embedBuilder = CreateEmbedForRecruit(recruiter);
-                await RespondAsync(embed: embedBuilder.Build());
+                await ReplyAsync(embed: embedBuilder.Build());
                 await Task.Delay(150);
             }
+
+            await RespondAsync("Success", ephemeral: true);
         }
 
         private EmbedBuilder CreateEmbedForRecruit(Recruiter recruiter)

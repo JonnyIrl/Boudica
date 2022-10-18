@@ -42,26 +42,27 @@ class Program
     public async Task MainAsync()
     {
         // call ConfigureServices to create the ServiceCollection/Provider for passing around the services
-        await using (var services = ConfigureServices())
+        using (var services = ConfigureServices())
         {
             // get the client and assign to client 
             // you get the services via GetRequiredService<T>
-            _client = services.GetRequiredService<DiscordSocketClient>();
-            _commands = services.GetRequiredService<InteractionService>();
-
+            var client = services.GetRequiredService<DiscordSocketClient>();
+            var commands = services.GetRequiredService<InteractionService>();
+            _client = client;
+            _commands = commands;
             // setup logging and the ready event
-            _client.Log += LogAsync;
-            _commands.Log += LogAsync;
-            _client.Ready += ReadyAsync;
+            client.Log += LogAsync;
+            commands.Log += LogAsync;
+            client.Ready += ReadyAsync;
 
 #if DEBUG
-            await _client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
+            await client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
 #else
-            await _client.LoginAsync(TokenType.Bot, _config["Token"]);
+            await client.LoginAsync(TokenType.Bot, _config["Token"]);
 #endif
 
-            await _client.StartAsync();
-            await _client.SetGameAsync(";help for command list");
+            await client.StartAsync();
+            await client.SetGameAsync(";help for command list");
 
             // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
             await services.GetRequiredService<CommandHandler>().InitializeAsync();
@@ -81,6 +82,12 @@ class Program
         Console.WriteLine($"Adding commands to {GuildId}...");
         await _commands.RegisterCommandsToGuildAsync(GuildId);
         Console.WriteLine($"Connected as -> [{_client.CurrentUser}] :)");
+
+        SocketGuild guild = _client.GetGuild(GuildId);
+        if (guild != null)
+        {
+            await guild.DownloadUsersAsync();
+        }
     }
 
     // this method handles the ServiceCollection creation/configuration, and builds out the service provider we can call on later
@@ -89,7 +96,14 @@ class Program
         var socketConfig = new DiscordSocketConfig
         {
             AlwaysDownloadUsers = true,
-            MessageCacheSize = 100
+            MessageCacheSize = 100,
+            GatewayIntents = GatewayIntents.GuildEmojis | 
+            GatewayIntents.GuildMembers | 
+            GatewayIntents.GuildMessageReactions | 
+            GatewayIntents.GuildMessages | 
+            GatewayIntents.GuildPresences | 
+            GatewayIntents.Guilds | 
+            GatewayIntents.GuildWebhooks
         };
         // this returns a ServiceProvider that is used later to call for those services
         // we can add types we have access to here, hence adding the new using statement:
