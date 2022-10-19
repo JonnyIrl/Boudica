@@ -108,7 +108,7 @@ namespace Boudica.MongoDB.Models
                 case WeaponType.ScoutRifle:
                     return "Scout Rifle";
                 case WeaponType.FusionRifle:
-                    return "Fustion Rifle";
+                    return "Fusion Rifle";
                 case WeaponType.SniperRifle:
                     return "Sniper Rifle";
                 case WeaponType.Shotgun:

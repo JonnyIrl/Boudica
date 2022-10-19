@@ -12,7 +12,7 @@ namespace Boudica.Commands
     {
         private const string Prefix = "/";
         [SlashCommand("help", "Show all available commands")]
-        public async Task HelpCommand()
+        public async Task HelpCommand(bool showResultsForEveryone)
         {
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "Here's a list of commands!";
@@ -22,7 +22,7 @@ namespace Boudica.Commands
             builder.AddField("Loadout Commands", LoadoutCommands());
             builder.AddField("Other Commands", MiscCommands());
             builder.WithColor(Color.Green);
-            await RespondAsync(embed: builder.Build());
+            await RespondAsync(embed: builder.Build(), ephemeral: showResultsForEveryone);
         }
 
         private string RaidCommands()
