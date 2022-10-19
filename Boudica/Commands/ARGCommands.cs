@@ -179,7 +179,7 @@ namespace Boudica.Commands
         }
 
         [RequireUserPermission(GuildPermission.KickMembers)]
-        [SlashCommand("supersub", "Award a PLayer with 6 Glimmer for being a Super Sub!")]
+        [SlashCommand("supersub", "Award a Player with 6 Glimmer for being a Super Sub!")]
         public async Task AwardSuperSubPlayer(SocketGuildUser guildUser, string reason = null)
         {
             if(guildUser == null || guildUser.IsBot)
@@ -202,7 +202,10 @@ namespace Boudica.Commands
             }
 
             await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 2, true);
-            await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
+            if(string.IsNullOrEmpty(reason))
+                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
+            else
+                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub and {reason}!");
         }    
 
         private string GetRank(int rank)

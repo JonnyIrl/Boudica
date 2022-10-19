@@ -55,6 +55,9 @@ namespace Boudica.Services
             var filter = builder.Eq(x => x.Id, userId);
 
             bool success = isSuperSub;
+#if DEBUG
+            return true;
+#else
             Console.WriteLine($"Awarding {AwardedGlimmerAmount} Glimmer from {userId} to {awardedGuardianId}");
             if (isSuperSub == false)
             {
@@ -69,6 +72,8 @@ namespace Boudica.Services
             if (!success) return false;
             success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, AwardedGlimmerAmount * multiplier);
             return success;
+
+#endif
         }
 
     }
