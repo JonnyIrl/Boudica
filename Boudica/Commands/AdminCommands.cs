@@ -2,7 +2,8 @@
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,9 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    public class AdminCommands: ModuleBase
+    [DefaultMemberPermissions(GuildPermission.KickMembers)]
+    [Group("recruit", "Commands for recruits")]
+    public class AdminCommands: InteractionModuleBase<SocketInteractionContext>
     {
         private readonly ActivityService _activityService;
         private readonly HiringService _hiringService;
@@ -33,34 +36,43 @@ namespace Boudica.Commands
             _failureEmoji = new Emoji("❌");
         }
 
-        [Command("recruit help")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        [SlashCommand("help", "To find all the commands related to recruiting")]
         public async Task RecruitHelp()
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("**New Recruit**  ;new recruit @Recruiter @NewJoiner");
-            sb.AppendLine("**Recruit Progress** ;recruit progress @NewJoiner");
-            sb.AppendLine("**All Recruit Progress**  ;all recruit progress");
-            sb.AppendLine("**Add Warning to Recruit**  ;recruit warn @NewJoiner");
-            sb.AppendLine("**Add Note to Recruit**  ;recruit note @NewJoiner This player posted an offensive gif");
+            sb.AppendLine("**New Recruit**  /recruit new @Recruiter @NewJoiner");
+            sb.AppendLine("**Recruit Progress** /recruit progress @NewJoiner");
+            sb.AppendLine("**All Recruit Progress**  /recruit progress-all");
+            sb.AppendLine("**Add Warning to Recruit**  /recruit warn @NewJoiner");
+            sb.AppendLine("**Add Note to Recruit**  /recruit note @NewJoiner This player posted an offensive gif");
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply(sb.ToString()).Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply(sb.ToString()).Build());
         }
 
-        [Command("new recruit")]
+        [SlashCommand("new", "Create a new recruit")]
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task CreateNewRecruit([Remainder] string args)
+        public async Task CreateNewRecruit(SocketGuildUser recruiter, SocketGuildUser newJoiner)
         {
-            List<IGuildUser> guildUsers = await GetTaggedRecruiterAndRecruit(args);
+            if(recruiter == null || recruiter.IsBot || newJoiner == null || newJoiner.IsBot)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. /recruit new @Recruiter @NewPerson").Build());
+                return;
+            }
+            List<IGuildUser> guildUsers = new List<IGuildUser>()
+            {
+                recruiter,
+                newJoiner,
+            };
+
             if(guildUsers == null || guildUsers.Count != 2)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. ;new recruit @Recruiter @NewPerson").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. /recruit new @Recruiter @NewPerson").Build());
                 return;
             }
 
             if(guildUsers[1].Id == Context.User.Id)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Invalid command, you cannot recruit yourself").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, you cannot recruit yourself").Build());
                 return;
             }
             const int recruiterIndex = 0;
@@ -68,28 +80,27 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(guildUsers[recruitIndex].Id);
             if(existingRecruiter != null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{existingRecruiter.Recruit.DisplayName} has already been recruited by {existingRecruiter.DisplayName}").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{existingRecruiter.Recruit.DisplayName} has already been recruited by {existingRecruiter.DisplayName}").Build());
                 return;
             }
 
             Recruiter newRecruiter = await _hiringService.InsertNewRecruit(guildUsers[recruiterIndex], guildUsers[recruitIndex]);
             if(newRecruiter == null || newRecruiter.Id == Guid.Empty)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Failed to insert new recruit.. it's not your fault, it's Jonny's").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to insert new recruit.. it's not your fault, it's Jonny's").Build());
                 return;
             }
 
-            await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the ;recruit progress <@{newRecruiter.Recruit.Id}>").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the ;recruit progress <@{newRecruiter.Recruit.Id}>").Build());
         }
 
-        [Command("recruit progress")]
+        [SlashCommand("progress", "Check a recruits progress")]
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task RecruitProgress([Remainder] string args)
+        public async Task RecruitProgress(SocketGuildUser recruit)
         {
-            IGuildUser recruit = await GetTaggedRecruit(args);
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit progress @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit progress @Recruit").Build());
                 return;
             }
 
@@ -97,22 +108,22 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
             EmbedBuilder embedBuilder = CreateEmbedForRecruit(existingRecruiter);
-            await ReplyAsync(null, false, embedBuilder.Build());
+            await RespondAsync(embed: embedBuilder.Build());
         }
 
-        [Command("all recruit progress")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        [SlashCommand("progress-all", "All recruits progress")]
         public async Task AllRecruitProgress()
         {
             List<Recruiter> allRecruiters = await _hiringService.FindAllRecruits();
+
             if (allRecruiters == null || allRecruiters.Count == 0)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"There are currently no recruits").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"There are currently no recruits").Build());
                 return;
             }
 
@@ -120,9 +131,11 @@ namespace Boudica.Commands
             foreach (Recruiter recruiter in allRecruiters)
             {
                 EmbedBuilder embedBuilder = CreateEmbedForRecruit(recruiter);
-                await ReplyAsync(null, false, embedBuilder.Build());
+                await ReplyAsync(embed: embedBuilder.Build());
                 await Task.Delay(150);
             }
+
+            await RespondAsync("Success", ephemeral: true);
         }
 
         private EmbedBuilder CreateEmbedForRecruit(Recruiter recruiter)
@@ -176,22 +189,20 @@ namespace Boudica.Commands
             return embedBuilder;
         }
 
-        [Command("recruit passed")]
+        [SlashCommand("enroll", "Enroll a recruit as full member")]
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task RecruitPassedProbation([Remainder] string args)
+        public async Task RecruitPassedProbation(SocketGuildUser recruit)
         {
-            IGuildUser recruit = await GetTaggedRecruit(args);
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit enroll @Recruit").Build());
                 return;
             }
-
 
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -199,7 +210,7 @@ namespace Boudica.Commands
                  existingRecruiter.Recruit.RecruitChecklist.JoinedPost == false ||
                  DateTime.UtcNow.Subtract(existingRecruiter.Recruit.RecruitChecklist.DateTimeJoined).TotalDays < 30)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not completed all their tasks").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not completed all their tasks").Build());
                 return;
             }
             bool result = await _hiringService.UpdateProbationPassed(existingRecruiter.Recruit);
@@ -207,24 +218,21 @@ namespace Boudica.Commands
             {
                 await _guardianService.IncreaseGlimmerAsync(existingRecruiter.UserId, existingRecruiter.DisplayName, 50);
                 await _guardianService.IncreaseGlimmerAsync(existingRecruiter.Recruit.Id, existingRecruiter.Recruit.DisplayName, 50);
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded 50 Glimmer and {existingRecruiter.DisplayName} has earned 50 Glimmer for recruiting this player.").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded 50 Glimmer and {existingRecruiter.DisplayName} has earned 50 Glimmer for recruiting this player.").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
         }
 
-        [Command("recruit warn")]
-        [Alias("recruit warning")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task RecruitWarning([Remainder] string args)
+        [SlashCommand("warn", "Increase the warning count for a Recruit")]
+        public async Task RecruitWarning(SocketGuildUser recruit)
         {
-            IGuildUser recruit = await GetTaggedRecruit(args);
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit warn @Recruit").Build());
                 return;
             }
 
@@ -232,7 +240,7 @@ namespace Boudica.Commands
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -240,37 +248,34 @@ namespace Boudica.Commands
             bool result = await _hiringService.UpdateRecruit(existingRecruiter.Recruit);
             if(result)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("Increased warning count successfully").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Increased warning count successfully").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
         }
 
-        [Command("recruit note")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task RecruitNote([Remainder] string args)
+        [SlashCommand("note", "Add a note against a Recruit")]
+        public async Task RecruitNote(SocketGuildUser recruit, string note)
         {
-            IGuildUser recruit = await GetTaggedRecruit(args);
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  ;recruit warning @Recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit note @Recruit").Build());
                 return;
             }
 
-            string note = args.Replace($"<@{recruit.Id}>", string.Empty).Trim();
             if(string.IsNullOrWhiteSpace(note))
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply("Supply a note about a recruit").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Supply a note about a recruit").Build());
                 return;
             }
 
             Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
             if (existingRecruiter == null)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
                 return;
             }
 
@@ -278,182 +283,13 @@ namespace Boudica.Commands
             bool result = await _hiringService.UpdateRecruit(existingRecruiter.Recruit);
             if (result)
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateSuccessReply("Added note successfully").Build());
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Added note successfully").Build());
                 return;
             }
             else
             {
-                await ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
             }
-        }
-
-
-        [Command("list open raids")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task ListOpenRaids()
-        {
-            IList<Raid> openRaids = await _activityService.FindAllOpenRaids();
-            openRaids = openRaids.OrderBy(x => x.DateTimeCreated).ToList();
-            if(openRaids == null || openRaids.Count == 0)
-            {
-                await ReplyAsync("There are no open raids!");
-                return;
-            }
-
-            EmbedBuilder embedBuilder = new EmbedBuilder();
-            StringBuilder sb = new StringBuilder();
-            embedBuilder.WithTitle("Below is a list of open raids. The command to close the raid is at the beginning of each.");
-            foreach(Raid openRaid in openRaids)
-            {
-                if (openRaid.GuidId != Context.Guild.Id) 
-                    continue;
-                ITextChannel channel = await Context.Guild.GetTextChannelAsync(openRaid.ChannelId);
-                if (channel == null) continue;
-                IMessage message = await channel.GetMessageAsync(openRaid.MessageId);
-                if(message == null) continue;
-
-                double daysOld = Math.Round(DateTime.UtcNow.Subtract(openRaid.DateTimeCreated).TotalDays, 0);
-                sb.AppendLine($";close raid {openRaid.Id} | {daysOld} days open | Created By <@{openRaid.CreatedByUserId}> |\n{message.Embeds.First().Description}\n\n");
-            }
-
-            if (sb.Length == 0)
-            {
-                await ReplyAsync("There are no open raids!");
-                return;
-            }
-
-            embedBuilder.Description = sb.ToString();
-            embedBuilder.WithDescription(sb.ToString());
-            await ReplyAsync(null, false, embedBuilder.Build());
-        }
-
-        [Command("list open fireteams")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task ListOpenFireteams()
-        {
-            IList<Fireteam> openFireteams = await _activityService.FindAllOpenFireteams();
-            openFireteams = openFireteams.OrderBy(x => x.DateTimeCreated).ToList();
-            if (openFireteams == null || openFireteams.Count == 0)
-            {
-                await ReplyAsync("There are no open fireteams!");
-                return;
-            }
-
-            EmbedBuilder embedBuilder = new EmbedBuilder();
-            StringBuilder sb = new StringBuilder();
-            embedBuilder.WithTitle("Below is a list of open Fireteam. The command to close the fireteam is at the beginning of each.");
-            foreach (Fireteam openFireteam in openFireteams)
-            {
-                if (openFireteam.GuidId != Context.Guild.Id)
-                    continue;
-                ITextChannel channel = await Context.Guild.GetTextChannelAsync(openFireteam.ChannelId);
-                if (channel == null) continue;
-                IMessage message = await channel.GetMessageAsync(openFireteam.MessageId);
-                if (message == null) continue;
-
-                double daysOld = Math.Round(DateTime.UtcNow.Subtract((DateTime)openFireteam?.DateTimeCreated).TotalDays, 0);
-                sb.AppendLine($";close fireteam {openFireteam.Id} | {daysOld} days open | Created By <@{openFireteam.CreatedByUserId}> |\n{message.Embeds.First().Description}\n\n");
-            }
-
-            if (sb.Length == 0)
-            {
-                await ReplyAsync("There are no open fireteams!");
-                return;
-            }
-
-            embedBuilder.Description = sb.ToString();
-            embedBuilder.WithDescription(sb.ToString());
-            await ReplyAsync(null, false, embedBuilder.Build());
-        }
-
-        [Command("testmethod")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
-        public async Task TestMethod()
-        {
-            bool result = await _activityService.CreatedRaidThisWeek(850688118113173515);
-            int breakHere = 0;
-        }
-
-        private async Task<List<IGuildUser>> GetTaggedRecruiterAndRecruit(string args)
-        {
-            string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
-            List<IGuildUser> guildUsers = new List<IGuildUser>();
-            if (sanitisedSplit.Contains("@") == false) return guildUsers;
-            string[] users = sanitisedSplit.Split('@');
-            foreach (string user in users)
-            {
-                string sanitisedUser = string.Empty;
-                int space = user.IndexOf(' ');
-                if (space == -1)
-                    sanitisedUser = user.Trim();
-                else
-                {
-                    sanitisedUser = user.Substring(0, space).Trim();
-                }
-                if (string.IsNullOrEmpty(sanitisedUser)) continue;
-                if (IsDigitsOnly(sanitisedUser) == false) continue;
-
-                if (ulong.TryParse(sanitisedUser, out ulong userId))
-                {
-                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null && guildUser.IsBot == false)
-                    {
-                        if (guildUsers.FirstOrDefault(x => x.Id == userId) == null)
-                            guildUsers.Add(guildUser);
-                    }
-
-                    if(guildUsers.Count == 2)
-                    {
-                        return guildUsers;
-                    }
-                }
-            }
-
-            return guildUsers;
-        }
-
-        private async Task<IGuildUser> GetTaggedRecruit(string args)
-        {
-            string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
-            List<IGuildUser> guildUsers = new List<IGuildUser>();
-            if (sanitisedSplit.Contains("@") == false) return null;
-            string[] users = sanitisedSplit.Split('@');
-            foreach (string user in users)
-            {
-                string sanitisedUser = string.Empty;
-                int space = user.IndexOf(' ');
-                if (space == -1)
-                    sanitisedUser = user.Trim();
-                else
-                {
-                    sanitisedUser = user.Substring(0, space).Trim();
-                }
-                if (string.IsNullOrEmpty(sanitisedUser)) continue;
-                if (IsDigitsOnly(sanitisedUser) == false) continue;
-
-                if (ulong.TryParse(sanitisedUser, out ulong userId))
-                {
-                    IGuildUser guildUser = await Context.Guild.GetUserAsync(userId);
-                    if (guildUser != null && guildUser.IsBot == false)
-                    {
-                        if (guildUsers.FirstOrDefault(x => x.Id == userId) == null)
-                            return guildUser;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        bool IsDigitsOnly(string str)
-        {
-            foreach (char c in str)
-            {
-                if (c < '0' || c > '9')
-                    return false;
-            }
-
-            return true;
         }
     }
 }

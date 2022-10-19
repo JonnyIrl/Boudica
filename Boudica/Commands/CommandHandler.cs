@@ -8,7 +8,7 @@ using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +21,7 @@ namespace Boudica.Commands
         private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
         private readonly IConfiguration _config;
-        private readonly CommandService _commands;
+        private readonly InteractionService _commands;
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
         private readonly ActivityService _activityService;
@@ -32,7 +32,6 @@ namespace Boudica.Commands
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
         private object _lock = new object();
-        //private char SlashPrefix = '/';
 
         private Emoji _jEmoji = new Emoji("🇯");
         private Emoji _sEmoji = new Emoji("🇸");
@@ -61,15 +60,17 @@ namespace Boudica.Commands
 
 #if DEBUG
         private const ulong glimmerId = 1009200271475347567;
+        private const ulong GuildId = 958852217186713680;
 #else
         private const ulong glimmerId = 728197708074188802;
+        private const ulong GuildId = 530462081636368395;
 #endif
-        public CommandHandler(IServiceProvider services)
+        public CommandHandler(InteractionService interactionCommands, IServiceProvider services)
         {
             // juice up the fields with these services
             // since we passed the services in, we can use GetRequiredService to pass them into the fields set earlier
             _config = services.GetRequiredService<IConfiguration>();
-            _commands = services.GetRequiredService<CommandService>();
+            _commands = interactionCommands;
             _client = services.GetRequiredService<DiscordSocketClient>();
             _activityService = services.GetRequiredService<ActivityService>();
             _guardianService = services.GetRequiredService<GuardianService>();
@@ -82,20 +83,20 @@ namespace Boudica.Commands
             // get prefix from the configuration file
             Prefix = Char.Parse(_config["Prefix"]);
 
-            // take action when we execute a command
-            _commands.CommandExecuted += CommandExecutedAsync;
-
-            _client.SlashCommandExecuted += SlashCommandHandler;
-
-            // take action when we receive a message (so we can process it, and see if it is a valid command)
-            _client.MessageReceived += MessageReceivedAsync;
-
             //Listen for Reactions
             _client.ReactionAdded += ReactionAddedAsync;
             _client.ReactionRemoved += ReactionRemovedAsync;
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+        }
+
+        public void AddPlayerToManualEmoteList(ulong userId)
+        {
+            lock (_lock)
+            {
+                _manualRemovedReactionList.Add(userId);
+            }
         }
 
         private void PopulateAlphabetList()
@@ -143,95 +144,126 @@ namespace Boudica.Commands
         {
             // register modules that are public and inherit ModuleBase<T>.
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
-        }
 
-        // this class is where the magic starts, and takes actions upon receiving messages
-        public async Task MessageReceivedAsync(SocketMessage rawMessage)
-        {
-            // ensures we don't process system/other bot messages
-            if (!(rawMessage is SocketUserMessage message))
-            {
-                return;
-            }
-
-            if (message.Source != MessageSource.User)
-            {
-                return;
-            }
-
-            //Is a DM
-            //if(!(message.Channel is SocketGuildChannel socketGuildChannel))
+            //SocketGuild guild = _client.GetGuild(GuildId);
+            //if (guild.IsSynced == false)
             //{
-                
+            //    await guild.DownloadUsersAsync();
             //}
-            
 
-            // sets the argument position away from the prefix we set
-            var argPos = 0;
+            // process the InteractionCreated payloads to execute Interactions commands
+            _client.InteractionCreated += HandleInteraction;
 
-            // determine if the message has a valid prefix, and adjust argPos based on prefix
-            if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(Prefix, ref argPos)))
+            // process the command execution results 
+            _commands.SlashCommandExecuted += SlashCommandExecuted;
+            _commands.ContextCommandExecuted += ContextCommandExecuted;
+            _commands.ComponentCommandExecuted += ComponentCommandExecuted;
+        }
+
+        private async Task HandleInteraction(SocketInteraction arg)
+        {
+            try
             {
-                //Task.Run(() => { ReplyWhereIsXur(message); });
-                return;
+                // create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules
+                var ctx = new SocketInteractionContext(_client, arg);
+                await _commands.ExecuteCommandAsync(ctx, _services);
             }
-
-            var context = new SocketCommandContext(_client, message);
-            // execute command if one is found that matches
-            await _commands.ExecuteAsync(context, argPos, _services);
-        }
-
-        private async Task SlashCommandHandler(SocketSlashCommand command)
-        {
-            //TODO
-        }
-
-        public async Task ReplyWhereIsXur(SocketUserMessage message)
-        {
-            string content = message.Content;
-            if (string.IsNullOrEmpty(content)) return;
-            if (content.Contains("<@244209636897456129>") == false) return;
-            if (content.ToLower().Contains("xur") && content.ToLower().Contains("where"))
+            catch (Exception ex)
             {
-                var context = new SocketCommandContext(_client, message);
-                await context.Channel.SendMessageAsync(null, false, EmbedHelper.CreateSuccessReply($"Here you go {message.Author.Username}, as you were too lazy to look yourself, let me help you!\n\nhttps://letmegooglethat.com/?q=where+the+fuck+is+Xur&l=1").Build());
-            }
-        }
-        public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
-        {
-            // if a command isn't found, log that info to console and exit this method
-            if (!command.IsSpecified)
-            {
-                if (command.GetValueOrDefault() == null)
+                Console.WriteLine(ex);
+                // if a Slash Command execution fails it is most likely that the original interaction acknowledgement will persist. It is a good idea to delete the original
+                // response, or at least let the user know that something went wrong during the command execution.
+                if (arg.Type == InteractionType.ApplicationCommand)
                 {
-                    Console.WriteLine($"Command failed to execute for [] <-> []!");
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine($"Command failed to execute for {context.User.Username} <-> {context.Message.Content}!");
+                    await arg.GetOriginalResponseAsync().ContinueWith(async (msg) => await msg.Result.DeleteAsync());
                 }
             }
-
-
-            // log success to the console and exit this method
-            if (result.IsSuccess)
-            {
-                Console.WriteLine($"Command {context.Message.Content} executed for -> {context.User.Username}");
-                return;
-            }
-
-            if(result.ErrorReason.Contains("permission"))
-            {
-                await context.Channel.SendMessageAsync($"You don't have permission to use this command!");
-                return;
-            }
-
-
-            // failure scenario, let's let the user know
-            await context.Channel.SendMessageAsync($"Sorry, ... something went wrong, blame Jonny!");
         }
 
+        private Task ComponentCommandExecuted(ComponentCommandInfo arg1, IInteractionContext arg2, IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        private Task ContextCommandExecuted(ContextCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        private Task SlashCommandExecuted(SlashCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
@@ -1203,6 +1235,9 @@ namespace Boudica.Commands
 
         private IRole GetRoleForChannel(SocketGuildUser user, ulong channelId)
         {
+            if (user == null || user.IsBot) 
+                return null;
+
             switch (channelId)
             {
                 case RaidChannel:

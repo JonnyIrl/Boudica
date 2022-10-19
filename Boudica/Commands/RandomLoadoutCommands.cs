@@ -1,7 +1,7 @@
 ﻿using Boudica.Enums;
 using Boudica.MongoDB.Models;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    public class RandomLoadoutCommands: ModuleBase
+    public class RandomLoadoutCommands: InteractionModuleBase<SocketInteractionContext>
     {
         private Emote _kineticEmote;
         private Emote _arcEmote;
@@ -45,7 +45,7 @@ namespace Boudica.Commands
             Emote.TryParse($"<:engram5:{ExoticId}>", out _exoticEmote);
         }
 
-        [Command("random loadout pve")]
+        [SlashCommand("random-loadout-pve", "Gets a random pve loadout")]
         public async Task RandomLoadoutPvE()
         {
             RandomLoadout loadout = new RandomLoadout();
@@ -87,7 +87,7 @@ namespace Boudica.Commands
             else
                 embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.SpecialWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()}", true);
 
-            await ReplyAsync(null, false, embed.Build());
+            await RespondAsync(embed: embed.Build());
         }
 
 
