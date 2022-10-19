@@ -53,6 +53,11 @@ namespace Boudica.Commands
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task CreateNewRecruit(SocketGuildUser recruiter, SocketGuildUser newJoiner)
         {
+            if(recruiter == null || recruiter.IsBot || newJoiner == null || newJoiner.IsBot)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, only supply the recruiter and the recruit i.e. /recruit new @Recruiter @NewPerson").Build());
+                return;
+            }
             List<IGuildUser> guildUsers = new List<IGuildUser>()
             {
                 recruiter,
@@ -93,7 +98,7 @@ namespace Boudica.Commands
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task RecruitProgress(SocketGuildUser recruit)
         {
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit progress @Recruit").Build());
                 return;
@@ -188,7 +193,7 @@ namespace Boudica.Commands
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task RecruitPassedProbation(SocketGuildUser recruit)
         {
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit enroll @Recruit").Build());
                 return;
@@ -225,7 +230,7 @@ namespace Boudica.Commands
         [SlashCommand("warn", "Increase the warning count for a Recruit")]
         public async Task RecruitWarning(SocketGuildUser recruit)
         {
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit warn @Recruit").Build());
                 return;
@@ -255,7 +260,7 @@ namespace Boudica.Commands
         [SlashCommand("note", "Add a note against a Recruit")]
         public async Task RecruitNote(SocketGuildUser recruit, string note)
         {
-            if (recruit == null)
+            if (recruit == null || recruit.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit note @Recruit").Build());
                 return;

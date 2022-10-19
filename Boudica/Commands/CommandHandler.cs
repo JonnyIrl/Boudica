@@ -1235,6 +1235,9 @@ namespace Boudica.Commands
 
         private IRole GetRoleForChannel(SocketGuildUser user, ulong channelId)
         {
+            if (user == null || user.IsBot) 
+                return null;
+
             switch (channelId)
             {
                 case RaidChannel:

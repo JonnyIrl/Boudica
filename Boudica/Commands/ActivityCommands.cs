@@ -31,78 +31,91 @@ namespace Boudica.Commands
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command arguments, supply a description for your raid e.g. /create raid Vow of Disciple Tuesday 28th 6pm").Build());
                 return;
             }
-
-            List<ActivityUser> addedUsers = AddPlayersToNewActivity(raidDescription);
-            Raid newRaid = new Raid()
+            Raid newRaid = null;
+            try
             {
-                DateTimeCreated = DateTime.UtcNow,
-                CreatedByUserId = Context.User.Id,
-                GuidId = Context.Guild.Id,
-                ChannelId = Context.Channel.Id,
-                MaxPlayerCount = 6,
-                Players = new List<ActivityUser>()
+                List<ActivityUser> addedUsers = AddPlayersToNewActivity(raidDescription);
+                newRaid = new Raid()
+                {
+                    DateTimeCreated = DateTime.UtcNow,
+                    CreatedByUserId = Context.User.Id,
+                    GuidId = Context.Guild.Id,
+                    ChannelId = Context.Channel.Id,
+                    MaxPlayerCount = 6,
+                    Players = new List<ActivityUser>()
                 {
                     new ActivityUser(Context.User.Id, Context.User.Username, true)
                 }
-            };
-            if (addedUsers.Any())
-            {
-                newRaid.Players.AddRange(addedUsers);
-            }
-            newRaid = await _activityService.CreateRaidAsync(newRaid);
-            if (newRaid.Id <= 0)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("I couldn't create the raid because Jonny did something wrong!").Build());
-                return;
-            }
+                };
+                if (addedUsers.Any())
+                {
+                    newRaid.Players.AddRange(addedUsers);
+                }
+                newRaid = await _activityService.CreateRaidAsync(newRaid);
+                if (newRaid.Id <= 0)
+                {
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("I couldn't create the raid because Jonny did something wrong!").Build());
+                    return;
+                }
 
-            var embed = new EmbedBuilder();
-            embed.WithColor(new Color(0, 255, 0));
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine(raidDescription);
-            embed.WithAuthor(Context.User);
-            sb.AppendLine();
-            sb.AppendLine();
+                var embed = new EmbedBuilder();
+                embed.WithColor(new Color(0, 255, 0));
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine(raidDescription);
+                embed.WithAuthor(Context.User);
+                sb.AppendLine();
+                sb.AppendLine();
 
-            var user = Context.User;
-            string description = sb.ToString();
-            foreach(ActivityUser activityUser in addedUsers)
-            {
-                description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
-            }
-            description = description.Trim();
-            embed.Description = description;
+                var user = Context.User;
+                string description = sb.ToString();
+                foreach (ActivityUser activityUser in addedUsers)
+                {
+                    description = description.Replace($"<@{activityUser.UserId}>", string.Empty);
+                }
+                description = description.Trim();
+                embed.Description = description;
 
-            AddActivityUsersField(embed, "Players", newRaid.Players);
-            AddActivityUsersField(embed, "Subs", newRaid.Substitutes);
+                AddActivityUsersField(embed, "Players", newRaid.Players);
+                AddActivityUsersField(embed, "Subs", newRaid.Substitutes);
 
-            EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
+                EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
 
-            IUserMessage newMessage;
-            IRole role = GetRoleForChannel(Context.Channel.Id);
-            if (role != null)
-            {
-                // this will reply with the embed
-                await RespondAsync(role.Mention, embed: embed.Build());
-                newMessage = await GetOriginalResponseAsync();
-            }
-            else
-            {
-                // this will reply with the embed
-                await RespondAsync(embed: embed.Build());
-                newMessage = await GetOriginalResponseAsync();
-            }
+                IUserMessage newMessage;
+                IRole role = GetRoleForChannel(Context.Channel.Id);
+                if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
+                {
+                    // this will reply with the embed
+                    await RespondAsync(role.Mention, embed: embed.Build());
+                    newMessage = await GetOriginalResponseAsync();
+                }
+                else
+                {
+                    // this will reply with the embed
+                    await RespondAsync(embed: embed.Build());
+                    newMessage = await GetOriginalResponseAsync();
+                }
 
 
-            newRaid.MessageId = newMessage.Id;
-            await _activityService.UpdateRaidAsync(newRaid);
+                newRaid.MessageId = newMessage.Id;
+                await _activityService.UpdateRaidAsync(newRaid);
 
-            await newMessage.PinAsync();
-            await newMessage.AddReactionsAsync(new List<IEmote>()
+                await newMessage.PinAsync();
+                await newMessage.AddReactionsAsync(new List<IEmote>()
             {
                 new Emoji("🇯"),
                 new Emoji("🇸"),
             });
+            }
+            catch(Exception ex)
+            {
+                //Didn't get to post the raid into the chat so therefore delete
+                if(newRaid != null && newRaid.MessageId == 0)
+                {
+                    await _activityService.DeleteRaidAsync(newRaid.Id);
+                    await RespondAsync("Failed to create the raid!");
+                }
+                Console.Error.WriteLine("Exception creating raid", ex);
+            }
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]
@@ -169,7 +182,7 @@ namespace Boudica.Commands
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannel(Context.Channel.Id);
-            if (role != null)
+            if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount)
             {
                 await RespondAsync(role.Mention, embed: embed.Build());
                 newMessage = await GetOriginalResponseAsync();
@@ -190,26 +203,7 @@ namespace Boudica.Commands
                 new Emoji("🇸"),
             });
         }
-        
-        private async Task CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId)
-        {
-            if (activityUsers == null) return;
-            int increaseAmount = 1 * activityUsers.Count;
-            foreach(ActivityUser user in activityUsers)
-            {
-                if (user.UserId == creatorId)
-                {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
-                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
-                }
-                else if(user.Reacted)
-                {
-                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
-                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
-                }
-            }
-        }
-
+       
         private IRole GetRoleForChannel(ulong channelId)
         {
             switch(channelId)

@@ -63,7 +63,7 @@ namespace Boudica.Commands
         {
             if (Context.User.Id != 244209636897456129)
             {
-                await RespondAsync("Failed", ephemeral: true);
+                await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace Boudica.Commands
         {
             if (Context.User.Id != 244209636897456129)
             {
-                await RespondAsync("Failed", ephemeral: true);
+                await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
                 return;
             }
 
@@ -146,7 +146,7 @@ namespace Boudica.Commands
         {
             if (Context.User.Id != 244209636897456129)
             {
-                await RespondAsync("Failed", ephemeral: true);
+                await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
                 return;
             }
 

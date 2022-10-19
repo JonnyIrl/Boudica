@@ -54,6 +54,12 @@ namespace Boudica.Services
             return await _raidCollection.FindOneAndReplaceAsync(filter, raid, new FindOneAndReplaceOptions<MongoDB.Models.Raid, MongoDB.Models.Raid>() { ReturnDocument = ReturnDocument.After });
         }
 
+        public async Task<bool> DeleteRaidAsync(int id)
+        {
+            var result = await _raidCollection.DeleteOneAsync(x => x.Id == id);
+            return result.DeletedCount > 0;
+        }
+
         public async Task<MongoDB.Models.Raid> GetMongoRaidAsync(int raidId)
         {
             if (raidId <= 0) throw new ArgumentNullException("Id must be provided to update");
