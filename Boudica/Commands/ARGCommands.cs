@@ -148,8 +148,6 @@ namespace Boudica.Commands
                 return;
             }
 
-            await DeferAsync();
-
             ActivityUser user = new ActivityUser(guildUser.Id, guildUser.DisplayName);
             if(user == null)
             {
@@ -160,8 +158,7 @@ namespace Boudica.Commands
             if(user.UserId == Context.User.Id)
             {
                 //Reverse Uno
-                await RespondAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
-                await Task.Delay(500);
+                await ReplyAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
                 await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
                 await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
                 return;
