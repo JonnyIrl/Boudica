@@ -73,30 +73,30 @@ namespace Boudica.Commands
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
             }
 
-            EmbedBuilder embed = new EmbedBuilder();
-            CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
-            embed.Title = attributes.Title;
-            embed.Description = attributes.Description;
-            string[] rgb = attributes.ColorCode.Split(",");
-            embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-            embed.AddField(attributes.EmbedFieldBuilder) ;
+            //EmbedBuilder embed = new EmbedBuilder();
+            //CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
+            //embed.Title = attributes.Title;
+            //embed.Description = attributes.Description;
+            //string[] rgb = attributes.ColorCode.Split(",");
+            //embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+            //embed.AddField(attributes.EmbedFieldBuilder) ;
 
-            IUserMessage message;
-            IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
-            if (role != null)
-            {
-                await RespondAsync(role.Mention, embed: embed.Build());
-                message = await GetOriginalResponseAsync();
-            }
-            else
-            {
-                await RespondAsync(embed: embed.Build());
-                message = await GetOriginalResponseAsync();
-            }
+            //IUserMessage message;
+            //IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+            //if (role != null)
+            //{
+            //    await RespondAsync(role.Mention, embed: embed.Build());
+            //    message = await GetOriginalResponseAsync();
+            //}
+            //else
+            //{
+            //    await RespondAsync(embed: embed.Build());
+            //    message = await GetOriginalResponseAsync();
+            //}
 
-            await _trialsService.UpdateMessageId(message.Id);
-            await message.PinAsync();
-            await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
+            //await _trialsService.UpdateMessageId(message.Id);
+            //await message.PinAsync();
+            //await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
         }
 
         [SlashCommand("lock-trials-vote", "Lock trials vote")]

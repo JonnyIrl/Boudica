@@ -1,4 +1,5 @@
-﻿using Boudica.MongoDB;
+﻿using Boudica.Helpers;
+using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Discord;
 using Discord.WebSocket;
@@ -16,7 +17,7 @@ namespace Boudica.Services
     {
         private readonly Timer _actionTimer;
         private readonly TrialsService _trialsService;
-        private const int FiveMinutes = 300000;
+        private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
 
         private readonly IMongoDBContext _mongoDBContext;
@@ -41,15 +42,15 @@ namespace Boudica.Services
 
         public CronService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
-            //_mongoDBContext = mongoDBContext;
-            //_cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
-            //_trialsService = services.GetRequiredService<TrialsService>();
-            //_client = services.GetRequiredService<DiscordSocketClient>();
-            //PopulateAlphabetList();
-            //if (_actionTimer == null)
-            //{
-            //    _actionTimer = new Timer(TimerElapsed, null, ThirtySeconds, ThirtySeconds);
-            //}
+            _mongoDBContext = mongoDBContext;
+            _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
+            _trialsService = services.GetRequiredService<TrialsService>();
+            _client = services.GetRequiredService<DiscordSocketClient>();
+            PopulateAlphabetList();
+            if (_actionTimer == null)
+            {
+                _actionTimer = new Timer(TimerElapsed, null, OneMinute, OneMinute);
+            }
         }
 
         private void PopulateAlphabetList()
@@ -88,7 +89,7 @@ namespace Boudica.Services
                 List<CronTask> tasks = await GetTasksToAction();
                 if (tasks.Count == 0)
                 {
-                    Console.WriteLine("No tasks to be sent");
+                    Console.WriteLine(DateTime.UtcNow.ToString("HH:mm:ss") + " No tasks to be sent");
                     return;
                 }
 
@@ -109,31 +110,57 @@ namespace Boudica.Services
                         continue;
                     }
 
-                    EmbedBuilder embed = new EmbedBuilder();
-                    embed.Title = task.EmbedAttributes.Title;
-                    embed.Description = task.EmbedAttributes.Description;
-                    string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
-                    embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-                    embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
-
-
                     task.DateTimeLastTriggered = DateTime.UtcNow;
                     await MarkTaskAsProcessed(task);
 
                     if (task.Name == "TrialsVote")
                     {
+                        bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
+                        if (createdTrialsVote == false)
+                        {
+                            await channel.SendMessageAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
+                            return;
+                        }
+
+                        EmbedBuilder embed = new EmbedBuilder();
+                        CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
+                        task.EmbedAttributes = attributes;
+                        embed.Title = task.EmbedAttributes.Title;
+                        embed.Description = task.EmbedAttributes.Description;
+                        string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
+                        embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+                        embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
                         await SendTrialsVoteMessage(task, guild, channel, embed);
                     }
                     else if(task.Name == "TrialsVoteLock")
                     {
+                        EmbedBuilder embed = new EmbedBuilder();
+                        CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
+                        task.EmbedAttributes = attributes;
+                        embed.Title = task.EmbedAttributes.Title;
+                        embed.Description = task.EmbedAttributes.Description;
+                        string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
+                        embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+                        embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
                         await SendTrialsLockVoteMessage(task, channel, embed);
+                    }
+                    else
+                    {
+                        if (task.LastMessageId > 0)
+                        {
+                            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(task.LastMessageId);
+                            if (message == null) return;
+                            task.LastMessageId = message.Id;
+                            await MarkTaskAsProcessed(task);
+                        }
                     }
 
                 }
             }
             catch (Exception ex)
             {
-
+                Console.WriteLine("Exception happened in CronService");
+                Console.WriteLine(ex.ToString());
             }
         }
 
@@ -148,15 +175,25 @@ namespace Boudica.Services
             else
             {
                 message = await channel.SendMessageAsync(null, false, embed.Build());
-                task.LastMessageId = message.Id;
-                await MarkTaskAsProcessed(task);
             }
 
+            task.LastMessageId = message.Id;
+            await MarkTaskAsProcessed(task);
+
+            await _trialsService.UpdateMessageId(message.Id);
+            await message.PinAsync();
             await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
         }
 
         private async Task SendTrialsLockVoteMessage(CronTask task, SocketTextChannel channel, EmbedBuilder embed)
         {
+            TrialsVote trialsVote = await _trialsService.LockTrialsVote();
+            if (trialsVote == null)
+            {
+                await channel.SendMessageAsync(embed: EmbedHelper.CreateFailedReply("Failed to lock").Build());
+                return;
+            }
+
             CronTask trialsVoteTask = await _cronTaskCollection.Find(x => x.Name == "TrialsVote").FirstOrDefaultAsync();
             if (trialsVoteTask == null) return;
 
@@ -254,7 +291,7 @@ namespace Boudica.Services
         {
             CronEmbedAttributes cronEmbedAttributes = new CronEmbedAttributes();
             cronEmbedAttributes.Title = "Trials Vote";
-            cronEmbedAttributes.Description = "Vote for the map you think will be the Trials map. Only your first vote will count";
+            cronEmbedAttributes.Description = "Vote for the map you think will be the Trials map. Only your first vote will count. Voting will end <t:1666367999:R>";
             cronEmbedAttributes.ColorCode = "21,142,2";
             StringBuilder sb = new StringBuilder();
 

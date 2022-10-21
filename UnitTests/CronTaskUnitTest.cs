@@ -21,21 +21,22 @@ namespace UnitTests
         [TestMethod]
         public void RealWorldCheck()
         {
-            DateTime lastTriggered = DateTime.Parse("2022-10-07 07:00");
-            DateTime triggerDateTime = DateTime.Parse("2022-10-13 16:55");
+            DateTime lastTriggered = DateTime.Parse("2022-10-14 06:00");
+            DateTime triggerDateTime = DateTime.Parse("2022-10-07 06:25");
 
             List<CronTask> tasks = new List<CronTask>();
 
             tasks.Add(GetTrialsCronTaskWeekly(lastTriggered, triggerDateTime));
 
-            triggerDateTime = DateTime.Parse("2022-10-14 " + DateTime.UtcNow.AddSeconds(-30).ToString("HH:mm"));
+            lastTriggered = DateTime.MinValue;
+            triggerDateTime = DateTime.Parse("2022-10-21 06:25");
             tasks.Add(GetTrialsCronTaskWeekly(lastTriggered, triggerDateTime));
 
-            triggerDateTime = DateTime.UtcNow.AddDays(-7).AddSeconds(-30);
-            tasks.Add(GetTrialsCronTaskWeekly(lastTriggered, triggerDateTime));
+            //triggerDateTime = DateTime.UtcNow.AddDays(-7).AddSeconds(-30);
+            //tasks.Add(GetTrialsCronTaskWeekly(lastTriggered, triggerDateTime));
 
             tasks = _cronService.FilterTaskList(tasks);
-            Assert.IsTrue(tasks.Count == 1);
+            Assert.IsTrue(tasks.Count == 2);
         }
 
         [TestMethod]
