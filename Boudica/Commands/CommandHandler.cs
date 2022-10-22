@@ -56,6 +56,13 @@ namespace Boudica.Commands
 
         private const ulong MiscChannel = 530528672172736515;
         private const string MiscRole = "Activity Aficionados";
+
+#if DEBUG
+        private const ulong GeneralChannel = 958852217186713683;
+#else
+        private const ulong GeneralChannel = 530528343666458663;
+#endif
+
         #endregion
 
 #if DEBUG
@@ -87,8 +94,35 @@ namespace Boudica.Commands
             _client.ReactionAdded += ReactionAddedAsync;
             _client.ReactionRemoved += ReactionRemovedAsync;
 
+            _client.UserJoined += UserJoined;
+
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+        }
+
+        private async Task UserJoined(SocketGuildUser arg)
+        {
+            if(arg.Guild.Id != GuildId)
+            {
+                Console.WriteLine("GuildId not equal");
+                return;
+            }
+
+            SocketGuild guild = _client.GetGuild(arg.Guild.Id);
+            if(guild == null)
+            {
+                Console.WriteLine("Could not find guild that user joined");
+                return;
+            }
+
+            ITextChannel channel = guild.GetTextChannel(GeneralChannel);
+            if(channel == null)
+            {
+                Console.WriteLine("Could not find channel for id " + GeneralChannel);
+                return;
+            }
+
+            await channel.SendMessageAsync($"Welcome to the server <@{arg.Id}>! This is an automated message for now which will be updated by a lovely admin when they have time :)");
         }
 
         public void AddPlayerToManualEmoteList(ulong userId)
@@ -656,12 +690,12 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
-                #region Check Closed
+#region Check Closed
                 if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
                 {
                     return activityResponse;
                 }
-                #endregion
+#endregion
 
 
                 ActivityType activityType = new ActivityType();
@@ -800,12 +834,12 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
-                #region Check Closed
+#region Check Closed
                 if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
                 {
                     return activityResponse;
                 }
-                #endregion
+#endregion
 
 
                 ActivityType activityType = new ActivityType();
@@ -906,12 +940,12 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
-                #region Check Closed
+#region Check Closed
                 if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
                 {
                     return activityResponse;
                 }
-                #endregion
+#endregion
 
 
                 ActivityType activityType = new ActivityType();

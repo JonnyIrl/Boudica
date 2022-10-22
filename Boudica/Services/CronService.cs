@@ -17,6 +17,7 @@ namespace Boudica.Services
     {
         private readonly Timer _actionTimer;
         private readonly TrialsService _trialsService;
+        private const int FiveMinute = 300000;
         private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
 
@@ -49,7 +50,7 @@ namespace Boudica.Services
             PopulateAlphabetList();
             if (_actionTimer == null)
             {
-                _actionTimer = new Timer(TimerElapsed, null, OneMinute, OneMinute);
+                _actionTimer = new Timer(TimerElapsed, null, OneMinute, FiveMinute);
             }
         }
 

@@ -86,7 +86,8 @@ namespace Boudica.Helpers
             "you should be proud of yourself.",
             "you’re so cute that puppies and kittens send pictures of you to each other.",
             "how do you keep being so funny and making everyone laugh?",
-            "I look at you the same way we all look at giraffes, which is basically like, “I bet you were just born awesome.”"
+            "I look at you the same way we all look at giraffes, which is basically like, “I bet you were just born awesome.”",
+            "the size of your brain must hurt your skull!"
         };
     }
 }
