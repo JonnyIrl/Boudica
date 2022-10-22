@@ -37,9 +37,9 @@ namespace Boudica.Services
             return null;
         }
 
-        public async Task<List<Recruiter>> FindAllRecruits()
+        public async Task<List<Recruiter>> FindAllRecruits(ulong guildId)
         {
-            return await _recruiterCollection.Find(x => x .ProbationPassed == false).ToListAsync();
+            return await _recruiterCollection.Find(x => x.GuildId == guildId && x.ProbationPassed == false).ToListAsync();
         }
 
         public async Task<Recruiter> InsertNewRecruit(IGuildUser recruiter, IGuildUser recruit)
@@ -83,6 +83,12 @@ namespace Boudica.Services
             var updateBuilder = Builders<Recruiter>.Update;
             var updateResult = await _recruiterCollection.UpdateOneAsync(x => x.Recruit.Id == recruit.Id, updateBuilder.Set(x => x.Recruit, recruit));
             return updateResult.ModifiedCount > 0;
+        }
+
+        public async Task<bool> DeleteRecruit(Recruit recruit)
+        {
+            var deleteResult = await _recruiterCollection.DeleteOneAsync(x => x.Recruit.Id == recruit.Id);
+            return deleteResult.DeletedCount > 0;
         }
 
     }

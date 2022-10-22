@@ -58,88 +58,88 @@ namespace Boudica.Commands
             _alphabetList.Add(new Emoji("🇿"));
         }
 
-        [SlashCommand("create-trials-vote", "Create trials vote")]
-        public async Task CreateTrialsTask()
-        {
-            if (Context.User.Id != 244209636897456129)
-            {
-                await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
-                return;
-            }
+        //[SlashCommand("create-trials-vote", "Create trials vote")]
+        //public async Task CreateTrialsTask()
+        //{
+        //    if (Context.User.Id != 244209636897456129)
+        //    {
+        //        await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
+        //        return;
+        //    }
 
-            bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
-            if(createdTrialsVote == false)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
-            }
+        //    bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
+        //    if(createdTrialsVote == false)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
+        //    }
 
-            //EmbedBuilder embed = new EmbedBuilder();
-            //CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
-            //embed.Title = attributes.Title;
-            //embed.Description = attributes.Description;
-            //string[] rgb = attributes.ColorCode.Split(",");
-            //embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-            //embed.AddField(attributes.EmbedFieldBuilder) ;
+        //    //EmbedBuilder embed = new EmbedBuilder();
+        //    //CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
+        //    //embed.Title = attributes.Title;
+        //    //embed.Description = attributes.Description;
+        //    //string[] rgb = attributes.ColorCode.Split(",");
+        //    //embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+        //    //embed.AddField(attributes.EmbedFieldBuilder) ;
 
-            //IUserMessage message;
-            //IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
-            //if (role != null)
-            //{
-            //    await RespondAsync(role.Mention, embed: embed.Build());
-            //    message = await GetOriginalResponseAsync();
-            //}
-            //else
-            //{
-            //    await RespondAsync(embed: embed.Build());
-            //    message = await GetOriginalResponseAsync();
-            //}
+        //    //IUserMessage message;
+        //    //IRole role = Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+        //    //if (role != null)
+        //    //{
+        //    //    await RespondAsync(role.Mention, embed: embed.Build());
+        //    //    message = await GetOriginalResponseAsync();
+        //    //}
+        //    //else
+        //    //{
+        //    //    await RespondAsync(embed: embed.Build());
+        //    //    message = await GetOriginalResponseAsync();
+        //    //}
 
-            //await _trialsService.UpdateMessageId(message.Id);
-            //await message.PinAsync();
-            //await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
-        }
+        //    //await _trialsService.UpdateMessageId(message.Id);
+        //    //await message.PinAsync();
+        //    //await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
+        //}
 
-        [SlashCommand("lock-trials-vote", "Lock trials vote")]
-        public async Task LockTrialsTask()
-        {
-            if (Context.User.Id != 244209636897456129)
-            {
-                await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
-                return;
-            }
+        //[SlashCommand("lock-trials-vote", "Lock trials vote")]
+        //public async Task LockTrialsTask()
+        //{
+        //    if (Context.User.Id != 244209636897456129)
+        //    {
+        //        await RespondAsync("Failed - Only Jonny can do this command", ephemeral: true);
+        //        return;
+        //    }
 
-            TrialsVote trialsVote = await _trialsService.LockTrialsVote();
-            if (trialsVote == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to lock").Build());
-                return;
-            }
+        //    TrialsVote trialsVote = await _trialsService.LockTrialsVote();
+        //    if (trialsVote == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Failed to lock").Build());
+        //        return;
+        //    }
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Voting is now closed").Build());
+        //    await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Voting is now closed").Build());
             
 
-            IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(trialsVote.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
-                return;
-            }
+        //    IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(trialsVote.MessageId, CacheMode.AllowDownload);
+        //    if (message == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+        //        return;
+        //    }
 
-            EmbedBuilder embed = new EmbedBuilder();
-            CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
-            embed.Title = attributes.Title;
-            embed.Description = attributes.Description;
-            string[] rgb = attributes.ColorCode.Split(",");
-            embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-            embed.AddField(attributes.EmbedFieldBuilder);
+        //    EmbedBuilder embed = new EmbedBuilder();
+        //    CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
+        //    embed.Title = attributes.Title;
+        //    embed.Description = attributes.Description;
+        //    string[] rgb = attributes.ColorCode.Split(",");
+        //    embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+        //    embed.AddField(attributes.EmbedFieldBuilder);
 
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = embed.Build();
-            });
+        //    await message.ModifyAsync(x =>
+        //    {
+        //        x.Embed = embed.Build();
+        //    });
 
-            await RespondAsync("Success", ephemeral: true);
-        }
+        //    await RespondAsync("Success", ephemeral: true);
+        //}
 
         [SlashCommand("confirm-trials-map", "Confirm weekly Trials Map")]
         public async Task ConfirmTrialsMap(string args)
@@ -244,13 +244,13 @@ namespace Boudica.Commands
         }
         private List<string> TrialsMaps = new List<string>()
         {
-            "Altar of Flame",
+            //"Altar of Flame",
             "Bannerfall",
             "Burnout",
             "Cathedral of Dusk",
             "Disjunction",
             "Distant Shore",
-            //"Endless Vale",
+            "Endless Vale",
             "Eternity",
             "Exodus Blue",
             "Fragment",

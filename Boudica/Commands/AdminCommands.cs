@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    [DefaultMemberPermissions(GuildPermission.KickMembers)]
+    [DefaultMemberPermissions(GuildPermission.ModerateMembers)]
     [Group("recruit", "Commands for recruits")]
     public class AdminCommands: InteractionModuleBase<SocketInteractionContext>
     {
@@ -50,7 +50,6 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("new", "Create a new recruit")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task CreateNewRecruit(SocketGuildUser recruiter, SocketGuildUser newJoiner)
         {
             if(recruiter == null || recruiter.IsBot || newJoiner == null || newJoiner.IsBot)
@@ -91,11 +90,10 @@ namespace Boudica.Commands
                 return;
             }
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the ;recruit progress <@{newRecruiter.Recruit.Id}>").Build());
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Created successfully. {newRecruiter.Recruit.DisplayName} has been recruited by {newRecruiter.DisplayName}. You can check their progress by using the /recruit progress <@{newRecruiter.Recruit.Id}>").Build());
         }
 
         [SlashCommand("progress", "Check a recruits progress")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task RecruitProgress(SocketGuildUser recruit)
         {
             if (recruit == null || recruit.IsBot)
@@ -119,7 +117,7 @@ namespace Boudica.Commands
         [SlashCommand("progress-all", "All recruits progress")]
         public async Task AllRecruitProgress()
         {
-            List<Recruiter> allRecruiters = await _hiringService.FindAllRecruits();
+            List<Recruiter> allRecruiters = await _hiringService.FindAllRecruits(Context.Guild.Id);
 
             if (allRecruiters == null || allRecruiters.Count == 0)
             {
@@ -127,12 +125,11 @@ namespace Boudica.Commands
                 return;
             }
 
-
             foreach (Recruiter recruiter in allRecruiters)
             {
                 EmbedBuilder embedBuilder = CreateEmbedForRecruit(recruiter);
                 await ReplyAsync(embed: embedBuilder.Build());
-                await Task.Delay(150);
+                await Task.Delay(50);
             }
 
             await RespondAsync("Success", ephemeral: true);
@@ -189,8 +186,7 @@ namespace Boudica.Commands
             return embedBuilder;
         }
 
-        [SlashCommand("enroll", "Enroll a recruit as full member")]
-        [RequireUserPermission(Discord.GuildPermission.KickMembers)]
+        [SlashCommand("enroll", "Enroll a recruit as full member")] 
         public async Task RecruitPassedProbation(SocketGuildUser recruit)
         {
             if (recruit == null || recruit.IsBot)
@@ -289,6 +285,36 @@ namespace Boudica.Commands
             else
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Something went wrong.. blame Jonny").Build());
+            }
+        }
+
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        [SlashCommand("delete", "Delete a recruit.")]
+        public async Task DeleteRecruit(SocketGuildUser recruit)
+        {
+            if (recruit == null || recruit.IsBot)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a recruit record or you may have issued an invalid command ensure it is as follows.  /recruit delete @Recruit").Build());
+                return;
+            }
+
+            Recruiter existingRecruiter = await _hiringService.FindRecruit(recruit.Id);
+            if (existingRecruiter == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"{recruit.DisplayName} has not been recruited by anybody").Build());
+                return;
+            }
+
+            
+            bool result = await _hiringService.DeleteRecruit(existingRecruiter.Recruit);
+            if (result)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Deleted successfully").Build());
+                return;
+            }
+            else
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not delete.. something went wrong.. blame Jonny").Build());
             }
         }
     }
