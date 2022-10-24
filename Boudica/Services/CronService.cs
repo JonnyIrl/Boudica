@@ -1,4 +1,5 @@
-﻿using Boudica.Helpers;
+﻿using Boudica.Enums;
+using Boudica.Helpers;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Discord;
@@ -34,8 +35,6 @@ namespace Boudica.Services
         private const ulong ChannelId = 530529088620724246;
 #endif
 
-        private List<Emoji> _alphabetList;
-
         public CronService()
         {
 
@@ -47,41 +46,40 @@ namespace Boudica.Services
             _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
             _trialsService = services.GetRequiredService<TrialsService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
-            PopulateAlphabetList();
             if (_actionTimer == null)
             {
                 _actionTimer = new Timer(TimerElapsed, null, OneMinute, FiveMinute);
             }
         }
 
-        private void PopulateAlphabetList()
-        {
-            _alphabetList = new List<Emoji>();
-            _alphabetList.Add(new Emoji("🇦"));
-            _alphabetList.Add(new Emoji("🇧"));
-            _alphabetList.Add(new Emoji("🇨"));
-            _alphabetList.Add(new Emoji("🇩"));
-            _alphabetList.Add(new Emoji("🇪"));
-            _alphabetList.Add(new Emoji("🇫"));
-            _alphabetList.Add(new Emoji("🇬"));
-            _alphabetList.Add(new Emoji("🇭"));
-            _alphabetList.Add(new Emoji("🇮"));
-            _alphabetList.Add(new Emoji("🇰"));
-            _alphabetList.Add(new Emoji("🇱"));
-            _alphabetList.Add(new Emoji("🇲"));
-            _alphabetList.Add(new Emoji("🇳"));
-            _alphabetList.Add(new Emoji("🇴"));
-            _alphabetList.Add(new Emoji("🇵"));
-            _alphabetList.Add(new Emoji("🇶"));
-            _alphabetList.Add(new Emoji("🇷"));
-            _alphabetList.Add(new Emoji("🇹"));
-            _alphabetList.Add(new Emoji("🇺"));
-            _alphabetList.Add(new Emoji("🇻"));
-            _alphabetList.Add(new Emoji("🇼"));
-            _alphabetList.Add(new Emoji("🇽"));
-            _alphabetList.Add(new Emoji("🇾"));
-            _alphabetList.Add(new Emoji("🇿"));
-        }
+        //private void PopulateAlphabetList()
+        //{
+        //    _alphabetList = new List<Emoji>();
+        //    _alphabetList.Add(new Emoji("🇦"));
+        //    _alphabetList.Add(new Emoji("🇧"));
+        //    _alphabetList.Add(new Emoji("🇨"));
+        //    _alphabetList.Add(new Emoji("🇩"));
+        //    _alphabetList.Add(new Emoji("🇪"));
+        //    _alphabetList.Add(new Emoji("🇫"));
+        //    _alphabetList.Add(new Emoji("🇬"));
+        //    _alphabetList.Add(new Emoji("🇭"));
+        //    _alphabetList.Add(new Emoji("🇮"));
+        //    _alphabetList.Add(new Emoji("🇰"));
+        //    _alphabetList.Add(new Emoji("🇱"));
+        //    _alphabetList.Add(new Emoji("🇲"));
+        //    _alphabetList.Add(new Emoji("🇳"));
+        //    _alphabetList.Add(new Emoji("🇴"));
+        //    _alphabetList.Add(new Emoji("🇵"));
+        //    _alphabetList.Add(new Emoji("🇶"));
+        //    _alphabetList.Add(new Emoji("🇷"));
+        //    _alphabetList.Add(new Emoji("🇹"));
+        //    _alphabetList.Add(new Emoji("🇺"));
+        //    _alphabetList.Add(new Emoji("🇻"));
+        //    _alphabetList.Add(new Emoji("🇼"));
+        //    _alphabetList.Add(new Emoji("🇽"));
+        //    _alphabetList.Add(new Emoji("🇾"));
+        //    _alphabetList.Add(new Emoji("🇿"));
+        //}
 
         public async void TimerElapsed(object state)
         {
@@ -183,7 +181,6 @@ namespace Boudica.Services
 
             await _trialsService.UpdateMessageId(message.Id);
             await message.PinAsync();
-            await message.AddReactionsAsync(_alphabetList.Take(TrialsMaps.Count));
         }
 
         private async Task SendTrialsLockVoteMessage(CronTask task, SocketTextChannel channel, EmbedBuilder embed)
@@ -290,18 +287,47 @@ namespace Boudica.Services
         }
         private CronEmbedAttributes CreateTrialsVoteEmbedAttributes()
         {
+            DateTime closingDateTime = DateTime.Parse(FindFridayDate().ToString("yyyy-MM-dd") + " 17:00:00");
+            closingDateTime = DateTime.SpecifyKind(closingDateTime, DateTimeKind.Utc);
+            long offset = ((DateTimeOffset)closingDateTime).ToUnixTimeSeconds();
+
             CronEmbedAttributes cronEmbedAttributes = new CronEmbedAttributes();
             cronEmbedAttributes.Title = "Trials Vote";
-            cronEmbedAttributes.Description = "Vote for the map you think will be the Trials map. Only your first vote will count. Voting will end <t:1666367999:R>";
+            cronEmbedAttributes.Description = $"Use **/trials-vote** to vote for the map you think will be the Trials map. Only your first vote will count. \n\nVoting will end <t:{offset}:R>";
             cronEmbedAttributes.ColorCode = "21,142,2";
             StringBuilder sb = new StringBuilder();
 
-            for (int i = 0; i < TrialsMaps.Count; i++)
+            Enum.GetValues<TrialsMap>().ToList().ForEach(x =>
             {
-                sb.AppendLine($"{_alphabetList[i]} - {TrialsMaps[i]}");
-            }
+                sb.AppendLine(x.ToName());
+            });
+
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
+        }
+
+        private DateTime FindFridayDate()
+        {
+            DateTime now = DateTime.UtcNow;
+            switch (now.DayOfWeek)
+            {
+                case DayOfWeek.Sunday:
+                    return now.AddDays(-2);
+                case DayOfWeek.Monday:
+                    return now.AddDays(-3);
+                case DayOfWeek.Tuesday:
+                    return now.AddDays(-4);
+                case DayOfWeek.Wednesday:
+                    return now.AddDays(-5);
+                case DayOfWeek.Thursday:
+                    return now.AddDays(-6);
+                case DayOfWeek.Friday:
+                    return now;
+                case DayOfWeek.Saturday:
+                    return now.AddDays(-1);
+            }
+
+            return now;
         }
 
         private CronEmbedAttributes CreateTrialsVoteLockAttributes()
@@ -312,36 +338,13 @@ namespace Boudica.Services
             cronEmbedAttributes.ColorCode = "237,34,19";
             StringBuilder sb = new StringBuilder();
 
-            for (int i = 0; i < TrialsMaps.Count; i++)
+            Enum.GetValues<TrialsMap>().ToList().ForEach(x =>
             {
-                sb.AppendLine($"{_alphabetList[i]} - {TrialsMaps[i]}");
-            }
+                sb.AppendLine(x.ToName());
+            });
+
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
         }
-        private List<string> TrialsMaps = new List<string>()
-        {
-            //"Altar of Flame",
-            "Bannerfall",
-            "Burnout",
-            "Cathedral of Dusk",
-            "Disjunction",
-            "Distant Shore",
-            "Endless Vale",
-            "Eternity",
-            "Exodus Blue",
-            "Fragment",
-            "Javelin-4",
-            "Midtown",
-            "Pacifica",
-            "Radiant Cliffs",
-            "Rusted Lands",
-            "The Dead Cliffs",
-            "The Fortress",
-            "Twilight Gap",
-            "Vostok",
-            "Widow’s Court",
-            "Wormhaven",
-        };
     }
 }

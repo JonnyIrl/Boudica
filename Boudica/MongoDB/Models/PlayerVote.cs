@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Boudica.Enums;
+using Discord;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,5 +14,6 @@ namespace Boudica.MongoDB.Models
         public string Username { get; set; }
         public string VotedEmoteName { get; set; }
         public DateTime DateTimeVoted { get; set; }
+        public TrialsMap TrialsMap { get; set; }
     }
 }

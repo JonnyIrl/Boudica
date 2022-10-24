@@ -1,4 +1,5 @@
-﻿using Boudica.MongoDB;
+﻿using Boudica.Enums;
+using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Discord;
 using MongoDB.Driver;
@@ -64,11 +65,11 @@ namespace Boudica.Services
             return trialsVote;
         }
 
-        public async Task<List<PlayerVote>> GetWinningTrialsGuesses(string correctEmojiName)
+        public async Task<List<PlayerVote>> GetWinningTrialsGuesses(TrialsMap trialsMap)
         {
             TrialsVote trialsVote = await GetThisWeeksVote();
             if (trialsVote == null) return null;
-            return trialsVote.PlayerVotes.Where(x => x.VotedEmoteName == correctEmojiName).OrderBy(x => x.DateTimeVoted).ToList();
+            return trialsVote.PlayerVotes.Where(x => x.TrialsMap == trialsMap).OrderBy(x => x.DateTimeVoted).ToList();
         }
 
         public async Task<List<PlayerVote>> GetAllTrialsGuesses()
@@ -108,6 +109,30 @@ namespace Boudica.Services
 
             return updateResult.IsAcknowledged;
         }
+
+        public async Task<bool> AddPlayersVote(ulong userId, string userName, TrialsMap trialsMap)
+        {
+            TrialsVote existingVote = await _trialsCollection.Find(x => x.WeeklyVoteDate == DateTime.UtcNow.Date).FirstOrDefaultAsync();
+            if (existingVote == null) return false;
+            if (existingVote.IsLocked) return false;
+
+            PlayerVote existingPlayerVote = existingVote.PlayerVotes.FirstOrDefault(x => x.Id == userId);
+            if (existingPlayerVote != null) return false;
+
+            existingPlayerVote = new PlayerVote()
+            {
+                Id = userId,
+                DateTimeVoted = DateTime.UtcNow,
+                Username = userName,
+                TrialsMap = trialsMap
+            };
+
+            var updateBuilder = Builders<TrialsVote>.Update;
+            var updateResult = await _trialsCollection.UpdateOneAsync(x => x.Id == existingVote.Id, updateBuilder.AddToSet("PlayerVotes", existingPlayerVote));
+
+            return updateResult.IsAcknowledged;
+        }
+
 
         private DateTime FindFridayDate()
         {

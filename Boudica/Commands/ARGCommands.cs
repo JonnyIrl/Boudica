@@ -97,9 +97,18 @@ namespace Boudica.Commands
         //}
 
         [SlashCommand("leaderboard", "Display current glimmer leaderboard")]
-        public async Task GetLeaderboard()
+        public async Task GetLeaderboard(bool fullLeaderboard = false)
         {
-            List<Guardian> guardians = await _guardianService.GetLeaderboard(Context.User.Id);
+            List<Guardian> guardians = new List<Guardian>();
+            if (fullLeaderboard)
+            {
+                guardians = await _guardianService.GetFullLeaderboard(Context.User.Id);
+            }
+            else
+            { 
+                guardians = await _guardianService.GetLeaderboard(Context.User.Id); 
+            }
+
             if (guardians.Any() == false)
             {
                 await RespondAsync("There is nobody in the leaderboards... yet");
@@ -138,6 +147,7 @@ namespace Boudica.Commands
             embed.WithFooter(footer => footer.Text = "Increase your Glimmer by creating and joining activities. Glimmer can be used in the Lightfall clan event.");
             await RespondAsync(embed: embed.Build());
         }
+
 
         [SlashCommand("award", "Award a player with 3 Glimmer daily")]
         public async Task AwardPlayer(SocketGuildUser guildUser, string reasonForAward = null)

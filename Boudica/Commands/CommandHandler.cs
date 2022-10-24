@@ -122,7 +122,7 @@ namespace Boudica.Commands
                 return;
             }
 
-            await channel.SendMessageAsync($"Welcome to the server <@{arg.Id}>! This is an automated message for now which will be updated by a lovely admin when they have time :)");
+            //await channel.SendMessageAsync($"Welcome to the server <@{arg.Id}>! This is an automated message for now which will be updated by a lovely admin when they have time :)");
         }
 
         public void AddPlayerToManualEmoteList(ulong userId)
@@ -415,6 +415,7 @@ namespace Boudica.Commands
                 var originalMessage = await message.GetOrDownloadAsync();
                 if (originalMessage == null) return;
                 if (originalMessage.Embeds == null || originalMessage.Embeds.Any() == false) return;
+                if (originalMessage.Author.IsBot == false) return;
                 var embed = originalMessage.Embeds.First();
                 if (embed.Title.Contains("closed")) return;
 
