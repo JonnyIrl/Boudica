@@ -1000,9 +1000,9 @@ namespace Boudica.Commands
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task ListOpenRaids()
         {
-            await DeferAsync();
+            //await DeferAsync();
 
-            IList<Raid> openRaids = await _activityService.FindAllOpenRaids();
+            IList<Raid> openRaids = await _activityService.FindAllOpenRaids(Context.Guild.Id);
             openRaids = openRaids.OrderBy(x => x.DateTimeCreated).ToList();
             if (openRaids == null || openRaids.Count == 0)
             {
@@ -1041,9 +1041,9 @@ namespace Boudica.Commands
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task ListOpenFireteams()
         {
-            await DeferAsync();
+            //await DeferAsync();
 
-            IList<Fireteam> openFireteams = await _activityService.FindAllOpenFireteams();
+            IList<Fireteam> openFireteams = await _activityService.FindAllOpenFireteams(Context.Guild.Id);
             openFireteams = openFireteams.OrderBy(x => x.DateTimeCreated).ToList();
             if (openFireteams == null || openFireteams.Count == 0)
             {

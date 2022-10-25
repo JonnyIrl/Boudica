@@ -54,6 +54,7 @@ class Program
             client.Log += LogAsync;
             commands.Log += LogAsync;
             client.Ready += ReadyAsync;
+            client.Connected += ClientConnected;
 
 #if DEBUG
             await client.LoginAsync(TokenType.Bot, _config["DebugToken"]);
@@ -69,6 +70,10 @@ class Program
 
             await Task.Delay(Timeout.Infinite);
         }
+    }
+
+    private async Task ClientConnected()
+    {
     }
 
     private Task LogAsync(LogMessage log)
@@ -87,6 +92,7 @@ class Program
         if (guild != null)
         {
             await guild.DownloadUsersAsync();
+            Console.WriteLine("Downloaded Users");
         }
     }
 
