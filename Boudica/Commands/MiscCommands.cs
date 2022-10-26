@@ -145,6 +145,6 @@ namespace Boudica.Commands
                 }
                 x.Embed = embed.Build();
             });
-        }
+        }       
     }
 }

@@ -110,6 +110,15 @@ namespace Boudica.Commands
                 return;
             }
 
+            if (existingRecruiter.Recruit.RecruitChecklist.JoinedPost == false)
+            {
+                if (await _activityService.RecruitJoinedRaid(existingRecruiter.Recruit.Id) || await _activityService.RecruitJoinedFireteam(existingRecruiter.Recruit.Id))
+                {
+                    existingRecruiter.Recruit.RecruitChecklist.JoinedPost = true;
+                    await _hiringService.UpdateRecruit(existingRecruiter.Recruit);
+                }
+            }
+
             EmbedBuilder embedBuilder = CreateEmbedForRecruit(existingRecruiter);
             await RespondAsync(embed: embedBuilder.Build());
         }
@@ -117,7 +126,17 @@ namespace Boudica.Commands
         [SlashCommand("progress-all", "All recruits progress")]
         public async Task AllRecruitProgress()
         {
+            await DeferAsync();
             List<Recruiter> allRecruiters = await _hiringService.FindAllRecruits(Context.Guild.Id);
+            foreach(Recruiter recruiter in allRecruiters)
+            {
+                if (recruiter.Recruit.RecruitChecklist.JoinedPost) continue;
+                if(await _activityService.RecruitJoinedRaid(recruiter.Recruit.Id) || await _activityService.RecruitJoinedFireteam(recruiter.Recruit.Id))
+                {
+                    recruiter.Recruit.RecruitChecklist.JoinedPost = true;
+                    await _hiringService.UpdateRecruit(recruiter.Recruit);
+                }    
+            }
 
             if (allRecruiters == null || allRecruiters.Count == 0)
             {
@@ -129,7 +148,7 @@ namespace Boudica.Commands
             {
                 EmbedBuilder embedBuilder = CreateEmbedForRecruit(recruiter);
                 await ReplyAsync(embed: embedBuilder.Build());
-                await Task.Delay(50);
+                await Task.Delay(150);
             }
 
             await RespondAsync("Success", ephemeral: true);

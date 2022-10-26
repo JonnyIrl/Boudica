@@ -70,6 +70,11 @@ namespace Boudica.Services
             return await (await _raidCollection.FindAsync(x => x.DateTimeClosed == DateTime.MinValue && x.GuidId == guildId)).ToListAsync();
         }
 
+        public async Task<bool> RecruitJoinedRaid(ulong recruitId)
+        {
+            return await _raidCollection.Find(x => x.Players.Any(y => y.UserId == recruitId)).FirstOrDefaultAsync() != null;
+        }
+
         public async Task<List<Raid>> FindAllClosedRaids()
         {
             return await (await _raidCollection.FindAsync(x => x.DateTimeClosed != DateTime.MinValue)).ToListAsync();
@@ -125,6 +130,11 @@ namespace Boudica.Services
         {
             if (fireteamId <= 0) throw new ArgumentNullException("Id must be provided to update");
             return await (await _fireteamCollection.FindAsync(x => x.Id == fireteamId)).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> RecruitJoinedFireteam(ulong recruitId)
+        {
+            return await _fireteamCollection.Find(x => x.Players.Any(y => y.UserId == recruitId)).FirstOrDefaultAsync() != null;
         }
 
         public async Task<bool> CreatedFireteamThisWeek(ulong userId)

@@ -123,29 +123,35 @@ namespace Boudica.Commands
                 return;
             }
 
-            //await channel.SendMessageAsync($"<@{arg.Id}>!", embed: EmbedHelper.CreateInfoReply(GetUserJoinedMessage()).Build());
+            await channel.SendMessageAsync($"<@{arg.Id}>!", embed: EmbedHelper.CreateInfoReply(GetUserJoinedMessage()).Build());
         }
 
         private string GetUserJoinedMessage()
         {
-            const string userJoinedMessage =
-@"Welcome to the best clan related decision you ever made.... We are the Deadly Viper Squad and now so are you!
+            const ulong CrucibleChannel = 530529088620724246;
+            const ulong RaidChannel = 530529729321631785;
+            const ulong CheckpointChannel = 1009209094286094386;
+            const ulong WeaponsChannel = 530530585538461698;
+            const ulong AnnouncementsChannel = 557927181393592370;
+            const ulong LoreChannel = 530529654306766848;
+            const ulong WelcomeChannel = 530536477151592469;
 
-There are a number of channels for you to be a part of and get involved in such as #crucible and #raids, where we organise activities relating to those areas of Destiny. Additionally, we have some channels to enhance your gaming experience! An example being #checkpoints, which allows you to avoid the hassle of trudging through an activity, when you want to focus on one specific part! Feel free to get stuck in with discussion around the #lore of destiny, as well as the best rolls for the must have #weapons. 
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Welcome to the best clan related decision you ever made.... We are the Deadly Viper Squad and now so are you!");
+            sb.AppendLine("");
+            sb.AppendLine($"There are a number of channels for you to be a part of and get involved in such as <#{CrucibleChannel}> and <#{RaidChannel}>, where we organise activities relating to those areas of Destiny. Additionally, we have some channels to enhance your gaming experience! An example being <#{CheckpointChannel}>, which allows you to avoid the hassle of trudging through an activity, when you want to focus on one specific part! Feel free to get stuck in with discussion around the <#{LoreChannel}> of destiny, as well as the best rolls for the must have <#{WeaponsChannel}>.");
+            sb.AppendLine("");
+            sb.AppendLine($"However, before any of that, you'll need to get yourself kitted out with roles in <#{WelcomeChannel}>, so please head on over and don't forget to read the clan rules too!");
+            sb.AppendLine("");
+            sb.AppendLine("We have a number of in-house robots we use to streamline the discord and give you the autonomy to organise your own fireteams, stay appraised of your stats and keep you up to date with all news destiny. You may recognise <@296023718839451649>, utilised by **/** commands, for example */daily* which shows the daily rotations (after you have registered with /register). But allow us to introduce you to <@994334270480986233>! Boudica lets you organise fireteams and earn our clan currency *Glimmer*. Feel free to use the /help command for a full list of what these bad bots are capable of!");
+            sb.AppendLine("");
+            sb.AppendLine($"I'll draw your attention to Seasonal Clan Events and the channel(s) in the category. As a clan we enjoy organising a wide range of events that allow clan members to test their mettle, their artistic flair and their fashionable expertise against one another, on a seasonal basis. *Glimmer* will be particularly useful during the upcoming event we are looking to debut during the next expansion Lightfall. Further news on these glorious events is released from <#{AnnouncementsChannel}>.");
+            sb.AppendLine("");
+            sb.AppendLine($"We hope we haven't bombarded you with too much info, all that is left is to welcome you to a community, over a **decade** in the making!");
+            sb.AppendLine("");
+            sb.AppendLine("We are most happy to have you and look forward to seeing you grow!");
 
-However, before any of that, you'll need to get yourself kitted out with roles in #welcome, so please head on over and don't forget to read the clan rules too!
-
-We have a number of in-house robots we use to streamline the discord and give you the autonomy to organise your own fireteams, stay appraised of your stats and keep you up to date with all news destiny. You may recognise @Charlemagne, utilised by **/** commands, for example */daily* which shows the daily rotations (after you have registered with /register). But allow us to introduce you to @Boudica! Boudica lets you organise fireteams and earn our clan currency *Glimmer*. Feel free to use the /help command for a full list of what these bad bots are capable of!
-
-I'll draw your attention to Seasonal Clan Events and the channel(s) in the category. As a clan we enjoy organising a wide range of events that allow clan members to test their mettle, their artistic flair and their fashionable expertise against one another, on a seasonal basis. *Glimmer* will be particularly useful during the upcoming event we are looking to debut during the next expansion Lightfall. Further news on these glorious events is released from #announcements. 
-
-We hope we haven't bombarded you with too much info, all that is left is to welcome you to a community, over a **decade** in the making! 
-
-We are most happy to have you and look forward to seeing you grow!
-
-";
-
-            return userJoinedMessage;
+            return sb.ToString();
         }
 
         public void AddPlayerToManualEmoteList(ulong userId)
