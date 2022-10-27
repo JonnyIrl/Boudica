@@ -212,6 +212,42 @@ namespace UnitTests
         }
         #endregion
 
+        [TestMethod]
+        public void UnixTimestamp()
+        {
+            //1666976400
+            //FindFridayDate().ToString("yyyy-MM-dd")
+            DateTime closingDateTime = DateTime.Parse("2022-10-28" + " 17:00:00");
+            closingDateTime = DateTime.SpecifyKind(closingDateTime, DateTimeKind.Utc);
+            long offset = ((DateTimeOffset)closingDateTime).ToUnixTimeSeconds();
+            int breakHere = 0;
+            Assert.AreEqual(1666976400, offset);
+        }
+
+        private DateTime FindFridayDate()
+        {
+            DateTime now = DateTime.UtcNow;
+            switch (now.DayOfWeek)
+            {
+                case DayOfWeek.Sunday:
+                    return now.AddDays(-2);
+                case DayOfWeek.Monday:
+                    return now.AddDays(-3);
+                case DayOfWeek.Tuesday:
+                    return now.AddDays(-4);
+                case DayOfWeek.Wednesday:
+                    return now.AddDays(-5);
+                case DayOfWeek.Thursday:
+                    return now.AddDays(-6);
+                case DayOfWeek.Friday:
+                    return now;
+                case DayOfWeek.Saturday:
+                    return now.AddDays(-1);
+            }
+
+            return now;
+        }
+
         private CronTask GetTrialsCronTaskWeekly(DateTime dateTimeLastTriggered, DateTime triggerDateTime)
         {
             return new CronTask()

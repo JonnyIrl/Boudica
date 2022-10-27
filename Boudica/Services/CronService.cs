@@ -43,7 +43,11 @@ namespace Boudica.Services
         public CronService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
             _mongoDBContext = mongoDBContext;
+#if DEBUG
+            _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name + "Test");
+#else
             _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
+#endif
             _trialsService = services.GetRequiredService<TrialsService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             if (_actionTimer == null)
@@ -237,8 +241,6 @@ namespace Boudica.Services
         {
             await _cronTaskCollection.FindOneAndReplaceAsync(x => x.Id == task.Id, task);
         }
-
-
 
         public async Task<bool> CreateTrialsTask()
         {

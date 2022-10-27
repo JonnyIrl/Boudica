@@ -112,7 +112,7 @@ namespace Boudica.Services
 
         public async Task<bool> AddPlayersVote(ulong userId, string userName, TrialsMap trialsMap)
         {
-            TrialsVote existingVote = await _trialsCollection.Find(x => x.WeeklyVoteDate == DateTime.UtcNow.Date).FirstOrDefaultAsync();
+            TrialsVote existingVote = await GetThisWeeksVote();
             if (existingVote == null) return false;
             if (existingVote.IsLocked) return false;
 

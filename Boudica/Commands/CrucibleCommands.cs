@@ -30,12 +30,12 @@ namespace Boudica.Commands
         public async Task VoteForTrialsMap(Enums.TrialsMap trialsMap)
         {
             TrialsVote currentVote = await _trialsService.GetThisWeeksVote();
-            if(currentVote == null)
+            if (currentVote == null)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("There is currently no trials vote yet.. keep checking Crucible channel!").Build(), ephemeral: true);
                 return;
             }
-            else if(currentVote.IsLocked)
+            else if (currentVote.IsLocked)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Sorry, this weeks vote is closed!").Build(), ephemeral: true);
                 return;
