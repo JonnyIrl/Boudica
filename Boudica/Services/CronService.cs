@@ -208,6 +208,7 @@ namespace Boudica.Services
             {
                 x.Embed = embed.Build();
             });
+            await message.UnpinAsync();
         }
 
         private async Task<List<CronTask>> GetTasksToAction()
