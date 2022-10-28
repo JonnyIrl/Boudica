@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -99,6 +100,48 @@ namespace Boudica.Commands
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+
+            _client.ButtonExecuted += ButtonExecuted;
+
+        }
+
+        private async Task ButtonExecuted(SocketMessageComponent component)
+        {
+            // We can now check for our custom id
+            string switchStatement = component.Data.CustomId.Substring(0, component.Data.CustomId.IndexOf("-"));
+            if(int.TryParse(switchStatement, out int swap) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            if (int.TryParse(component.Data.CustomId.Replace(switchStatement + "-", string.Empty).Trim(), out int id) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            ButtonCustomId buttonClicked = (ButtonCustomId) swap;
+            switch (buttonClicked)
+            {
+                case ButtonCustomId.Invalid:
+                    break;
+                case ButtonCustomId.RaidAlert:
+                    var context = new InteractionContext(_client, component, component.Channel);
+                    await _commands.ExecuteCommandAsync(context, _services);
+                    break;
+                case ButtonCustomId.FireteamAlert:
+                    break;
+                case ButtonCustomId.EditRaid:
+                    break;
+                case ButtonCustomId.EditFireteam:
+                    break;
+                case ButtonCustomId.CloseRaid:
+                    break;
+                case ButtonCustomId.CloseFireteam:
+                    break;
+                default:
+                    await component.RespondAsync("Failed", ephemeral: true);
+                    break;
+            }
         }
 
         private async Task UserJoined(SocketGuildUser arg)
@@ -229,7 +272,22 @@ namespace Boudica.Commands
             {
                 // create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules
                 var ctx = new SocketInteractionContext(_client, arg);
-                await _commands.ExecuteCommandAsync(ctx, _services);
+                switch (arg.Type)
+                {
+                    case InteractionType.Ping:
+                        break;
+                    case InteractionType.ApplicationCommand:
+                        await _commands.ExecuteCommandAsync(ctx, _services);
+                        break;
+                    case InteractionType.MessageComponent:
+                        break;
+                    case InteractionType.ApplicationCommandAutocomplete:
+                        break;
+                    case InteractionType.ModalSubmit:
+                        break;
+                    default:
+                        break;
+                }
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
 ﻿using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -80,18 +81,24 @@ namespace Boudica.Commands
 
                 EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
 
+                var buttons = new ComponentBuilder()
+                    .WithButton("Edit Raid", $"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Alert Raid", $"{(int)ButtonCustomId.RaidAlert}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Close Raid", $"{(int)ButtonCustomId.CloseRaid}-{newRaid.Id}", ButtonStyle.Danger);
+
+
                 IUserMessage newMessage;
                 IRole role = GetRoleForChannel(Context.Channel.Id);
                 if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
                 {
                     // this will reply with the embed
-                    await RespondAsync(role.Mention, embed: embed.Build());
+                    await RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
                     newMessage = await GetOriginalResponseAsync();
                 }
                 else
                 {
                     // this will reply with the embed
-                    await RespondAsync(embed: embed.Build());
+                    await RespondAsync(embed: embed.Build(), components: buttons.Build());
                     newMessage = await GetOriginalResponseAsync();
                 }
 
