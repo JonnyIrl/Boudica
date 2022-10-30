@@ -17,6 +17,10 @@ namespace Boudica.Services
         protected IMongoCollection<Raid> _raidCollection;
         protected IMongoCollection<MongoDB.Models.Fireteam> _fireteamCollection;
 
+        public ActivityService()
+        {
+
+        }
         public ActivityService(IMongoDBContext mongoDBContext)
         {
             _mongoDBContext = mongoDBContext;
@@ -83,7 +87,7 @@ namespace Boudica.Services
         public async Task<bool> CreatedRaidThisWeek(ulong userId)
         {
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
-            return await (_raidCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+            return await _raidCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId).FirstOrDefaultAsync() != null;
         }
         public async Task<Raid> FindMostRecentCompletedRaidForUser(ulong userId)
         {
@@ -140,7 +144,7 @@ namespace Boudica.Services
         public async Task<bool> CreatedFireteamThisWeek(ulong userId)
         {
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
-            return await (_fireteamCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId)).AnyAsync();
+            return await _fireteamCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId).FirstOrDefaultAsync() != null;
         }
 
         public async Task<List<Fireteam>> FindAllOpenFireteams(ulong guildId)

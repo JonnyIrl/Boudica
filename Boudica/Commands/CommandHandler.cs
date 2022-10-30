@@ -1097,31 +1097,30 @@ namespace Boudica.Commands
                 //Raid
                 if(split[0].Contains("Raid"))
                 {
-                    if(int.TryParse(split[0].Replace("Raid", string.Empty).Trim(), out int id))
+                    if (int.TryParse(split[0].Replace("Raid", string.Empty).Trim(), out int id))
                     {
                         Raid existingRaid = await _activityService.GetMongoRaidAsync(id);
                         if (existingRaid == null || existingRaid.DateTimeClosed == DateTime.MinValue || existingRaid.AwardedGlimmer || existingRaid.CreatedByUserId != user.Id) return;
-                        Task.Run(async () =>
+
+                        Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId, true);
+                        existingRaid.AwardedGlimmer = true;
+                        await _activityService.UpdateRaidAsync(existingRaid);
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
+                        sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                        if (glimmerResult.Item2 == false)
                         {
-                            Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId, true);
-                            existingRaid.AwardedGlimmer = true;
-                            await _activityService.UpdateRaidAsync(existingRaid);
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
-                            sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
-                            if(glimmerResult.Item2 == false)
-                            {
-                                string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
-                                if (string.IsNullOrEmpty(creatorName) == false)
-                                    sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
-                            }
-                            var modifiedEmbed = new EmbedBuilder();
-                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
-                            modifiedEmbed.Color = embed.Color;
-                            await originalMessage.ModifyAsync(x =>
-                            {
-                                x.Embed = modifiedEmbed.Build();
-                            });
+                            Console.WriteLine("glimmerResult.Item2 == false");
+                            string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
+                            if (string.IsNullOrEmpty(creatorName) == false)
+                                sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                        }
+                        var modifiedEmbed = new EmbedBuilder();
+                        modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
+                        modifiedEmbed.Color = embed.Color;
+                        await originalMessage.ModifyAsync(x =>
+                        {
+                            x.Embed = modifiedEmbed.Build();
                         });
                     }
                 }
@@ -1132,28 +1131,26 @@ namespace Boudica.Commands
                     {
                         Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(id);
                         if (existingFireteam == null || existingFireteam.DateTimeClosed == DateTime.MinValue || existingFireteam.AwardedGlimmer || existingFireteam.CreatedByUserId != user.Id) return;
-                        Task.Run(async () =>
+                        Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId, false);
+                        existingFireteam.AwardedGlimmer = true;
+                        await _activityService.UpdateFireteamAsync(existingFireteam);
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
+                        sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                        //AwardedThisWeek = false
+                        if (glimmerResult.Item2 == false)
                         {
-                            Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId, false);
-                            existingFireteam.AwardedGlimmer = true;
-                            await _activityService.UpdateFireteamAsync(existingFireteam);
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
-                            sb.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
-                            //AwardedThisWeek = false
-                            if (glimmerResult.Item2 == false)
-                            {
-                                string creatorName = existingFireteam.Players.FirstOrDefault(x => x.UserId == existingFireteam.CreatedByUserId)?.DisplayName;
-                                if (string.IsNullOrEmpty(creatorName) == false)
-                                    sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
-                            }
-                            var modifiedEmbed = new EmbedBuilder();
-                            modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
-                            modifiedEmbed.Color = embed.Color;
-                            await originalMessage.ModifyAsync(x =>
-                            {
-                                x.Embed = modifiedEmbed.Build();
-                            });
+                            Console.WriteLine("glimmerResult.Item2 == false");
+                            string creatorName = existingFireteam.Players.FirstOrDefault(x => x.UserId == existingFireteam.CreatedByUserId)?.DisplayName;
+                            if (string.IsNullOrEmpty(creatorName) == false)
+                                sb.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                        }
+                        var modifiedEmbed = new EmbedBuilder();
+                        modifiedEmbed.Description = $"{newDescriptionSplit[0]} {sb.ToString()}";
+                        modifiedEmbed.Color = embed.Color;
+                        await originalMessage.ModifyAsync(x =>
+                        {
+                            x.Embed = modifiedEmbed.Build();
                         });
                     }
                 }
