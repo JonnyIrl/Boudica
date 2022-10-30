@@ -4,6 +4,7 @@ using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -107,6 +108,45 @@ namespace Boudica.Classes
 
             return true;
         }
+
+        public async Task<bool> CheckExistingRaidIsValidButtonClick(Raid existingRaid, SocketGuildUser user, bool forceCommand)
+        {
+            if (existingRaid == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find a Raid with that Id").Build());
+                return false;
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This raid is already closed").Build());
+                return false;
+            }
+
+            if (forceCommand)
+            {
+                if (user != null)
+                {
+                    if (user.GuildPermissions.ModerateMembers)
+                    {
+                        return true;
+                    }
+                }
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only a Moderator or Admin can edit/close a raid with this command.").Build());
+                return false;
+            }
+            else
+            {
+                if (existingRaid.CreatedByUserId != user.Id)
+                {
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("Only the Guardian who created the raid can edit/close a raid").Build());
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
 
         public async Task<bool> CheckExistingFireteamIsValid(Fireteam existingFireteam)
         {

@@ -21,7 +21,19 @@ namespace Boudica.Commands
     {  
         public CreateActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
+            handler.OnEditRaidButtonClicked += OnEditRaidButtonClicked;
+            handler.OnAlertRaidButtonClicked += OnAlertRaidButtonClicked;
+            
+        }
 
+        private async Task OnAlertRaidButtonClicked(SocketUser user, int raidId)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task OnEditRaidButtonClicked(SocketUser user, int raidId)
+        {
+            throw new NotImplementedException();
         }
 
         [SlashCommand("raid", "Create a Raid")]
@@ -323,7 +335,12 @@ namespace Boudica.Commands
     {
         public CloseActivityCommands(IServiceProvider services, CommandHandler handler) : base(services, handler)
         {
+            handler.OnCloseRaidButtonClicked += OnCloseRaidButtonClicked;
+        }
 
+        private async Task OnCloseRaidButtonClicked(SocketGuildUser user, int raidId)
+        {
+            await CloseRaidButtonClick(raidId, user);
         }
 
         [SlashCommand("fireteam", "Close a Fireteam")]
@@ -488,6 +505,57 @@ namespace Boudica.Commands
                 await _activityService.UpdateRaidAsync(existingRaid);
                 await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
             }
+        }
+
+        public async Task CloseRaidButtonClick(int raidId, SocketGuildUser user)
+        {
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            bool exisingRaidResult = await CheckExistingRaidIsValidButtonClick(existingRaid, user, false);
+            if (exisingRaidResult == false) return;
+
+            existingRaid.DateTimeClosed = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            ITextChannel channel = user.Guild.GetTextChannel(existingRaid.ChannelId);
+            if (channel == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+                return;
+            }
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
+                return;
+            }
+            var modifiedEmbed = new EmbedBuilder();
+            var embed = message.Embeds.FirstOrDefault();
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            modifiedEmbed.Title = "This raid is now closed";
+            modifiedEmbed.Color = Color.Red;
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+            });
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
+                IUserMessage responseMessage = await GetOriginalResponseAsync();
+                if (responseMessage != null)
+                    await responseMessage.AddReactionsAsync(_successFailEmotes);
+            }
+            else
+            {
+                existingRaid.AwardedGlimmer = true;
+                await _activityService.UpdateRaidAsync(existingRaid);
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+            }
+
         }
 
         [DefaultMemberPermissions(GuildPermission.KickMembers)]

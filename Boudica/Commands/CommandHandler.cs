@@ -18,6 +18,14 @@ namespace Boudica.Commands
 {
     public class CommandHandler
     {
+        public delegate Task EditRaidButtonClicked(SocketGuildUser user, int raidId);
+        public delegate Task CloseRaidButtonClicked(SocketGuildUser user, int raidId);
+        public delegate Task AlertRaidButtonClicked(SocketGuildUser user, int raidId);
+        public event EditRaidButtonClicked OnEditRaidButtonClicked;
+        public event CloseRaidButtonClicked OnCloseRaidButtonClicked;
+        public event AlertRaidButtonClicked OnAlertRaidButtonClicked;
+
+
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
@@ -125,16 +133,30 @@ namespace Boudica.Commands
                 case ButtonCustomId.Invalid:
                     break;
                 case ButtonCustomId.RaidAlert:
-                    var context = new InteractionContext(_client, component, component.Channel);
-                    await _commands.ExecuteCommandAsync(context, _services);
+                    //var context = new InteractionContext(_client, component, component.Channel);
+                    //await _commands.ExecuteCommandAsync(context, _services);
+                    if (OnAlertRaidButtonClicked != null)
+                    {
+                        await OnAlertRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                    }
                     break;
                 case ButtonCustomId.FireteamAlert:
                     break;
                 case ButtonCustomId.EditRaid:
+                    if (OnEditRaidButtonClicked != null)
+                    {
+                        await OnEditRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                    }
                     break;
                 case ButtonCustomId.EditFireteam:
                     break;
                 case ButtonCustomId.CloseRaid:
+                    if (OnCloseRaidButtonClicked != null)
+                    {
+                        var context = new InteractionContext(_client, component, component.Channel);
+                        await _commands.ExecuteCommandAsync(context, _services);
+                        await OnCloseRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                    }
                     break;
                 case ButtonCustomId.CloseFireteam:
                     break;
@@ -142,6 +164,7 @@ namespace Boudica.Commands
                     await component.RespondAsync("Failed", ephemeral: true);
                     break;
             }
+            await component.RespondAsync($"Button click. Type: {buttonClicked}, Id: {id}", ephemeral: true);
         }
 
         private async Task UserJoined(SocketGuildUser arg)
@@ -272,6 +295,7 @@ namespace Boudica.Commands
             {
                 // create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules
                 var ctx = new SocketInteractionContext(_client, arg);
+                var data = arg.Data;
                 switch (arg.Type)
                 {
                     case InteractionType.Ping:
