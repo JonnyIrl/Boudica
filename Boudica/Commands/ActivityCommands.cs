@@ -21,27 +21,106 @@ namespace Boudica.Commands
     {  
         public CreateActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
-            handler.OnEditRaidButtonClicked += OnEditRaidButtonClicked;
-            handler.OnAlertRaidButtonClicked += OnAlertRaidButtonClicked;
-            
+            handler.OnCreateRaidModalSubmitted += OnCreateRaidModalSubmitted;
         }
 
-        private async Task OnAlertRaidButtonClicked(SocketUser user, int raidId)
+        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description)
         {
-            throw new NotImplementedException();
-        }
+            if(string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
+            {
+                return new Result(false, "You must supply a title or description");
+            }
 
-        private async Task OnEditRaidButtonClicked(SocketUser user, int raidId)
-        {
-            throw new NotImplementedException();
+            IGuildUser guildUser = modal.User as IGuildUser;
+            if(guildUser == null)
+            {
+                return new Result(false, "Could not find user");
+            }
+            Raid newRaid = null;
+            try
+            {
+                newRaid = new Raid()
+                {
+                    DateTimeCreated = DateTime.UtcNow,
+                    CreatedByUserId = guildUser.Id,
+                    GuidId = guildUser.Guild.Id,
+                    ChannelId = channel.Id,
+                    MaxPlayerCount = 6,
+                    Players = new List<ActivityUser>()
+                    {
+                        new ActivityUser(guildUser.Id, guildUser.Username, true)
+                    }
+                };
+                newRaid = await _activityService.CreateRaidAsync(newRaid);
+                if (newRaid.Id <= 0)
+                {
+                    return new Result(false, "I couldn't create the raid because Jonny did something wrong!");
+                }
+
+                var embed = new EmbedBuilder();
+                embed.WithColor(new Color(0, 255, 0));
+                embed.WithAuthor(guildUser);
+
+                embed.Title = title.Trim();
+                embed.Description = description.Trim();
+
+                AddActivityUsersField(embed, "Players", newRaid.Players);
+                AddActivityUsersField(embed, "Subs", newRaid.Substitutes);
+
+                EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
+
+                var buttons = new ComponentBuilder()
+                    .WithButton("Edit Raid", $"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Alert Raid", $"{(int)ButtonCustomId.RaidAlert}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Close Raid", $"{(int)ButtonCustomId.CloseRaid}-{newRaid.Id}", ButtonStyle.Danger);
+
+
+                IUserMessage newMessage;
+                IRole role = GetRoleForChannel(channel.Id);
+                if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
+                {
+                    // this will reply with the embed
+                    await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
+                    newMessage = await modal.GetOriginalResponseAsync();
+                }
+                else
+                {
+                    // this will reply with the embed
+                    await modal.RespondAsync(embed: embed.Build(), components: buttons.Build());
+                    newMessage = await modal.GetOriginalResponseAsync();
+                }
+
+
+                newRaid.MessageId = newMessage.Id;
+                await _activityService.UpdateRaidAsync(newRaid);
+
+                await newMessage.PinAsync();
+                await newMessage.AddReactionsAsync(new List<IEmote>()
+                {
+                    new Emoji("🇯"),
+                    new Emoji("🇸"),
+                });
+            }
+            catch (Exception ex)
+            {
+                //Didn't get to post the raid into the chat so therefore delete
+                if (newRaid != null && newRaid.MessageId == 0)
+                {
+                    await _activityService.DeleteRaidAsync(newRaid.Id);
+                    return new Result(false, "Failed to create the raid!");
+                }
+                Console.Error.WriteLine("Exception creating raid", ex);
+            }
+
+            return new Result(true, string.Empty);
         }
 
         [SlashCommand("raid", "Create a Raid")]
-        public async Task CreateRaidCommand(string raidDescription)
+        public async Task CreateRaidCommand(string raidDescription = null)
         {
             if (string.IsNullOrEmpty(raidDescription))
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command arguments, supply a description for your raid e.g. /create raid Vow of Disciple Tuesday 28th 6pm").Build());
+                await RespondWithModalAsync(ModalHelper.CreateRaidModal());
                 return;
             }
             Raid newRaid = null;
@@ -250,7 +329,43 @@ namespace Boudica.Commands
     {
         public EditActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
+            handler.OnEditRaidModalSubmitted += OnEditRaidModalSubmitted;
+            handler.OnEditRaidButtonClicked += OnEditRaidButtonClick;
+        }
 
+        private async Task<Result> OnEditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId)
+        {
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            if (existingRaid == null)
+            {
+                return new Result(false, "Could not find Raid to edit");
+            }
+
+            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                return new Result(false, "Could not find message to edit"); ;
+            }
+
+            Task.Run(async () =>
+            {
+                var modifiedEmbed = new EmbedBuilder();
+                var embed = message.Embeds.FirstOrDefault();
+                modifiedEmbed.Title = title;
+                modifiedEmbed.Description = description;
+                EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateColorOnEmbed(modifiedEmbed, embed);
+                EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
+                EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+                await message.ModifyAsync(x =>
+                {
+                    x.Embed = modifiedEmbed.Build();
+                });
+
+                await message.ReplyAsync($"Raid {raidId} has been edited!");
+            });
+           
+            return new Result(true, string.Empty);
         }
 
         [SlashCommand("raid", "Edit a Raid")]
@@ -291,6 +406,32 @@ namespace Boudica.Commands
             });
 
             await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been edited!").Build());
+        }
+
+        private async Task<Result> OnEditRaidButtonClick(SocketMessageComponent component, int raidId)
+        {
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            Result existingRaidResult = await CheckExistingRaidIsValidButtonClick(component, existingRaid, false);
+            if (existingRaidResult.Success == false) return existingRaidResult;
+
+            if (component.GuildId != existingRaid.GuidId)
+            {
+                return new Result(false, "Could not find message to edit");
+            }
+            IUserMessage message = component.Message as IUserMessage;
+            if (message == null)
+            {
+                return new Result(false, "Could not find message to edit");
+            }
+
+            var embed = message.Embeds.FirstOrDefault();
+            if(embed == null)
+            {
+                return new Result(false, "Failed");
+            }
+
+            await component.RespondWithModalAsync(ModalHelper.EditRaidModal(existingRaid, embed.Title, embed.Description));
+            return new Result(true, string.Empty);
         }
 
         [SlashCommand("fireteam", "Edit a Fireteam")]
@@ -338,9 +479,9 @@ namespace Boudica.Commands
             handler.OnCloseRaidButtonClicked += OnCloseRaidButtonClicked;
         }
 
-        private async Task OnCloseRaidButtonClicked(SocketGuildUser user, int raidId)
+        private async Task<Result> OnCloseRaidButtonClicked(SocketMessageComponent component, int raidId)
         {
-            await CloseRaidButtonClick(raidId, user);
+            return await CloseRaidButtonClick(raidId, component);
         }
 
         [SlashCommand("fireteam", "Close a Fireteam")]
@@ -507,26 +648,24 @@ namespace Boudica.Commands
             }
         }
 
-        public async Task CloseRaidButtonClick(int raidId, SocketGuildUser user)
+        public async Task<Result> CloseRaidButtonClick(int raidId, SocketMessageComponent component)
         {
+            SocketGuildUser user = component.User as SocketGuildUser;
+            if(user == null)
+            {
+                return new Result(false, "Failed, could not find user");
+            }
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool exisingRaidResult = await CheckExistingRaidIsValidButtonClick(existingRaid, user, false);
-            if (exisingRaidResult == false) return;
+            Result exisingRaidResult = await CheckExistingRaidIsValidButtonClick(component, existingRaid, user, false);
+            if (exisingRaidResult.Success == false) return exisingRaidResult;
 
             existingRaid.DateTimeClosed = DateTime.UtcNow;
             await _activityService.UpdateRaidAsync(existingRaid);
 
-            ITextChannel channel = user.Guild.GetTextChannel(existingRaid.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+            IUserMessage message = component.Message as IUserMessage;
             if (message == null)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
-                return;
+                return new Result(false, "Could not find message to close");
             }
             var modifiedEmbed = new EmbedBuilder();
             var embed = message.Embeds.FirstOrDefault();
@@ -540,22 +679,24 @@ namespace Boudica.Commands
             await message.ModifyAsync(x =>
             {
                 x.Embed = modifiedEmbed.Build();
+                x.Components = null;
             });
 
             if (existingRaid.DateTimeClosed != DateTime.MinValue)
             {
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await GetOriginalResponseAsync();
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
+                IUserMessage responseMessage = await component.GetOriginalResponseAsync();
                 if (responseMessage != null)
                     await responseMessage.AddReactionsAsync(_successFailEmotes);
+                return new Result(true, string.Empty);
             }
             else
             {
                 existingRaid.AwardedGlimmer = true;
                 await _activityService.UpdateRaidAsync(existingRaid);
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+                return new Result(true, string.Empty);
             }
-
         }
 
         [DefaultMemberPermissions(GuildPermission.KickMembers)]
@@ -605,7 +746,34 @@ namespace Boudica.Commands
     {
         public OtherActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
+            handler.OnAlertRaidButtonClicked += OnAlertRaidButtonClicked;
+        }
 
+        private async Task<Result> OnAlertRaidButtonClicked(SocketMessageComponent component, int raidId)
+        {
+            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+            Result exisingRaidResult = await CheckCanAlertRaidButtonClick(component.User.Id, existingRaid);
+            if (exisingRaidResult.Success == false) return exisingRaidResult;
+
+            existingRaid.DateTimeAlerted = DateTime.UtcNow;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+            IUserMessage message = component.Message as IUserMessage;
+            if (message == null)
+            {
+                return new Result(false, "Could not find message to alert");
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (ActivityUser player in existingRaid.Players)
+            {
+                if (player.UserId == component.User.Id) continue;
+                sb.Append($"<@{player.UserId}> ");
+            }
+
+            sb.Append("Are you all still ok for this raid?");
+            await message.ReplyAsync(sb.ToString());
+            return new Result(true, "Success");
         }
 
         [SlashCommand("add-player", "Add Player to activity")]
@@ -1042,6 +1210,29 @@ namespace Boudica.Commands
 
             return true;
         }
+        private async Task<Result> CheckCanAlertRaidButtonClick(ulong userId, Raid existingRaid)
+        {
+            if (existingRaid == null)
+            {
+                return new Result(false, "Could not find a Raid with that Id");
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                return new Result(false, "This Raid is already closed");
+            }
+            if (existingRaid.CreatedByUserId != userId)
+            {
+                return new Result(false, "Only the person who created the Raid can alert the players");
+            }
+
+            if (existingRaid.DateTimeAlerted.Date == DateTime.UtcNow.Date)
+            {
+                return new Result(false, "You can only alert once per day");
+            }
+
+            return new Result(true, string.Empty);
+        }
         private async Task<bool> CheckCanAlertFireteam(Fireteam existingFireteam)
         {
 
@@ -1070,7 +1261,7 @@ namespace Boudica.Commands
 
             return true;
         }
-        
+
         [SlashCommand("list-open-raids", "List all open Raids")]
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task ListOpenRaids()

@@ -18,9 +18,15 @@ namespace Boudica.Commands
 {
     public class CommandHandler
     {
-        public delegate Task EditRaidButtonClicked(SocketGuildUser user, int raidId);
-        public delegate Task CloseRaidButtonClicked(SocketGuildUser user, int raidId);
-        public delegate Task AlertRaidButtonClicked(SocketGuildUser user, int raidId);
+        public delegate Task<Result> EditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId);
+        public event EditRaidModalSubmitted OnEditRaidModalSubmitted;
+
+        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description);
+        public event CreateRaidModalSubmitted OnCreateRaidModalSubmitted;
+
+        public delegate Task<Result> EditRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> CloseRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> AlertRaidButtonClicked(SocketMessageComponent component, int raidId);
         public event EditRaidButtonClicked OnEditRaidButtonClicked;
         public event CloseRaidButtonClicked OnCloseRaidButtonClicked;
         public event AlertRaidButtonClicked OnAlertRaidButtonClicked;
@@ -131,32 +137,59 @@ namespace Boudica.Commands
             switch (buttonClicked)
             {
                 case ButtonCustomId.Invalid:
+                    await component.RespondAsync("Failed", ephemeral: true);
                     break;
                 case ButtonCustomId.RaidAlert:
-                    //var context = new InteractionContext(_client, component, component.Channel);
-                    //await _commands.ExecuteCommandAsync(context, _services);
                     if (OnAlertRaidButtonClicked != null)
                     {
-                        await OnAlertRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                        Result result = await OnAlertRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+                            await component.RespondAsync("Successfully alerted raid", ephemeral: true);
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to alert raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
                     }
+                    await component.RespondAsync("Failed to alert raid", ephemeral: true);
                     break;
                 case ButtonCustomId.FireteamAlert:
                     break;
                 case ButtonCustomId.EditRaid:
                     if (OnEditRaidButtonClicked != null)
                     {
-                        await OnEditRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                        Result result = await OnEditRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to edit raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
                     }
+                    await component.RespondAsync("Failed to edit raid", ephemeral: true);
                     break;
                 case ButtonCustomId.EditFireteam:
                     break;
                 case ButtonCustomId.CloseRaid:
                     if (OnCloseRaidButtonClicked != null)
                     {
-                        var context = new InteractionContext(_client, component, component.Channel);
-                        await _commands.ExecuteCommandAsync(context, _services);
-                        await OnCloseRaidButtonClicked.Invoke((SocketGuildUser)component.User, id);
+                        Result result = await OnCloseRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
                     }
+                    await component.RespondAsync("Failed to close raid", ephemeral: true);
                     break;
                 case ButtonCustomId.CloseFireteam:
                     break;
@@ -164,7 +197,7 @@ namespace Boudica.Commands
                     await component.RespondAsync("Failed", ephemeral: true);
                     break;
             }
-            await component.RespondAsync($"Button click. Type: {buttonClicked}, Id: {id}", ephemeral: true);
+            //await component.RespondAsync($"Button click. Type: {buttonClicked}, Id: {id}", ephemeral: true);
         }
 
         private async Task UserJoined(SocketGuildUser arg)
@@ -257,16 +290,95 @@ namespace Boudica.Commands
             _alphabetList.Add(new Emoji("🇿"));
         }
 
-        private async Task ModalSubmitted(SocketModal arg)
+        private async Task ModalSubmitted(SocketModal modal)
         {
-            List<SocketMessageComponentData> components = arg.Data.Components.ToList();
-            StringBuilder sb = new StringBuilder();
-            foreach(SocketMessageComponentData component in components)
+            // We can now check for our custom id
+            string switchStatement = modal.Data.CustomId.Substring(0, modal.Data.CustomId.IndexOf("-"));
+            if (int.TryParse(switchStatement, out int swap) == false)
             {
-                sb.AppendLine(component.CustomId + " - " + component.Value);
+                await modal.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            if (int.TryParse(modal.Data.CustomId.Replace(switchStatement + "-", string.Empty).Trim(), out int id) == false)
+            {
+                await modal.RespondAsync("Command failed", ephemeral: true);
+                return;
             }
 
-            await arg.RespondAsync(sb.ToString());
+            List<SocketMessageComponentData> components = modal.Data.Components.ToList();
+            string title = string.Empty;
+            string description = string.Empty;
+            foreach (SocketMessageComponentData component in components)
+            {
+                if(int.TryParse(component.CustomId, out int modalInputType))
+                {
+                    ModalInputType type = (ModalInputType)modalInputType;
+                    switch (type)
+                    {
+                        case ModalInputType.InputTitle:
+                            title = component.Value;
+                            break;
+                        case ModalInputType.InputDescription:
+                            description = component.Value;
+                            break;
+                        case ModalInputType.Select:
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            ButtonCustomId buttonClicked = (ButtonCustomId)swap;
+            switch (buttonClicked)
+            {
+                case ButtonCustomId.Invalid:
+                    break;
+                case ButtonCustomId.EditRaid:
+                    if (OnEditRaidModalSubmitted != null)
+                    {
+                        Result result = await OnEditRaidModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
+                        if (result.Success)
+                        {
+                            await modal.RespondAsync("Success", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to edit raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to edit raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.EditFireteam:
+                    break;
+                case ButtonCustomId.CloseRaid:
+                    break;
+                case ButtonCustomId.CloseFireteam:
+                    break;
+                case ButtonCustomId.CreateRaid:
+                    if (OnCreateRaidModalSubmitted != null)
+                    {
+                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description);
+                        if (result.Success)
+                        {
+                            await modal.FollowupAsync("Successfully created raid", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to create raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to create raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.CreateFireteam:
+                    break;
+                default:
+                    await modal.RespondAsync("Failed", ephemeral: true);
+                    break;
+            }
+
         }
 
         public async Task InitializeAsync()
@@ -1402,6 +1514,7 @@ namespace Boudica.Commands
 
             return null;
         }
+
     }
 
     public class ActivityType

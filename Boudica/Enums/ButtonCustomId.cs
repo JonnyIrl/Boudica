@@ -14,6 +14,8 @@ namespace Boudica.Enums
         EditRaid,
         EditFireteam,
         CloseRaid,
-        CloseFireteam
+        CloseFireteam,
+        CreateRaid,
+        CreateFireteam
     }
 }
