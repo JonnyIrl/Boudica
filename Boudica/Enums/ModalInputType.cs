@@ -10,6 +10,7 @@ namespace Boudica.Enums
     {
         InputTitle,
         InputDescription,
-        Select
+        Select,
+        FireteamSize
     }
 }

@@ -22,6 +22,82 @@ namespace Boudica.Commands
         public CreateActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
             handler.OnCreateRaidModalSubmitted += OnCreateRaidModalSubmitted;
+            handler.OnCreateFireteamModalSubmitted += OnCreateFireteamModalSubmitted;
+        }
+
+        private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize)
+        {
+            if (int.TryParse(fireteamSize, out int fireteamSizeResult) == false)
+            {
+                return new Result(false, "Fireteam size must only be a number between 2 and 6");
+            }
+            if (fireteamSizeResult > 6 || fireteamSizeResult <= 1)
+            {
+                return new Result(false, "Fireteam size has to be between 2 and 6 ");
+            }
+
+            Fireteam newFireteam = new Fireteam()
+            {
+                DateTimeCreated = DateTime.UtcNow,
+                CreatedByUserId = Context.User.Id,
+                GuidId = Context.Guild.Id,
+                ChannelId = Context.Channel.Id,
+                MaxPlayerCount = (byte)fireteamSizeResult,
+                Players = new List<ActivityUser>()
+                {
+                    new ActivityUser(modal.User.Id, modal.User.Username, true)
+                }
+            };
+
+            newFireteam = await _activityService.CreateFireteamAsync(newFireteam);
+            if (newFireteam.Id <= 0)
+            {
+                return new Result(false, "I couldn't create the fireteam because Jonny did something wrong!");
+            }
+
+            var embed = new EmbedBuilder();
+            embed.WithColor(new Color(0, 255, 0));
+            StringBuilder sb = new StringBuilder();
+            //Remove the number for the size of the fireteam from the string for the Description
+            embed.WithAuthor(modal.User);
+            embed.Title = title;
+            embed.Description = description;
+
+            AddActivityUsersField(embed, "Players", newFireteam.Players);
+            AddActivityUsersField(embed, "Subs", newFireteam.Substitutes);
+
+            EmbedHelper.UpdateFooterOnEmbed(embed, newFireteam);
+
+            var buttons = new ComponentBuilder()
+                   .WithButton("Edit Fireteam", $"{(int)ButtonCustomId.EditFireteam}-{newFireteam.Id}", ButtonStyle.Primary)
+                   .WithButton("Alert Fireteam", $"{(int)ButtonCustomId.FireteamAlert}-{newFireteam.Id}", ButtonStyle.Primary)
+                   .WithButton("Close Fireteam", $"{(int)ButtonCustomId.CloseFireteam}-{newFireteam.Id}", ButtonStyle.Danger);
+
+            IUserMessage newMessage;
+            IRole role = GetRoleForChannel(Context.Channel.Id);
+            if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount)
+            {
+                await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
+                newMessage = await modal.GetOriginalResponseAsync();
+            }
+            else
+            {
+                await modal.RespondAsync(embed: embed.Build(), components: buttons.Build());
+                newMessage = await modal.GetOriginalResponseAsync();
+            }
+
+            newFireteam.MessageId = newMessage.Id;
+            await _activityService.UpdateFireteamAsync(newFireteam);
+
+            await newMessage.PinAsync();
+            await newMessage.AddReactionsAsync(new List<IEmote>()
+            {
+                new Emoji("🇯"),
+                new Emoji("🇸"),
+            });
+
+
+            return new Result(true, string.Empty);
         }
 
         private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description)
@@ -217,8 +293,13 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]
-        public async Task CreateFireteamCommand(int fireteamSize, string description)
+        public async Task CreateFireteamCommand(int fireteamSize = -1, string description = null)
         {
+            if (fireteamSize == -1)
+            {
+                await RespondWithModalAsync(ModalHelper.CreateFireteamModal());
+                return;
+            }
             if (string.IsNullOrEmpty(description))
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command arguments, supply the total slots and a description for your fireteam e.g. ;create fireteam 3 Duality Dungeon ASAP will create a fireteam that a total of 3 people (including you) can join").Build());

@@ -31,5 +31,16 @@ namespace Boudica.Helpers
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, maxLength: 400);
             return builder.Build();
         }
+
+        public static Modal CreateFireteamModal()
+        {
+            ModalBuilder builder = new ModalBuilder()
+                .WithCustomId($"{(int)ButtonCustomId.CreateRaid}-0")
+                .WithTitle("Create Fireteam")
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, maxLength: 400)
+                .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true);
+            return builder.Build();
+        }
     }
 }
