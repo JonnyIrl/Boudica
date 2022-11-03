@@ -205,6 +205,20 @@ namespace Boudica.Classes
 
             return true;
         }
+        public async Task<Result> CheckExistingFireteamIsValidButtonClick(SocketMessageComponent component, Fireteam existingFireteam, SocketGuildUser user)
+        {
+            if (existingFireteam == null)
+            {
+                return new Result(false, "Could not find a Fireteam with that Id");
+            }
+
+            if (existingFireteam.CreatedByUserId != user.Id)
+            {
+                return new Result(false, "Only the Guardian who created the Fireteam or an Admin can edit/close a raid");
+            }
+
+            return new Result(true, string.Empty);
+        }
 
         public List<ActivityUser> AddPlayersToNewActivity(string args, int maxCount = 5, bool removePlayer = false)
         {

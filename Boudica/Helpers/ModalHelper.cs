@@ -35,11 +35,21 @@ namespace Boudica.Helpers
         public static Modal CreateFireteamModal()
         {
             ModalBuilder builder = new ModalBuilder()
-                .WithCustomId($"{(int)ButtonCustomId.CreateRaid}-0")
+                .WithCustomId($"{(int)ButtonCustomId.CreateFireteam}-0")
                 .WithTitle("Create Fireteam")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, maxLength: 250)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, maxLength: 400)
                 .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true);
+            return builder.Build();
+        }
+
+        public static Modal EditFireteamModal(Fireteam newFireteam, string existingTitle, string existingDescription)
+        {
+            ModalBuilder builder = new ModalBuilder()
+                 .WithCustomId($"{(int)ButtonCustomId.EditFireteam}-{newFireteam.Id}")
+                 .WithTitle("Edit Fireteam")
+                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, maxLength: 250)
+                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, maxLength: 400);
             return builder.Build();
         }
     }
