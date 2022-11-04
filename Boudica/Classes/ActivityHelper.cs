@@ -4,6 +4,7 @@ using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -108,6 +109,78 @@ namespace Boudica.Classes
             return true;
         }
 
+        public async Task<Result> CheckExistingRaidIsValidButtonClick(SocketMessageComponent component, Raid existingRaid, bool forceCommand)
+        {
+            if (existingRaid == null)
+            {
+                return new Result(false, "Could not find a Raid with that Id");
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateFailedReply("This raid is already closed").Build());
+                return new Result(false, "This raid is already closed");
+            }
+
+            if (forceCommand)
+            {
+                IGuildUser guildUser = component.User as SocketGuildUser;
+                if (guildUser != null)
+                {
+                    if (guildUser.GuildPermissions.ModerateMembers)
+                    {
+                        return new Result(true, string.Empty);
+                    }
+                }
+                return new Result(false, "Only a Moderator or Admin can edit/close a raid with this command.");
+            }
+            else
+            {
+                if (existingRaid.CreatedByUserId != component.User.Id)
+                {
+                    return new Result(false, $"<@{component.User.Id}> Only the Guardian who created the raid can edit/close a raid");
+                }
+            }
+
+            return new Result(true, string.Empty);
+        }
+
+
+        public async Task<Result> CheckExistingRaidIsValidButtonClick(SocketMessageComponent component, Raid existingRaid, SocketGuildUser user, bool forceCommand)
+        {
+            if (existingRaid == null)
+            {
+                return new Result(false, "Could not find a Raid with that Id");
+            }
+
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                return new Result(false, "This raid is already closed");
+            }
+
+            if (forceCommand)
+            {
+                if (user != null)
+                {
+                    if (user.GuildPermissions.ModerateMembers)
+                    {
+                        return new Result(true, string.Empty);
+                    }
+                }
+                return new Result(false, "Only a Moderator or Admin can edit/close a raid with this command.");
+            }
+            else
+            {
+                if (existingRaid.CreatedByUserId != user.Id)
+                {
+                    return new Result(false, "Only the Guardian who created the raid can edit/close a raid");
+                }
+            }
+
+            return new Result(true, string.Empty);
+        }
+
+
         public async Task<bool> CheckExistingFireteamIsValid(Fireteam existingFireteam)
         {
             if (existingFireteam == null)
@@ -131,6 +204,20 @@ namespace Boudica.Classes
             }
 
             return true;
+        }
+        public async Task<Result> CheckExistingFireteamIsValidButtonClick(SocketMessageComponent component, Fireteam existingFireteam, SocketGuildUser user)
+        {
+            if (existingFireteam == null)
+            {
+                return new Result(false, "Could not find a Fireteam with that Id");
+            }
+
+            if (existingFireteam.CreatedByUserId != user.Id)
+            {
+                return new Result(false, "Only the Guardian who created the Fireteam or an Admin can edit/close a raid");
+            }
+
+            return new Result(true, string.Empty);
         }
 
         public List<ActivityUser> AddPlayersToNewActivity(string args, int maxCount = 5, bool removePlayer = false)

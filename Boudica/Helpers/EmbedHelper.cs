@@ -59,6 +59,12 @@ namespace Boudica.Helpers
             modifiedEmbed.Color = embed.Color;
         }
 
+        public static void UpdateColorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
+        {
+            if (embed == null) return;
+            modifiedEmbed.Color = embed.Color;
+        }
+
         public static void UpdateDescriptionTitleColorOnEmbed(EmbedBuilder modifiedEmbed, IEmbed? embed)
         {
             if (embed == null) return;

@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -17,6 +18,38 @@ namespace Boudica.Commands
 {
     public class CommandHandler
     {
+        #region Raid Modals
+        public delegate Task<Result> EditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId);
+        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description);
+        public event CreateRaidModalSubmitted OnCreateRaidModalSubmitted;
+        public event EditRaidModalSubmitted OnEditRaidModalSubmitted;
+        #endregion
+
+        #region Raid Buttons
+        public delegate Task<Result> EditRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> CloseRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> AlertRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public event EditRaidButtonClicked OnEditRaidButtonClicked;
+        public event CloseRaidButtonClicked OnCloseRaidButtonClicked;
+        public event AlertRaidButtonClicked OnAlertRaidButtonClicked;
+        #endregion
+
+        #region Fireteam Modals
+        public delegate Task<Result> EditFireteamModalSubmitted(ITextChannel channel, string title, string description, int fireteamId);
+        public delegate Task<Result> CreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize);
+        public event CreateFireteamModalSubmitted OnCreateFireteamModalSubmitted;
+        public event EditFireteamModalSubmitted OnEditFireteamModalSubmitted;
+        #endregion
+
+        #region Fireteam Buttons
+        public delegate Task<Result> EditFireteamButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> CloseFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
+        public delegate Task<Result> AlertFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
+        public event EditFireteamButtonClicked OnEditFireteamButtonClicked;
+        public event CloseFireteamButtonClicked OnCloseFireteamButtonClicked;
+        public event AlertFireteamButtonClicked OnAlertFireteamButtonClicked;
+        #endregion
+
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
@@ -99,6 +132,132 @@ namespace Boudica.Commands
 
             //Listen for modals
             _client.ModalSubmitted += ModalSubmitted;
+
+            _client.ButtonExecuted += ButtonExecuted;
+
+        }
+
+        private async Task ButtonExecuted(SocketMessageComponent component)
+        {
+            // We can now check for our custom id
+            string switchStatement = component.Data.CustomId.Substring(0, component.Data.CustomId.IndexOf("-"));
+            if(int.TryParse(switchStatement, out int swap) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            if (int.TryParse(component.Data.CustomId.Replace(switchStatement + "-", string.Empty).Trim(), out int id) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            ButtonCustomId buttonClicked = (ButtonCustomId) swap;
+            switch (buttonClicked)
+            {
+                case ButtonCustomId.Invalid:
+                    await component.RespondAsync("Failed", ephemeral: true);
+                    break;
+                case ButtonCustomId.RaidAlert:
+                    if (OnAlertRaidButtonClicked != null)
+                    {
+                        Result result = await OnAlertRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+                            await component.RespondAsync("Successfully alerted raid", ephemeral: true);
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to alert raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to alert raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.FireteamAlert:
+                    if (OnAlertFireteamButtonClicked != null)
+                    {
+                        Result result = await OnAlertFireteamButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+                            await component.RespondAsync("Successfully alerted fireteam", ephemeral: true);
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to alert fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to alert fireteam", ephemeral: true);
+                    break;
+                case ButtonCustomId.EditRaid:
+                    if (OnEditRaidButtonClicked != null)
+                    {
+                        Result result = await OnEditRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to edit raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to edit raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.EditFireteam:
+                    if (OnEditFireteamButtonClicked != null)
+                    {
+                        Result result = await OnEditFireteamButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to edit fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to edit fireteam", ephemeral: true);
+                    break;
+                case ButtonCustomId.CloseRaid:
+                    if (OnCloseRaidButtonClicked != null)
+                    {
+                        Result result = await OnCloseRaidButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.CloseFireteam:
+                    if (OnCloseFireteamButtonClicked != null)
+                    {
+                        Result result = await OnCloseFireteamButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close fireteam", ephemeral: true);
+                    break;
+                default:
+                    await component.RespondAsync("Failed", ephemeral: true);
+                    break;
+            }
+            //await component.RespondAsync($"Button click. Type: {buttonClicked}, Id: {id}", ephemeral: true);
         }
 
         private async Task UserJoined(SocketGuildUser arg)
@@ -191,16 +350,123 @@ namespace Boudica.Commands
             _alphabetList.Add(new Emoji("🇿"));
         }
 
-        private async Task ModalSubmitted(SocketModal arg)
+        private async Task ModalSubmitted(SocketModal modal)
         {
-            List<SocketMessageComponentData> components = arg.Data.Components.ToList();
-            StringBuilder sb = new StringBuilder();
-            foreach(SocketMessageComponentData component in components)
+            // We can now check for our custom id
+            string switchStatement = modal.Data.CustomId.Substring(0, modal.Data.CustomId.IndexOf("-"));
+            if (int.TryParse(switchStatement, out int swap) == false)
             {
-                sb.AppendLine(component.CustomId + " - " + component.Value);
+                await modal.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            if (int.TryParse(modal.Data.CustomId.Replace(switchStatement + "-", string.Empty).Trim(), out int id) == false)
+            {
+                await modal.RespondAsync("Command failed", ephemeral: true);
+                return;
             }
 
-            await arg.RespondAsync(sb.ToString());
+            List<SocketMessageComponentData> components = modal.Data.Components.ToList();
+            string title = string.Empty;
+            string description = string.Empty;
+            string fireteamSize = string.Empty;
+            foreach (SocketMessageComponentData component in components)
+            {
+                if(int.TryParse(component.CustomId, out int modalInputType))
+                {
+                    ModalInputType type = (ModalInputType)modalInputType;
+                    switch (type)
+                    {
+                        case ModalInputType.InputTitle:
+                            title = component.Value;
+                            break;
+                        case ModalInputType.InputDescription:
+                            description = component.Value;
+                            break;
+                        case ModalInputType.Select:
+                            break;
+                        case ModalInputType.FireteamSize:
+                            fireteamSize = component.Value;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            ButtonCustomId buttonClicked = (ButtonCustomId)swap;
+            switch (buttonClicked)
+            {
+                case ButtonCustomId.Invalid:
+                    break;
+                case ButtonCustomId.EditRaid:
+                    if (OnEditRaidModalSubmitted != null)
+                    {
+                        Result result = await OnEditRaidModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
+                        if (result.Success)
+                        {
+                            await modal.RespondAsync("Success", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to edit raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to edit raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.EditFireteam:
+                    if (OnEditFireteamModalSubmitted != null)
+                    {
+                        Result result = await OnEditFireteamModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
+                        if (result.Success)
+                        {
+                            await modal.RespondAsync("Success", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to edit fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to edit fireteam", ephemeral: true);
+                    break;
+                case ButtonCustomId.CreateRaid:
+                    if (OnCreateRaidModalSubmitted != null)
+                    {
+                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description);
+                        if (result.Success)
+                        {
+                            await modal.FollowupAsync("Successfully created raid", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to create raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to create raid", ephemeral: true);
+                    break;
+                case ButtonCustomId.CreateFireteam:
+                    if (OnCreateFireteamModalSubmitted != null)
+                    {
+                        Result result = await OnCreateFireteamModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, fireteamSize);
+                        if (result.Success)
+                        {
+                            await modal.FollowupAsync("Successfully created fireteam", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to create fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to create fireteam", ephemeral: true);
+                    break;
+                default:
+                    await modal.RespondAsync("Failed", ephemeral: true);
+                    break;
+            }
+
         }
 
         public async Task InitializeAsync()
@@ -229,7 +495,23 @@ namespace Boudica.Commands
             {
                 // create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules
                 var ctx = new SocketInteractionContext(_client, arg);
-                await _commands.ExecuteCommandAsync(ctx, _services);
+                var data = arg.Data;
+                switch (arg.Type)
+                {
+                    case InteractionType.Ping:
+                        break;
+                    case InteractionType.ApplicationCommand:
+                        await _commands.ExecuteCommandAsync(ctx, _services);
+                        break;
+                    case InteractionType.MessageComponent:
+                        break;
+                    case InteractionType.ApplicationCommandAutocomplete:
+                        break;
+                    case InteractionType.ModalSubmit:
+                        break;
+                    default:
+                        break;
+                }
             }
             catch (Exception ex)
             {
@@ -1317,6 +1599,7 @@ namespace Boudica.Commands
 
             return null;
         }
+
     }
 
     public class ActivityType
