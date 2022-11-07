@@ -17,8 +17,8 @@ namespace Boudica.Helpers
             ModalBuilder builder = new ModalBuilder()
                 .WithCustomId($"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}")
                 .WithTitle("Edit Raid")
-                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, maxLength: 250)
-                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, maxLength: 400);
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, required: false, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, required: false, maxLength: 400);
             return builder.Build();
         }
 
@@ -27,8 +27,8 @@ namespace Boudica.Helpers
             ModalBuilder builder = new ModalBuilder()
                 .WithCustomId($"{(int)ButtonCustomId.CreateRaid}-0")
                 .WithTitle("Create Raid")
-                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, maxLength: 250)
-                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, maxLength: 400);
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400);
             return builder.Build();
         }
 
@@ -37,8 +37,8 @@ namespace Boudica.Helpers
             ModalBuilder builder = new ModalBuilder()
                 .WithCustomId($"{(int)ButtonCustomId.CreateFireteam}-0")
                 .WithTitle("Create Fireteam")
-                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, maxLength: 250)
-                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, maxLength: 400)
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
                 .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true);
             return builder.Build();
         }
@@ -48,8 +48,8 @@ namespace Boudica.Helpers
             ModalBuilder builder = new ModalBuilder()
                  .WithCustomId($"{(int)ButtonCustomId.EditFireteam}-{newFireteam.Id}")
                  .WithTitle("Edit Fireteam")
-                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, maxLength: 250)
-                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, maxLength: 400);
+                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, required: false, maxLength: 250)
+                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, required: false, maxLength: 400);
             return builder.Build();
         }
     }

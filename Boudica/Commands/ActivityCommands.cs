@@ -18,15 +18,25 @@ namespace Boudica.Commands
 {
     [Group("create", "Create an activity")]
     public class CreateActivityCommands : ActivityHelper
-    {  
+    {
+        private static bool _subscribed = false;
         public CreateActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
-        {
-            handler.OnCreateRaidModalSubmitted += OnCreateRaidModalSubmitted;
-            handler.OnCreateFireteamModalSubmitted += OnCreateFireteamModalSubmitted;
+        {       
+            if (!_subscribed)
+            {
+                handler.OnCreateRaidModalSubmitted += OnCreateRaidModalSubmitted;
+                handler.OnCreateFireteamModalSubmitted += OnCreateFireteamModalSubmitted;
+                _subscribed = true;
+            }
         }
 
         private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize)
         {
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
+            {
+                return new Result(false, "You must supply a title or description");
+            }
+
             if (int.TryParse(fireteamSize, out int fireteamSizeResult) == false)
             {
                 return new Result(false, "Fireteam size must only be a number between 2 and 6");
@@ -80,7 +90,7 @@ namespace Boudica.Commands
                    .WithButton("Close Fireteam", $"{(int)ButtonCustomId.CloseFireteam}-{newFireteam.Id}", ButtonStyle.Danger);
 
             IUserMessage newMessage;
-            IRole role = GetRoleForChannel(channel.Id);
+            IRole role = GetRoleForChannelModal(guildUser, channel.Id);
             if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount)
             {
                 await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
@@ -158,7 +168,7 @@ namespace Boudica.Commands
 
 
                 IUserMessage newMessage;
-                IRole role = GetRoleForChannel(channel.Id);
+                IRole role = GetRoleForChannelModal(guildUser, channel.Id);
                 if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
                 {
                     // this will reply with the embed
@@ -188,10 +198,11 @@ namespace Boudica.Commands
                 //Didn't get to post the raid into the chat so therefore delete
                 if (newRaid != null && newRaid.MessageId == 0)
                 {
+                    Console.WriteLine($"Exception creating raid - {ex.Message} - {ex.StackTrace} - {ex.InnerException}");
                     await _activityService.DeleteRaidAsync(newRaid.Id);
                     return new Result(false, "Failed to create the raid!");
                 }
-                Console.Error.WriteLine("Exception creating raid", ex);
+                Console.WriteLine("Exception creating raid", ex);
             }
 
             return new Result(true, string.Empty);
@@ -202,7 +213,7 @@ namespace Boudica.Commands
         {
             if (string.IsNullOrEmpty(raidDescription))
             {
-                await RespondWithModalAsync(ModalHelper.CreateRaidModal());
+                await RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000});
                 return;
             }
             Raid newRaid = null;
@@ -409,22 +420,53 @@ namespace Boudica.Commands
 
             return null;
         }
+
+        private IRole GetRoleForChannelModal(IGuildUser user, ulong channelId)
+        {
+            switch (channelId)
+            {
+                case RaidChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
+                case VanguardChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
+                case CrucibleChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+                case GambitChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
+                case MiscChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
+                case DungeonChannel:
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
+            }
+
+            return null;
+        }
     }
 
     [Group("edit", "Edit an activity")]
     public class EditActivityCommands : ActivityHelper
     {
+        private static bool _subscribed = false;
         public EditActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
-            handler.OnEditRaidModalSubmitted += OnEditRaidModalSubmitted;
-            handler.OnEditRaidButtonClicked += OnEditRaidButtonClick;
+            if (!_subscribed)
+            {
+                handler.OnEditRaidModalSubmitted += OnEditRaidModalSubmitted;
+                handler.OnEditRaidButtonClicked += OnEditRaidButtonClick;
 
-            handler.OnEditFireteamModalSubmitted += OnEditFireteamModalSubmitted;
-            handler.OnEditFireteamButtonClicked += OnEditFireteamButtonClick;
+                handler.OnEditFireteamModalSubmitted += OnEditFireteamModalSubmitted;
+                handler.OnEditFireteamButtonClicked += OnEditFireteamButtonClick;
+                _subscribed = true;
+            }
         }
 
         private async Task<Result> OnEditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId)
         {
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
+            {
+                return new Result(false, "You must supply a title or description");
+            }
+
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
             if (existingRaid == null)
             {
@@ -552,6 +594,11 @@ namespace Boudica.Commands
         }
         private async Task<Result> OnEditFireteamModalSubmitted(ITextChannel channel, string title, string description, int fireteamId)
         {
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
+            {
+                return new Result(false, "You must supply a title or description");
+            }
+
             Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
             if (existingFireteam == null)
             {
@@ -625,10 +672,15 @@ namespace Boudica.Commands
     [Group("close", "Close an activity")]
     public class CloseActivityCommands : ActivityHelper
     {
+        private static bool _subscribed = false;
         public CloseActivityCommands(IServiceProvider services, CommandHandler handler) : base(services, handler)
         {
-            handler.OnCloseRaidButtonClicked += OnCloseRaidButtonClicked;
-            handler.OnCloseFireteamButtonClicked += OnCloseFireteamButtonClicked;
+            if (!_subscribed)
+            {
+                handler.OnCloseRaidButtonClicked += OnCloseRaidButtonClicked;
+                handler.OnCloseFireteamButtonClicked += OnCloseFireteamButtonClicked;
+                _subscribed = true;
+            }
         }
 
         private async Task<Result> OnCloseRaidButtonClicked(SocketMessageComponent component, int raidId)
@@ -892,7 +944,7 @@ namespace Boudica.Commands
 
             if (existingFireteam.DateTimeClosed != DateTime.MinValue)
             {
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {existingFireteam} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {existingFireteam.Id} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
                 IUserMessage responseMessage = await component.GetOriginalResponseAsync();
                 if (responseMessage != null)
                     await responseMessage.AddReactionsAsync(_successFailEmotes);
@@ -952,10 +1004,15 @@ namespace Boudica.Commands
 
     public class OtherActivityCommands : ActivityHelper
     {
+        private static bool _subscribed = false;
         public OtherActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
-            handler.OnAlertRaidButtonClicked += OnAlertRaidButtonClicked;
-            handler.OnAlertFireteamButtonClicked += OnAlertFireteamButtonClicked;
+            if (!_subscribed)
+            {
+                handler.OnAlertRaidButtonClicked += OnAlertRaidButtonClicked;
+                handler.OnAlertFireteamButtonClicked += OnAlertFireteamButtonClicked;
+                _subscribed = true;
+            }
         }
 
         private async Task<Result> OnAlertRaidButtonClicked(SocketMessageComponent component, int raidId)
