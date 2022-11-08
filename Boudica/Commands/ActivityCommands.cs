@@ -871,6 +871,20 @@ namespace Boudica.Commands
             existingRaid.DateTimeClosed = DateTime.UtcNow;
             await _activityService.UpdateRaidAsync(existingRaid);
 
+            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
+                IUserMessage responseMessage = await component.GetOriginalResponseAsync();
+                if (responseMessage != null)
+                    await responseMessage.AddReactionsAsync(_successFailEmotes);
+            }
+            else
+            {
+                existingRaid.AwardedGlimmer = true;
+                await _activityService.UpdateRaidAsync(existingRaid);
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+            }
+
             IUserMessage message = component.Message as IUserMessage;
             if (message == null)
             {
@@ -891,21 +905,7 @@ namespace Boudica.Commands
                 x.Components = null;
             });
 
-            if (existingRaid.DateTimeClosed != DateTime.MinValue)
-            {
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await component.GetOriginalResponseAsync();
-                if (responseMessage != null)
-                    await responseMessage.AddReactionsAsync(_successFailEmotes);
-                return new Result(true, string.Empty);
-            }
-            else
-            {
-                existingRaid.AwardedGlimmer = true;
-                await _activityService.UpdateRaidAsync(existingRaid);
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
-                return new Result(true, string.Empty);
-            }
+            return new Result(true, string.Empty);
         }
 
         public async Task<Result> CloseFireteamButtonClick(int fireteamId, SocketMessageComponent component)
