@@ -283,6 +283,7 @@ namespace Boudica.Commands
             }
 
             await channel.SendMessageAsync($"<@{arg.Id}>!", embed: EmbedHelper.CreateInfoReply(GetUserJoinedMessage()).Build());
+            await _guardianService.CreateGuardian(arg.Id, arg.Username);
         }
 
         private string GetUserJoinedMessage()

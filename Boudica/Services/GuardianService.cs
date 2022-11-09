@@ -109,5 +109,10 @@ namespace Boudica.Services
             //return result.IsAcknowledged;
             return true;
         }
+
+        public async Task CreateGuardian(ulong userId, string displayName)
+        {
+            await IncreaseGlimmerAsync(userId, displayName, 0);
+        }
     }
 }

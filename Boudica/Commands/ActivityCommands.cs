@@ -737,6 +737,7 @@ namespace Boudica.Commands
             await message.ModifyAsync(x =>
             {
                 x.Embed = modifiedEmbed.Build();
+                x.Components = null;
             });
 
             if (existingFireteam.DateTimeClosed != DateTime.MinValue)
@@ -840,6 +841,7 @@ namespace Boudica.Commands
             await message.ModifyAsync(x =>
             {
                 x.Embed = modifiedEmbed.Build();
+                x.Components = null;
             });
 
             if (existingRaid.DateTimeClosed != DateTime.MinValue)
