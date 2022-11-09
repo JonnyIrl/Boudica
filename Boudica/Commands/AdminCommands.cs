@@ -21,6 +21,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly HiringService _hiringService;
         private readonly GuardianService _guardianService;
+        private readonly APIService _apIService;
 
         private readonly Emoji _successEmoji;
         private readonly Emoji _failureEmoji;
@@ -31,6 +32,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _hiringService = services.GetRequiredService<HiringService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _apIService = services.GetRequiredService<APIService>();
 
             _successEmoji = new Emoji("✅");
             _failureEmoji = new Emoji("❌");
@@ -335,6 +337,13 @@ namespace Boudica.Commands
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not delete.. something went wrong.. blame Jonny").Build());
             }
+        }
+
+        [SlashCommand("testapi", "jonny test")]
+        public async Task TestAPI()
+        {
+            await RespondAsync("yes", ephemeral: true);
+            await _apIService.Test();
         }
     }
 }
