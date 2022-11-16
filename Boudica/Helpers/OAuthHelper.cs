@@ -35,14 +35,14 @@ namespace Boudica.Helpers
                 }
 
                 HttpListenerContext context = _listener.EndGetContext(ar);
-                //LogHelper.ConsoleLog("[OAUTH] Connection Received.");
+                //Console.WriteLine("[OAUTH] Connection Received.");
 
                 var query = context.Request.QueryString;
-                string resultReason = "None";
 
-                OAuthResult result = new()
+                CodeResult result = new()
                 {
-                    Reason = "None"
+                    DiscordDisplayName = $"Levante#3845",
+                    Reason = ErrorReason.None
                 };
 
                 if (query != null && query.Count > 0)
@@ -62,11 +62,11 @@ namespace Boudica.Helpers
                 }
                 else
                 {
-                   Console.WriteLine("ErrorReason.MissingParameters");
+                    result.Reason = ErrorReason.MissingParameters;
                 }
 
                 _listener.BeginGetContext(new AsyncCallback(GetToken), _listener);
-                //LogHelper.ConsoleLog("[OAUTH] Sending Request.");
+                //Console.WriteLine("[OAUTH] Sending Request.");
 
                 HttpListenerRequest request = context.Request;
                 HttpListenerResponse response = context.Response;
@@ -75,15 +75,15 @@ namespace Boudica.Helpers
                 byte[] buffer = Encoding.UTF8.GetBytes(responseString);
 
                 response.ContentLength64 = buffer.Length;
-                if (result.Reason != "None")
+                if (result.Reason != ErrorReason.None)
                 {
-                    //LogHelper.ConsoleLog($"[OAUTH] Redirecting to Link Fail with reason {result.Reason}.");
+                    //Console.WriteLine($"[OAUTH] Redirecting to Link Fail with reason {result.Reason}.");
                     response.Redirect($"https://www.levante.dev/link-fail/?error={Convert.ToInt32(result.Reason)}");
                 }
                 else
                 {
-                    //LogHelper.ConsoleLog("[OAUTH] Redirecting to Link Success.");
-                    response.Redirect($"https://www.levante.dev/link-success/?discDisp={Uri.EscapeDataString("JonnyIrl")}");
+                    //Console.WriteLine("[OAUTH] Redirecting to Link Success.");
+                    response.Redirect($"https://www.levante.dev/link-success/?discDisp={Uri.EscapeDataString(result.DiscordDisplayName)}");
                 }
 
                 // simulate work
@@ -98,7 +98,7 @@ namespace Boudica.Helpers
                 }
                 catch (Exception x)
                 {
-                    //LogHelper.ConsoleLog("[OAUTH] Unable to send response write data.");
+                    //Console.WriteLine("[OAUTH] Unable to send response write data.");
                 }
                 Console.WriteLine("[OAUTH] Flow completed. Listening...");
             }
@@ -108,19 +108,20 @@ namespace Boudica.Helpers
             }
         }
 
-        private async Task<OAuthResult> ProcessCode(string Code, ulong DiscordID)
+        private async Task<CodeResult> ProcessCode(string Code, ulong DiscordID)
         {
-            var result = new OAuthResult() { Reason = "None" };
-
-            string clientId = "42024";
-            string clientSecret = "5asjaX53bkGaPz3v9qbEj4ds.txu8rTKiNzq7ojqSdM";
+            var result = new CodeResult()
+            {
+                DiscordDisplayName = $"Levante#3845",
+                Reason = ErrorReason.None
+            };
 
             using (var client = new HttpClient())
             {
                 var values = new Dictionary<string, string>
                 {
-                    { "client_id", $"{clientId}" },
-                    { "client_secret", $"{clientSecret}" },
+                    { "client_id", $"{BoudicaConfig.BungieClientId}" },
+                    { "client_secret", $"{BoudicaConfig.BungieClientSecret}" },
                     { "Authorization",  $"Basic {Code}" },
                     { "Content-Type", "application/x-www-form-urlencoded" },
                     { "grant_type", "authorization_code" },
@@ -132,16 +133,16 @@ namespace Boudica.Helpers
                 var content = response.Content.ReadAsStringAsync().Result;
                 dynamic item = JsonConvert.DeserializeObject(content);
 
-                result.AccessToken = item.access_token;
-                result.RefreshToken = item.refresh_token;
+                result.Access = item.access_token;
+                result.Refresh = item.refresh_token;
                 try
                 {
-                    result.AccessTokenExpiry = TimeSpan.FromSeconds(double.Parse($"{item.expires_in}"));
-                    result.RefreshTokenExpiry = TimeSpan.FromSeconds(double.Parse($"{item.refresh_expires_in}"));
+                    result.AccessExpiration = TimeSpan.FromSeconds(double.Parse($"{item.expires_in}"));
+                    result.RefreshExpiration = TimeSpan.FromSeconds(double.Parse($"{item.refresh_expires_in}"));
                 }
                 catch
                 {
-                    result.Reason = "Unknown";
+                    result.Reason = ErrorReason.Unknown;
                     return result;
                 }
 
@@ -154,23 +155,23 @@ namespace Boudica.Helpers
                 }
                 catch
                 {
-                    result.Reason = "OldCode";
+                    result.Reason = ErrorReason.OldCode;
                     return result;
                 }
 
                 if (memType <= -2)
                 {
-                    result.Reason = "NoProfileDataFound";
+                    result.Reason = ErrorReason.NoProfileDataFound;
                     return result;
                 }
 
-                IUser user = LevanteCordInstance.Client.GetUser(DiscordID);
+                IUser user = BoudicaInstance.Client.GetUser(DiscordID);
                 if (user == null)
-                    user = LevanteCordInstance.Client.Rest.GetUserAsync(DiscordID).Result;
+                    user = BoudicaInstance.Client.Rest.GetUserAsync(DiscordID).Result;
 
                 if (user == null)
                 {
-                    result.Reason = "DiscordUserNotFound";
+                    result.Reason = ErrorReason.DiscordUserNotFound;
                     return result;
                 }
 
@@ -178,11 +179,15 @@ namespace Boudica.Helpers
                 {
                     Name = $"Account Linking",
                 };
-
+                var foot = new EmbedFooterBuilder()
+                {
+                    Text = $"Powered by {BoudicaConfig.AppName} v{String.Format("{0:0.00#}", BoudicaConfig.Version)}",
+                };
                 var embed = new EmbedBuilder()
                 {
                     Color = Color.Green,
                     Author = auth,
+                    Footer = foot,
                 };
                 embed.Description =
                     $"Linking Successful.\n" +
@@ -205,15 +210,94 @@ namespace Boudica.Helpers
                 }
 
                 // Don't make users have to unlink to do this.
-                //if (DataConfig.IsExistingLinkedUser(user.Id))
-                //    DataConfig.DeleteUserFromConfig(user.Id);
+                if (DataConfig.IsExistingLinkedUser(user.Id))
+                    DataConfig.DeleteUserFromConfig(user.Id);
 
-                //DataConfig.AddUserToConfig(user.Id, memId, $"{memType}", bungieTag, result);
-                //Link up User
+                DataConfig.AddUserToConfig(user.Id, memId, $"{memType}", bungieTag, result);
 
                 result.DiscordDisplayName = $"{user.Username}#{user.Discriminator}";
                 return result;
             }
+        }
+
+        private int GetMembershipDataFromBungieId(string BungieID, out string MembershipID, out string BungieTag)
+        {
+            ///Platform/Destiny2/254/Profile/17125100/LinkedProfiles/
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+
+                string memId = "";
+                string memType = "";
+
+                var memResponse = client.GetAsync($"https://www.bungie.net/Platform/Destiny2/-1/Profile/{BungieID}/LinkedProfiles/?getAllMemberships=true").Result;
+                var memContent = memResponse.Content.ReadAsStringAsync().Result;
+                dynamic memItem = JsonConvert.DeserializeObject(memContent);
+
+                var lastPlayed = new DateTime();
+                var goodProfile = -1;
+
+                if (memItem == null || memItem.ErrorCode != 1)
+                {
+                    BungieTag = null;
+                    MembershipID = null;
+                    return -2;
+                }
+
+                for (var j = 0; j < memItem.Response.profiles.Count; j++)
+                {
+                    if (memItem.Response.profiles[j].isCrossSavePrimary == true)
+                    {
+                        memType = memItem.Response.profiles[j].membershipType;
+                        memId = memItem.Response.profiles[j].membershipId;
+                        goodProfile = j;
+                        break;
+                    }
+
+                    if (DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString()) <= lastPlayed) continue;
+
+                    lastPlayed = DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString());
+                    goodProfile = j;
+                }
+
+                if (goodProfile == -1)
+                {
+                    BungieTag = null;
+                    MembershipID = null;
+                    return -2;
+                }
+
+                memType = memItem.Response.profiles[goodProfile].membershipType;
+                memId = memItem.Response.profiles[goodProfile].membershipId;
+
+                Console.WriteLine($"[OAUTH] Received tokens for {memItem.Response.bnetMembership.supplementalDisplayName} on platform {memType}.");
+
+                MembershipID = $"{memId}";
+                string bungieTagCode = $"{memItem.Response.bnetMembership.bungieGlobalDisplayNameCode}".PadLeft(4, '0');
+                BungieTag = $"{memItem.Response.bnetMembership.bungieGlobalDisplayName}#{bungieTagCode}";
+                return int.Parse($"{memType}");
+            }
+        }
+
+        public class CodeResult
+        {
+            public string DiscordDisplayName;
+            public ErrorReason Reason;
+            public string Access;
+            public string Refresh;
+            public TimeSpan AccessExpiration;
+            public TimeSpan RefreshExpiration;
+        }
+
+        public enum ErrorReason
+        {
+            None,
+            MissingParameters,
+            OldCode,
+            NoProfileDataFound,
+            DiscordUserNotFound,
+            NoDiscordMessageSent,
+            Unknown,
         }
     }
 }

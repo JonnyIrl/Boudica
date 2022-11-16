@@ -8,6 +8,11 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+public static class BoudicaInstance
+{
+    public static DiscordSocketClient Client;
+}
+
 class Program
 {
     // setup our fields we assign later

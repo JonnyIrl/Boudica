@@ -117,6 +117,7 @@ namespace Boudica.Commands
             _trialsService = services.GetRequiredService<TrialsService>();
             _hiringService = services.GetRequiredService<HiringService>();
             _services = services;
+            ConfigHelper.LoadConfig();
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
             PopulateAlphabetList();
 
@@ -134,7 +135,7 @@ namespace Boudica.Commands
             _client.ModalSubmitted += ModalSubmitted;
 
             _client.ButtonExecuted += ButtonExecuted;
-
+            BoudicaInstance.Client = _client;
         }
 
         private async Task ButtonExecuted(SocketMessageComponent component)
