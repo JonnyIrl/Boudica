@@ -345,5 +345,42 @@ namespace Boudica.Commands
             await RespondAsync("yes", ephemeral: true);
             await _apIService.Test();
         }
+
+        [SlashCommand("link", "Link your Bungie account to your Discord account.")]
+        public async Task Link()
+        {
+            var foot = new EmbedFooterBuilder()
+            {
+                Text = $"Powered by JonnyIrl"
+            };
+            var auth = new EmbedAuthorBuilder()
+            {
+                IconUrl = Context.Client.CurrentUser.GetAvatarUrl(),
+                Name = "Account Linking"
+            };
+            var embed = new EmbedBuilder()
+            {
+                Color = Color.Green,
+                Footer = foot,
+                Author = auth
+            };
+            var plainTextBytes = Encoding.UTF8.GetBytes($"{Context.User.Id}");
+            string state = Convert.ToBase64String(plainTextBytes);
+
+            string clientId = "42011";
+
+            embed.Title = $"Click here to start the linking process.";
+            embed.Url = $"https://www.bungie.net/en/OAuth/Authorize?client_id={clientId}&response_type=code&state={state}";
+            embed.Description = $"- Linking allows you to start participate in daily/weekly challenges and more. It will be required to participate in the new Lightfall clan event\n" +
+                $"- After linking is complete, you'll receive another DM from me to confirm.\n" +
+                $"- Experienced a name change? Relinking will update your name with our data.";
+
+            var buttonBuilder = new ComponentBuilder()
+                .WithButton("Link with Boudica", style: ButtonStyle.Link, url: $"https://www.bungie.net/en/OAuth/Authorize?client_id={clientId}&response_type=code&state={state}", row: 0);
+
+            await RespondAsync(embed: embed.Build(), components: buttonBuilder.Build(), ephemeral: true);
+        }
+
+
     }
 }
