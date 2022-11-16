@@ -182,7 +182,20 @@ namespace Boudica.Commands
             }
 
             await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName);
-            await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+            try
+            {
+                if(string.IsNullOrEmpty(reasonForAward))
+                    await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+                else
+                    await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
+            }
+            catch(Exception ex)
+            {
+                if (string.IsNullOrEmpty(reasonForAward))
+                    await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+                else
+                    await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
+            }
         }
 
         [RequireUserPermission(GuildPermission.KickMembers)]

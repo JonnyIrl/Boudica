@@ -31,11 +31,11 @@ namespace Boudica.Services
 
         public async Task<Tuple<bool, string>> CanAwardGlimmerToGuardian(ulong userId, ulong targetGuardianId)
         {
-            AwardedGuardians userAwardedResult = await (await _awardedGuardiansCollection.FindAsync(x => x.Id == userId)).FirstOrDefaultAsync();
+            AwardedGuardians userAwardedResult = await  _awardedGuardiansCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
             //Make sure person only awards once per day
             if(userAwardedResult != null && userAwardedResult.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)
                 return new Tuple<bool, string>(false, "You can only award once per day");
-            List<AwardedGuardians> results = await (await _awardedGuardiansCollection.FindAsync(x => x.AwardedGuardiansId == targetGuardianId)).ToListAsync();
+            List<AwardedGuardians> results = await _awardedGuardiansCollection.Find(x => x.AwardedGuardiansId == targetGuardianId).ToListAsync();
             if (results.Any() == false) 
                 return new Tuple<bool, string>(true, string.Empty);
             //Only award person once per day.
