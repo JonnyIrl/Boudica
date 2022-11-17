@@ -1,5 +1,7 @@
 ﻿using Boudica.Classes;
+using Boudica.Services;
 using Discord;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,9 +15,11 @@ namespace Boudica.Helpers
     public class OAuthHelper
     {
         private HttpListener _listener;
+        private APIService _apiService;
 
-        public OAuthHelper()
+        public OAuthHelper(IServiceProvider services)
         {
+            _apiService = services.GetRequiredService<APIService>();
             _listener = new HttpListener();
             _listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
             _listener.Prefixes.Add("http://*:8080/");
@@ -112,7 +116,7 @@ namespace Boudica.Helpers
         {
             var result = new CodeResult()
             {
-                DiscordDisplayName = $"Levante#3845",
+                DiscordDisplayName = $"Boudica#4601",
                 Reason = ErrorReason.None
             };
 
@@ -210,11 +214,10 @@ namespace Boudica.Helpers
                 }
 
                 // Don't make users have to unlink to do this.
-                if (DataConfig.IsExistingLinkedUser(user.Id))
-                    DataConfig.DeleteUserFromConfig(user.Id);
+                //if (await _apiService.IsExistingLinkedUser(user.Id))
+                //    DataConfig.DeleteUserFromConfig(user.Id);
 
-                DataConfig.AddUserToConfig(user.Id, memId, $"{memType}", bungieTag, result);
-
+                await _apiService.AddUserToConfig(user.Id, user.Username, memId, $"{memType}", bungieTag, result);
                 result.DiscordDisplayName = $"{user.Username}#{user.Discriminator}";
                 return result;
             }

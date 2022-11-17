@@ -114,5 +114,52 @@ namespace Boudica.Services
         {
             await IncreaseGlimmerAsync(userId, displayName, 0);
         }
+
+        public async Task<Guardian> GetGuardian(ulong userId)
+        {
+            return await _guardianCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        }
+
+        public async Task<Guardian> InsertGuardian(Guardian guardian)
+        {
+            try
+            {
+                await _guardianCollection.InsertOneAsync(guardian);
+                return guardian;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Failed to insert guardian", ex);
+                return null;
+            }
+        }
+
+        public async Task<Guardian> UpdateGuardian(Guardian guardian)
+        {
+            return  await _guardianCollection.FindOneAndUpdateAsync(x => x.Id == guardian.Id, new UpdateDefinitionBuilder<Guardian>()
+                .Set(x => x.UniqueBungieName, guardian.UniqueBungieName)
+                .Set(x => x.BungieMembershipId, guardian.BungieMembershipId)
+                .Set(x => x.BungieMembershipType, guardian.BungieMembershipType)
+                .Set(x => x.RefreshToken, guardian.RefreshToken)
+                .Set(x => x.RefreshExpiration, guardian.RefreshExpiration)
+                .Set(x => x.AccessToken, guardian.AccessToken)
+                .Set(x => x.AccessExpiration, guardian.AccessExpiration));
+        }
+
+        public async Task<bool> UpdateGuardianTokens(ulong userId, string accessToken, string refreshToken, DateTime accessExpiration, DateTime tokenRefresh)
+        {
+            var builder = Builders<Guardian>.Filter;
+            var updateBuilder = Builders<Guardian>.Update;
+            var filter = builder.Eq(x => x.Id, userId);
+            var result = await _guardianCollection.UpdateOneAsync(filter, 
+                updateBuilder
+                .Set(x => x.AccessToken, accessToken)
+                .Set(x => x.RefreshToken, refreshToken)
+                .Set(x => x.AccessExpiration, accessExpiration)
+                .Set(x => x.RefreshToken, refreshToken)
+                , new UpdateOptions() { IsUpsert = true });
+
+            return result.ModifiedCount > 0;
+        }
     }
 }
