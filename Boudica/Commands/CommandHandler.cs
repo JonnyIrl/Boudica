@@ -107,6 +107,8 @@ namespace Boudica.Commands
 #endif
         public CommandHandler(InteractionService interactionCommands, IServiceProvider services)
         {
+            var oauthHelper = new OAuthHelper(services);
+
             // juice up the fields with these services
             // since we passed the services in, we can use GetRequiredService to pass them into the fields set earlier
             _config = services.GetRequiredService<IConfiguration>();

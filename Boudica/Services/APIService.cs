@@ -18,7 +18,7 @@ namespace Boudica.Services
         public APIService(IServiceProvider services)
         {
             _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri(" https://www.bungie.net/");
+            _httpClient.BaseAddress = new Uri("https://www.bungie.net/");
             _guardianService = services.GetRequiredService<GuardianService>();
         }
 
@@ -157,7 +157,7 @@ namespace Boudica.Services
             return null;
         }
 
-        public async Task AddUserToConfig(ulong discordId, string userName, string MembershipID, string MembershipType, string BungieName, OAuthHelper.CodeResult CodeResult)
+        public async Task LinkUserToDatabase(ulong discordId, string userName, string MembershipID, string MembershipType, string BungieName, OAuthHelper.CodeResult CodeResult)
         {
             Guardian existingGuardian = await _guardianService.GetGuardian(discordId);
             if (existingGuardian == null)

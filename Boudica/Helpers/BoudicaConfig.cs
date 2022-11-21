@@ -15,7 +15,7 @@ namespace Boudica.Helpers
         public static string AppName { get; set; } = "Boudica";
 
         [JsonProperty("Version")]
-        public static double Version { get; set; } = 1.0;
+        public static double Version { get; set; }
 
         [JsonProperty("BungieApiKey")]
         public static string BungieApiKey { get; set; } 

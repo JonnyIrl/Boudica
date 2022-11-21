@@ -1,4 +1,5 @@
 ﻿using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Services;
 using Discord;
 using Microsoft.Extensions.DependencyInjection;
@@ -200,7 +201,7 @@ namespace Boudica.Helpers
                 embed.AddField(x =>
                 {
                     x.Name = $"> Default Platform";
-                    x.Value = $"{(Guardian.Platform)memType}";
+                    x.Value = $"{(Platform)memType}";
                     x.IsInline = false;
                 });
                 try
@@ -217,7 +218,7 @@ namespace Boudica.Helpers
                 //if (await _apiService.IsExistingLinkedUser(user.Id))
                 //    DataConfig.DeleteUserFromConfig(user.Id);
 
-                await _apiService.AddUserToConfig(user.Id, user.Username, memId, $"{memType}", bungieTag, result);
+                await _apiService.LinkUserToDatabase(user.Id, user.Username, memId, $"{memType}", bungieTag, result);
                 result.DiscordDisplayName = $"{user.Username}#{user.Discriminator}";
                 return result;
             }
