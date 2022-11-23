@@ -23,7 +23,7 @@ namespace Boudica.Helpers
             _apiService = services.GetRequiredService<APIService>();
             _listener = new HttpListener();
             _listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
-            _listener.Prefixes.Add("http://*:8080/");
+            _listener.Prefixes.Add("https://localhost:8081/");
             _listener.Start();
             _listener.BeginGetContext(new AsyncCallback(GetToken), _listener);
             Console.WriteLine("[OAUTH] Listening...");

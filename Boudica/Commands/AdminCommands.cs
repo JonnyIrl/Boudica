@@ -21,7 +21,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly HiringService _hiringService;
         private readonly GuardianService _guardianService;
-        private readonly APIService _apIService;
+        //private readonly APIService _apIService;
 
         private readonly Emoji _successEmoji;
         private readonly Emoji _failureEmoji;
@@ -32,7 +32,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _hiringService = services.GetRequiredService<HiringService>();
             _guardianService = services.GetRequiredService<GuardianService>();
-            _apIService = services.GetRequiredService<APIService>();
+            //_apIService = services.GetRequiredService<APIService>();
 
             _successEmoji = new Emoji("✅");
             _failureEmoji = new Emoji("❌");
@@ -343,12 +343,13 @@ namespace Boudica.Commands
         public async Task TestAPI()
         {
             await RespondAsync("yes", ephemeral: true);
-            await _apIService.Test();
+            //await _apIService.Test();
         }
 
         [SlashCommand("link", "Link your Bungie account to your Discord account.")]
         public async Task Link()
         {
+            //await DeferAsync();
             var foot = new EmbedFooterBuilder()
             {
                 Text = $"Powered by JonnyIrl"
@@ -367,7 +368,7 @@ namespace Boudica.Commands
             var plainTextBytes = Encoding.UTF8.GetBytes($"{Context.User.Id}");
             string state = Convert.ToBase64String(plainTextBytes);
 
-            string clientId = "42011";
+            string clientId = "42024";
 
             embed.Title = $"Click here to start the linking process.";
             embed.Url = $"https://www.bungie.net/en/OAuth/Authorize?client_id={clientId}&response_type=code&state={state}";

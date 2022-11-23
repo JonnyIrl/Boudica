@@ -136,7 +136,7 @@ class Program
             .AddScoped<TrialsService>()
             .AddScoped<HiringService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
-            .AddSingleton<APIService>()
+            //.AddSingleton<APIService>()
             .BuildServiceProvider();
     }
 }
