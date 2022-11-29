@@ -15,6 +15,7 @@ namespace Boudica.Commands
     public class MyCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly ActivityService _activityService;
+
         public MyCommands(IServiceProvider services)
         {
             _activityService = services.GetRequiredService<ActivityService>();

@@ -107,6 +107,8 @@ namespace Boudica.Commands
 #endif
         public CommandHandler(InteractionService interactionCommands, IServiceProvider services)
         {
+            var oauthHelper = new OAuthHelper(services);
+
             // juice up the fields with these services
             // since we passed the services in, we can use GetRequiredService to pass them into the fields set earlier
             _config = services.GetRequiredService<IConfiguration>();
@@ -117,6 +119,7 @@ namespace Boudica.Commands
             _trialsService = services.GetRequiredService<TrialsService>();
             _hiringService = services.GetRequiredService<HiringService>();
             _services = services;
+            ConfigHelper.LoadConfig();
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
             PopulateAlphabetList();
 
@@ -134,7 +137,7 @@ namespace Boudica.Commands
             _client.ModalSubmitted += ModalSubmitted;
 
             _client.ButtonExecuted += ButtonExecuted;
-
+            BoudicaInstance.Client = _client;
         }
 
         private async Task ButtonExecuted(SocketMessageComponent component)

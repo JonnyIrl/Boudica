@@ -8,6 +8,11 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+public static class BoudicaInstance
+{
+    public static DiscordSocketClient Client;
+}
+
 class Program
 {
     // setup our fields we assign later
@@ -67,7 +72,6 @@ class Program
 
             // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
             await services.GetRequiredService<CommandHandler>().InitializeAsync();
-
             await Task.Delay(Timeout.Infinite);
         }
     }
@@ -111,6 +115,7 @@ class Program
             GatewayIntents.Guilds | 
             GatewayIntents.GuildWebhooks
         };
+
         // this returns a ServiceProvider that is used later to call for those services
         // we can add types we have access to here, hence adding the new using statement:
         // using csharpi.Services;
@@ -131,7 +136,7 @@ class Program
             .AddScoped<TrialsService>()
             .AddScoped<HiringService>()
             .AddSingleton<IMongoDBContext, MongoDBContext>()
-
+            .AddSingleton<APIService>()
             .BuildServiceProvider();
     }
 }
