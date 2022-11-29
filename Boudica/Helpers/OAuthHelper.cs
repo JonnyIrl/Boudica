@@ -23,7 +23,7 @@ namespace Boudica.Helpers
             _apiService = services.GetRequiredService<APIService>();
             _listener = new HttpListener();
             _listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
-            _listener.Prefixes.Add("https://localhost:8081/");
+            _listener.Prefixes.Add("http://localhost:8082/");
             _listener.Start();
             _listener.BeginGetContext(new AsyncCallback(GetToken), _listener);
             Console.WriteLine("[OAUTH] Listening...");
@@ -46,7 +46,7 @@ namespace Boudica.Helpers
 
                 CodeResult result = new()
                 {
-                    DiscordDisplayName = $"Levante#3845",
+                    DiscordDisplayName = $"Jonny-Irl#8324",
                     Reason = ErrorReason.None
                 };
 
@@ -80,22 +80,23 @@ namespace Boudica.Helpers
                 byte[] buffer = Encoding.UTF8.GetBytes(responseString);
 
                 response.ContentLength64 = buffer.Length;
-                if (result.Reason != ErrorReason.None)
-                {
-                    //Console.WriteLine($"[OAUTH] Redirecting to Link Fail with reason {result.Reason}.");
-                    response.Redirect($"https://www.levante.dev/link-fail/?error={Convert.ToInt32(result.Reason)}");
-                }
-                else
-                {
-                    //Console.WriteLine("[OAUTH] Redirecting to Link Success.");
-                    response.Redirect($"https://www.levante.dev/link-success/?discDisp={Uri.EscapeDataString(result.DiscordDisplayName)}");
-                }
+                //if (result.Reason != ErrorReason.None)
+                //{
+                //    //Console.WriteLine($"[OAUTH] Redirecting to Link Fail with reason {result.Reason}.");
+                //    response.Redirect($"https://www.levante.dev/link-fail/?error={Convert.ToInt32(result.Reason)}");
+                //}
+                //else
+                //{
+                //    //Console.WriteLine("[OAUTH] Redirecting to Link Success.");
+                //    response.Redirect($"https://www.levante.dev/link-success/?discDisp={Uri.EscapeDataString(result.DiscordDisplayName)}");
+                //}
 
                 // simulate work
                 //await Task.Delay(500);
 
                 try
                 {
+                    response.StatusCode = result.Reason == ErrorReason.None ? (int)HttpStatusCode.OK : (int)HttpStatusCode.BadRequest;
                     System.IO.Stream output = response.OutputStream;
                     output.Write(buffer, 0, buffer.Length);
                     // You must close the output stream.
