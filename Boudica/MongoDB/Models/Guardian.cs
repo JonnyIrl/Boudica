@@ -20,5 +20,6 @@ namespace Boudica.MongoDB.Models
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime AccessExpiration { get; set; } = DateTime.Now;
         public DateTime RefreshExpiration { get; set; } = DateTime.Now;
+        public List<GuardianCharacter> GuardianCharacters = new List<GuardianCharacter>();
     }
 }

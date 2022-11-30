@@ -104,6 +104,7 @@ namespace Boudica.Services
 
         public async Task<Guardian> RefreshCode(Guardian guardian)
         {
+            if (guardian == null) return null;
             var values = new Dictionary<string, string>
                 {
                     { "client_id", $"{BoudicaConfig.BungieClientId}" },
