@@ -136,6 +136,7 @@ namespace Boudica.Services
 
         public async Task<Guardian> UpdateGuardian(Guardian guardian)
         {
+            if (guardian.GuardianCharacters == null) guardian.GuardianCharacters = new List<GuardianCharacter>();
             return  await _guardianCollection.FindOneAndUpdateAsync(x => x.Id == guardian.Id, new UpdateDefinitionBuilder<Guardian>()
                 .Set(x => x.UniqueBungieName, guardian.UniqueBungieName)
                 .Set(x => x.BungieMembershipId, guardian.BungieMembershipId)
@@ -143,7 +144,9 @@ namespace Boudica.Services
                 .Set(x => x.RefreshToken, guardian.RefreshToken)
                 .Set(x => x.RefreshExpiration, guardian.RefreshExpiration)
                 .Set(x => x.AccessToken, guardian.AccessToken)
-                .Set(x => x.AccessExpiration, guardian.AccessExpiration));
+                .Set(x => x.AccessExpiration, guardian.AccessExpiration)
+                .Set(x => x.GuardianCharacters, guardian.GuardianCharacters)
+                );
         }
 
         public async Task<bool> UpdateGuardianTokens(ulong userId, string accessToken, string refreshToken, DateTime accessExpiration, DateTime tokenRefresh)

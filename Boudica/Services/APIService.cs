@@ -22,18 +22,13 @@ namespace Boudica.Services
             _guardianService = services.GetRequiredService<GuardianService>();
         }
 
-        public async Task Test()
-        {
-            //GET https://www.bungie.net/en/oauth/authorize?client_id=12345&response_type=code&state=6i0mkLx79Hp91nzWVeHrzHG4
-
-            //HttpResponseMessage response = await _httpClient.GetAsync($"en/oauth/authorize?client_id={clientId}&response_type=code&state=6i0mkLx79Hp91nzWVeHrzHG4");
-            //string responseResult = await response.Content.ReadAsStringAsync();
-            //response.EnsureSuccessStatusCode();
-        }
-
         public async Task<Tuple<string, string>> GetValidDestinyMembership(string bungieTag)
         {
+#if DEBUG
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+#else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
             string membershipType = string.Empty;
             var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/-1/" + Uri.EscapeDataString(bungieTag));
             var content = response.Content.ReadAsStringAsync().Result;
@@ -79,19 +74,47 @@ namespace Boudica.Services
             return new Tuple<string, string>(string.Empty, string.Empty);
         }
        
-
-        public bool IsBungieAPIDown(string JSONContent)
+        public async Task<Tuple<bool, string>> GetGuardianCharacterInformation(string membershipType, string membershipId)
         {
-            dynamic item = JsonConvert.DeserializeObject(JSONContent);
-            string status = item.ErrorStatus;
-            return !status.Equals("Success");
+#if DEBUG
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+#else
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
+
+            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Profile/" + membershipId + "?components=100,200");
+            var content = response.Content.ReadAsStringAsync().Result;
+            dynamic item = JsonConvert.DeserializeObject(content);
+
+            if (IsBungieAPIDown(content))
+            {
+                return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+            }
+
+            if (item.ErrorCode != 1)
+            {
+                return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
+            }
+
+            return new Tuple<bool, string>(true, content);
+        }
+
+        public bool IsBungieAPIDown(string jsonResponse)
+        {
+            dynamic item = JsonConvert.DeserializeObject(jsonResponse);
+            string status = item?.ErrorStatus;
+            return status != "Success";
         }
 
         public async Task<bool> IsPublicAccount(string bungieTag, int memId)
         {
             bool isPublic = false;
 
+#if DEBUG
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+#else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
 
             var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/{memId}/" + Uri.EscapeDataString(bungieTag));
             var content = response.Content.ReadAsStringAsync().Result;
@@ -105,6 +128,16 @@ namespace Boudica.Services
         public async Task<Guardian> RefreshCode(Guardian guardian)
         {
             if (guardian == null) return null;
+#if DEBUG
+            var values = new Dictionary<string, string>
+                {
+                    { "client_id", $"{BoudicaConfig.DebugBungieClientId}" },
+                    { "client_secret", $"{BoudicaConfig.DebugBungieClientSecret}" },
+                    { "Content-Type", "application/x-www-form-urlencoded" },
+                    { "grant_type", "refresh_token" },
+                    { "refresh_token", $"{guardian.RefreshToken}" }
+                };
+#else
             var values = new Dictionary<string, string>
                 {
                     { "client_id", $"{BoudicaConfig.BungieClientId}" },
@@ -113,6 +146,7 @@ namespace Boudica.Services
                     { "grant_type", "refresh_token" },
                     { "refresh_token", $"{guardian.RefreshToken}" }
                 };
+#endif
             var postContent = new FormUrlEncodedContent(values);
 
             var response = await _httpClient.PostAsync("https://www.bungie.net/Platform/App/OAuth/Token/", postContent);

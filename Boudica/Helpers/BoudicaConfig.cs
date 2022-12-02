@@ -25,5 +25,13 @@ namespace Boudica.Helpers
 
         [JsonProperty("BungieClientSecret")]
         public static string BungieClientSecret { get; set; }
+        [JsonProperty("DebugBungieApiKey")]
+        public static string DebugBungieApiKey { get; set; }
+
+        [JsonProperty("DebugBungieClientId")]
+        public static string DebugBungieClientId { get; set; }
+
+        [JsonProperty("DebugBungieClientSecret")]
+        public static string DebugBungieClientSecret { get; set; }
     }
 }

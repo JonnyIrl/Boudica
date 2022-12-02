@@ -1,4 +1,6 @@
-﻿using Boudica.Classes;
+﻿using Boudica.Attributes;
+using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
@@ -10,6 +12,7 @@ using GiphyDotNet.Manager;
 using GiphyDotNet.Model.Parameters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +27,7 @@ namespace Boudica.Commands
         private readonly IConfiguration _config;
         private readonly GuardianService _guardianService;
         private readonly AwardedGuardianService _awardedGuardianService;
+        private readonly APIService _apiService;
         private readonly GifService _gifService;
         private readonly Giphy _giphy;
 
@@ -31,12 +35,67 @@ namespace Boudica.Commands
         {
             _guardianService = services.GetRequiredService<GuardianService>();
             _awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
+            _apiService = services.GetRequiredService<APIService>();
             _gifService = services.GetRequiredService<GifService>();
             _giphy = new Giphy(configuration[nameof(Mongosettings.GiphyApiKey)]);
             //_itemService = services.GetRequiredService<ItemService>();
             //_eververseService = services.GetRequiredService<EververseService>();
             //_inventoryService = services.GetRequiredService<InventoryService>();
             //_config = services.GetRequiredService<IConfiguration>();
+        }
+
+        [SlashCommand("guardian", "Display Guardian Information")]
+        [AccountLinked]
+        public async Task GetGuardianInformation()
+        {
+            await DeferAsync();
+            Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
+            Tuple<bool, string> result = await _apiService.GetGuardianCharacterInformation(guardian.BungieMembershipType, guardian.BungieMembershipId);
+            if (result.Item1 == false)
+            {
+                await Context.Interaction.ModifyOriginalResponseAsync(message =>
+                {
+                    message.Content = result.Item2;
+                });
+                return;
+            }
+
+            try
+            {
+                dynamic item = JsonConvert.DeserializeObject(result.Item2);
+                for (int i = 0; i < item.Response.profile.data.characterIds.Count; i++)
+                {
+                    try
+                    {
+                        string charId = $"{item.Response.profile.data.characterIds[i]}";
+                        guardian.GuardianCharacters.Add(new GuardianCharacter()
+                        {
+                            GuardianClass = (GuardianClass)item.Response.characters.data[$"{charId}"].classType,
+                            Id = charId
+                        });
+                    }
+                    catch (Exception x)
+                    {
+                        Console.WriteLine($"{x}");
+                    }
+                }
+
+                if (guardian.GuardianCharacters.Count == 0)
+                {
+                    await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = $"No guardian found."; });
+                    return;
+                }
+
+                await _guardianService.UpdateGuardian(guardian);
+                await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = $"Success!"; });
+
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine($"Exception in {nameof(GetGuardianInformation)}");
+                Console.Error.WriteLine(ex);
+                await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = "Something went wrong.."; });
+            }
         }
 
         //[Command("increase")]

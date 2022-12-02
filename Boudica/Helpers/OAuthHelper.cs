@@ -124,6 +124,17 @@ namespace Boudica.Helpers
 
             using (var client = new HttpClient())
             {
+#if DEBUG
+                var values = new Dictionary<string, string>
+                {
+                    { "client_id", $"{BoudicaConfig.DebugBungieClientId}" },
+                    { "client_secret", $"{BoudicaConfig.DebugBungieClientSecret}" },
+                    { "Authorization",  $"Basic {Code}" },
+                    { "Content-Type", "application/x-www-form-urlencoded" },
+                    { "grant_type", "authorization_code" },
+                    { "code", Code },
+                };
+#else
                 var values = new Dictionary<string, string>
                 {
                     { "client_id", $"{BoudicaConfig.BungieClientId}" },
@@ -133,6 +144,7 @@ namespace Boudica.Helpers
                     { "grant_type", "authorization_code" },
                     { "code", Code },
                 };
+#endif
                 var postContent = new FormUrlEncodedContent(values);
 
                 var response = client.PostAsync("https://www.bungie.net/Platform/App/OAuth/Token/", postContent).Result;

@@ -9,7 +9,7 @@ namespace Boudica.MongoDB.Models
 {
     public class GuardianCharacter
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public GuardianClass GuardianClass { get; set; }
     }
 }
