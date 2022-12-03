@@ -120,6 +120,7 @@ namespace Boudica.Commands
             _hiringService = services.GetRequiredService<HiringService>();
             _services = services;
             ConfigHelper.LoadConfig();
+            ManifestHelper.Load();
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
             PopulateAlphabetList();
 

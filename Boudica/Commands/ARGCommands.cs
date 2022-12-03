@@ -49,6 +49,13 @@ namespace Boudica.Commands
         public async Task GetGuardianInformation()
         {
             await DeferAsync();
+            bool result = await PopulateGuardianInformation();
+            if(result)
+                await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = $"Success!"; });
+        }
+
+        private async Task<bool> PopulateGuardianInformation()
+        {
             Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
             Tuple<bool, string> result = await _apiService.GetGuardianCharacterInformation(guardian.BungieMembershipType, guardian.BungieMembershipId);
             if (result.Item1 == false)
@@ -57,7 +64,7 @@ namespace Boudica.Commands
                 {
                     message.Content = result.Item2;
                 });
-                return;
+                return false;
             }
 
             try
@@ -83,19 +90,98 @@ namespace Boudica.Commands
                 if (guardian.GuardianCharacters.Count == 0)
                 {
                     await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = $"No guardian found."; });
-                    return;
+                    return false;
                 }
 
                 await _guardianService.UpdateGuardian(guardian);
-                await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = $"Success!"; });
-
+                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.Error.WriteLine($"Exception in {nameof(GetGuardianInformation)}");
                 Console.Error.WriteLine(ex);
                 await Context.Interaction.ModifyOriginalResponseAsync(message => { message.Content = "Something went wrong.."; });
+                return false;
             }
+        }
+
+        [SlashCommand("activity-history", "Get Guardian History")]
+        [AccountLinked]
+        public async Task GetActivityHistory()
+        {
+            await DeferAsync();
+            Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
+            if(guardian.GuardianCharacters.Count == 0)
+            {
+                bool populateResult = await PopulateGuardianInformation();
+                if (populateResult == false) return;
+                guardian = await _guardianService.GetGuardian(Context.User.Id);
+            }
+            Tuple<bool, string> result = await _apiService.GetCharacterActivity(guardian.BungieMembershipType, guardian.BungieMembershipId, guardian.GuardianCharacters[0].Id);
+            if (result.Item1 == false)
+            {
+                await Context.Interaction.ModifyOriginalResponseAsync(message =>
+                {
+                    message.Content = result.Item2;
+                });
+                return;
+            }
+
+            BungieActivityResponse response = JsonConvert.DeserializeObject<BungieActivityResponse>(result.Item2);
+            StringBuilder sb = new StringBuilder();
+            foreach (BungieActivity bungieActivity in response?.Response?.BungieActivities)
+            {
+                if (ManifestHelper.DestinyActivityDefinitions == null) break;
+                var match = ManifestHelper.DestinyActivityDefinitions.FirstOrDefault(x => x.Key == bungieActivity.BungieActivityDetails.ReferenceId);
+
+                if (match.Key > 0)
+                {
+                    sb.AppendLine($"" +
+                        $"Activity Name: {match.Value.DisplayProperties.Name} | " +
+                        //$"Description: {match.Value.DisplayProperties.Description} | " +
+                        $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Kills).Value.Basic.DisplayValue} | " +
+                        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Completed).Value.Basic.DisplayValue}");
+                }
+            }
+            int breakHere = 0;
+            await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = sb.ToString());
+        }
+
+        [SlashCommand("manifest-info", "Get Guardian History")]
+        [AccountLinked]
+        public async Task GetManifestInfo()
+        {
+            await DeferAsync();
+           
+            Tuple<bool, string> result = await _apiService.GetManifestInformation();
+            if (result.Item1 == false)
+            {
+                await Context.Interaction.ModifyOriginalResponseAsync(message =>
+                {
+                    message.Content = result.Item2;
+                });
+                return;
+            }
+            await Context.Interaction.ModifyOriginalResponseAsync(message =>
+            {
+                message.Content = ".";
+            });
+
+            //BungieActivityResponse response = JsonConvert.DeserializeObject<BungieActivityResponse>(result.Item2);
+            //StringBuilder sb = new StringBuilder();
+            //foreach (BungieActivity bungieActivity in response?.Response?.BungieActivities)
+            //{
+            //    if (ManifestHelper.DestinyActivityDefinitions == null) break;
+            //var match = ManifestHelper.DestinyActivityDefinitions.FirstOrDefault(x => x.ActivityModeHashes.FirstOrDefault(y => y == bungieActivity.BungieActivityDetails.ReferenceId) != null);
+
+            //if(match != null)
+            //{
+            //    sb.AppendLine($"" +
+            //        $"Activity Name: {match.DisplayProperties.Name} | " +
+            //        $"Description: {match.DisplayProperties.Description} | " +
+            //        $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Kills)} | " +
+            //        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Completed)}");
+            //}
         }
 
         //[Command("increase")]

@@ -13,6 +13,7 @@ namespace Boudica.Services
 {
     public class APIService
     {
+        private const string ManifestJsonPath = "ManifestFiles/json";
         private readonly HttpClient _httpClient;
         private GuardianService _guardianService;
         public APIService(IServiceProvider services)
@@ -20,6 +21,54 @@ namespace Boudica.Services
             _httpClient = new HttpClient();
             _httpClient.BaseAddress = new Uri("https://www.bungie.net/");
             _guardianService = services.GetRequiredService<GuardianService>();
+        }
+
+        public async Task<Tuple<bool, string>> GetManifestInformation()
+        {
+#if DEBUG
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+#else
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
+
+            var response = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
+            var content = response.Content.ReadAsStringAsync().Result;
+            dynamic item = JsonConvert.DeserializeObject(content);
+
+            string destinyManifestVersion = item.Response.version;
+            if (!File.Exists($"{ManifestJsonPath}/{destinyManifestVersion}.json"))
+            {
+                Console.WriteLine($"Found new manifest v.{destinyManifestVersion}.");
+                File.WriteAllText($"{ManifestJsonPath}/{destinyManifestVersion}.json", JsonConvert.SerializeObject(item, Formatting.Indented));
+            }
+            else
+            {
+                Console.WriteLine($"Found existing manifest v.{destinyManifestVersion}. No need to download.");
+            }
+
+            // Activities
+            string path = item.Response.jsonWorldComponentContentPaths.en["DestinyActivityDefinition"];
+            string fileName = path.Split('/').LastOrDefault();
+            if (!Directory.Exists($"{ManifestJsonPath}/DestinyActivityDefinition"))
+                Directory.CreateDirectory($"{ManifestJsonPath}/DestinyActivityDefinition");
+            //if (!File.Exists($"{ManifestJsonPath}/DestinyActivityDefinition/{fileName}"))
+            //{
+                Console.WriteLine($"[MANIFEST] Storing DestinyActivityDefinition locally...");
+                string activityListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en["DestinyActivityDefinition"]}";
+                response = await _httpClient.GetAsync(activityListUrl);
+                content = response.Content.ReadAsStringAsync().Result;
+            dynamic result2 = JsonConvert.DeserializeObject(content);
+            foreach(var result3 in result2)
+            {
+                Dictionary<long, string> dictionaryResults = JsonConvert.DeserializeObject<Dictionary<long, string>>(result3);
+            }
+            
+                var activityList = JsonConvert.DeserializeObject<Dictionary<string, string>>(content);
+            int breakHere = 0;
+
+            //}
+
+            return new Tuple<bool, string>(true, content);
         }
 
         public async Task<Tuple<string, string>> GetValidDestinyMembership(string bungieTag)
@@ -83,6 +132,31 @@ namespace Boudica.Services
 #endif
 
             var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Profile/" + membershipId + "?components=100,200");
+            var content = response.Content.ReadAsStringAsync().Result;
+            dynamic item = JsonConvert.DeserializeObject(content);
+
+            if (IsBungieAPIDown(content))
+            {
+                return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+            }
+
+            if (item.ErrorCode != 1)
+            {
+                return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
+            }
+
+            return new Tuple<bool, string>(true, content);
+        }
+
+        public async Task<Tuple<bool, string>> GetCharacterActivity(string membershipType, string membershipId, string characterId)
+        {
+#if DEBUG
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+#else
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
+            ///Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/Activities/ 
+            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Account/" + membershipId + "/Character/" + characterId + "/Stats/Activities/?count=10");
             var content = response.Content.ReadAsStringAsync().Result;
             dynamic item = JsonConvert.DeserializeObject(content);
 

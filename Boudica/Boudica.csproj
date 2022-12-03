@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BungieSharper.Entities" Version="0.9.3" />
     <PackageReference Include="Discord.Net" Version="3.7.2" />
     <PackageReference Include="GiphyDotNet" Version="2.4.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.8" />
@@ -44,6 +45,9 @@
 
   <ItemGroup>
     <None Update="config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="ManifestFiles\json\DestinyActivityDefinition.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
