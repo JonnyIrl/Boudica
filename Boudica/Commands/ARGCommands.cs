@@ -153,18 +153,18 @@ namespace Boudica.Commands
         {
             await DeferAsync();
            
-            Tuple<bool, string> result = await _apiService.GetManifestInformation();
-            if (result.Item1 == false)
+            bool result = await _apiService.DownloadNewManifestFiles();
+            if (result== false)
             {
                 await Context.Interaction.ModifyOriginalResponseAsync(message =>
                 {
-                    message.Content = result.Item2;
+                    message.Content = "Failed";
                 });
                 return;
             }
             await Context.Interaction.ModifyOriginalResponseAsync(message =>
             {
-                message.Content = ".";
+                message.Content = "Success";
             });
 
             //BungieActivityResponse response = JsonConvert.DeserializeObject<BungieActivityResponse>(result.Item2);
@@ -183,6 +183,8 @@ namespace Boudica.Commands
             //        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Completed)}");
             //}
         }
+
+
 
         //[Command("increase")]
         //public async Task IncreaseGlimmer([Remainder] string args)
@@ -372,6 +374,8 @@ namespace Boudica.Commands
             else
                 await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub and {reason}!");
         }    
+
+
 
         private string GetRank(int rank)
         {
