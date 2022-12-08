@@ -17,6 +17,10 @@ namespace Boudica.Services
 {
     public class APIService
     {
+        public static Dictionary<long, string> Activities = new();
+        public static Dictionary<long, string> Nightfalls = new();
+
+
         private const string ManifestJsonPath = "ManifestFiles/json";
         private readonly HttpClient _httpClient;
         private GuardianService _guardianService;
@@ -31,7 +35,7 @@ namespace Boudica.Services
         public async Task<Tuple<bool, string>> GetManifestInformation()
         {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
@@ -79,7 +83,7 @@ namespace Boudica.Services
         public async Task<Tuple<string, string>> GetValidDestinyMembership(string bungieTag)
         {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
@@ -131,7 +135,7 @@ namespace Boudica.Services
         public async Task<Tuple<bool, string>> GetGuardianCharacterInformation(string membershipType, string membershipId)
         {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
@@ -155,8 +159,9 @@ namespace Boudica.Services
 
         public async Task<Tuple<bool, string>> GetCharacterActivity(string membershipType, string membershipId, string characterId)
         {
+            Console.WriteLine("DebugKey" + BoudicaConfig.BungieApiKey);
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
@@ -190,7 +195,7 @@ namespace Boudica.Services
             bool isPublic = false;
 
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.DebugBungieApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
@@ -210,8 +215,8 @@ namespace Boudica.Services
 #if DEBUG
             var values = new Dictionary<string, string>
                 {
-                    { "client_id", $"{BoudicaConfig.DebugBungieClientId}" },
-                    { "client_secret", $"{BoudicaConfig.DebugBungieClientSecret}" },
+                    { "client_id", $"{BoudicaConfig.BungieClientId}" },
+                    { "client_secret", $"{BoudicaConfig.BungieClientSecret}" },
                     { "Content-Type", "application/x-www-form-urlencoded" },
                     { "grant_type", "refresh_token" },
                     { "refresh_token", $"{guardian.RefreshToken}" }
@@ -229,7 +234,7 @@ namespace Boudica.Services
             var postContent = new FormUrlEncodedContent(values);
 
             var response = await _httpClient.PostAsync("https://www.bungie.net/Platform/App/OAuth/Token/", postContent);
-            var content = response.Content.ReadAsStringAsync().Result;
+            var content = await response.Content.ReadAsStringAsync();
             dynamic item = JsonConvert.DeserializeObject(content);
 
             if (item.refresh_token == null || item.access_token == null)
@@ -342,8 +347,8 @@ namespace Boudica.Services
 
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 
-            var response = _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/").Result;
-            var content = response.Content.ReadAsStringAsync().Result;
+            var response = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
+            var content = await response.Content.ReadAsStringAsync();
             dynamic item = JsonConvert.DeserializeObject(content);
             DestinyManifestVersion = item.Response.version;
             if (!File.Exists($"{ManifestJsonPath}{DestinyManifestVersion}.json"))
@@ -400,7 +405,7 @@ namespace Boudica.Services
             }
             #endregion
 
-            // Activities
+            #region Activities
             path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityDefinition)}"];
             fileName = path.Split('/').LastOrDefault();
             Dictionary<string, DestinyActivityDefinition> activityList = new();
@@ -418,9 +423,13 @@ namespace Boudica.Services
             else
             {
                 Console.WriteLine($"{nameof(DestinyActivityDefinition)} already exists");
+                activityList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}"));
             }
+            
 
-            // Places
+            #endregion
+
+            #region Places
             path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPlaceDefinition)}"];
             fileName = path.Split('/').LastOrDefault();
             Dictionary<string, DestinyPlaceDefinition> placeList = new();
@@ -438,9 +447,11 @@ namespace Boudica.Services
             else
             {
                 Console.WriteLine($"{nameof(DestinyPlaceDefinition)} already exists");
+                placeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPlaceDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}"));
             }
+            #endregion
 
-            // Modifiers
+            #region Modifiers
             path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityModifierDefinition)}"];
             fileName = path.Split('/').LastOrDefault();
             Dictionary<string, DestinyActivityModifierDefinition> modifierList = new();
@@ -459,8 +470,9 @@ namespace Boudica.Services
             {
                 Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
             }
+            #endregion
 
-            // Records/Triumph
+            #region Records/Triumphs
             path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyRecordDefinition)}"];
             fileName = path.Split('/').LastOrDefault();
             Dictionary<string, DestinyRecordDefinition> recordList = new();
@@ -479,8 +491,9 @@ namespace Boudica.Services
             {
                 Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
             }
+            #endregion
 
-            // Presentation Nodes
+            #region Presentation Nodes
             path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPresentationNodeDefinition)}"];
             fileName = path.Split('/').LastOrDefault();
             Dictionary<string, DestinyPresentationNodeDefinition> presentNodeList = new();
@@ -498,6 +511,30 @@ namespace Boudica.Services
             else
             {
                 Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
+            }
+            #endregion
+
+            foreach (var activity in activityList)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(activity.Value.DisplayProperties.Name))
+                    {
+                        if (placeList.ContainsKey($"{activity.Value.PlaceHash}"))
+                        {
+                            Activities.Add(activity.Value.Hash, placeList[$"{activity.Value.PlaceHash}"].DisplayProperties.Name);
+                            continue;
+                        }
+                    }
+
+                    Activities.Add(activity.Value.Hash, activity.Value.DisplayProperties.Name);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error assigning activity list item");
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex);
+                }
             }
 
             return true;

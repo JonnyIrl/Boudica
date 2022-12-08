@@ -131,13 +131,13 @@ namespace Boudica.Commands
             StringBuilder sb = new StringBuilder();
             foreach (BungieActivity bungieActivity in response?.Response?.BungieActivities)
             {
-                if (ManifestHelper.DestinyActivityDefinitions == null) break;
-                var match = ManifestHelper.DestinyActivityDefinitions.FirstOrDefault(x => x.Key == bungieActivity.BungieActivityDetails.ReferenceId);
+                if (APIService.Activities == null) break;
+                var match = APIService.Activities.FirstOrDefault(x => x.Key == bungieActivity.BungieActivityDetails.ReferenceId);
 
                 if (match.Key > 0)
                 {
                     sb.AppendLine($"" +
-                        $"Activity Name: {match.Value.DisplayProperties.Name} | " +
+                        $"Activity Name: {match.Value} | " +
                         //$"Description: {match.Value.DisplayProperties.Description} | " +
                         $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Kills).Value.Basic.DisplayValue} | " +
                         $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Completed).Value.Basic.DisplayValue}");

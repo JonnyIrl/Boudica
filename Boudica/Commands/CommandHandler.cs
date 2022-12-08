@@ -61,6 +61,7 @@ namespace Boudica.Commands
         private readonly GuardianService _guardianService;
         private readonly TrialsService _trialsService;
         private readonly HiringService _hiringService;
+        private readonly APIService _apiService;
         private char Prefix = ';';
 
         private static List<ulong> _manualRemovedReactionList = new List<ulong>();
@@ -118,9 +119,9 @@ namespace Boudica.Commands
             _guardianService = services.GetRequiredService<GuardianService>();
             _trialsService = services.GetRequiredService<TrialsService>();
             _hiringService = services.GetRequiredService<HiringService>();
+            _apiService = services.GetRequiredService<APIService>();
             _services = services;
             ConfigHelper.LoadConfig();
-            ManifestHelper.Load();
             Emote.TryParse($"<:misc_glimmer:{glimmerId}>", out _glimmerEmote);
             PopulateAlphabetList();
 
@@ -492,6 +493,8 @@ namespace Boudica.Commands
             _commands.SlashCommandExecuted += SlashCommandExecuted;
             _commands.ContextCommandExecuted += ContextCommandExecuted;
             _commands.ComponentCommandExecuted += ComponentCommandExecuted;
+
+            await _apiService.DownloadNewManifestFiles();
         }
 
         private async Task HandleInteraction(SocketInteraction arg)
