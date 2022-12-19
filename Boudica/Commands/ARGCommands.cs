@@ -139,8 +139,8 @@ namespace Boudica.Commands
                     sb.AppendLine($"" +
                         $"Activity Name: {match.Value} | " +
                         //$"Description: {match.Value.DisplayProperties.Description} | " +
-                        $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Kills).Value.Basic.DisplayValue} | " +
-                        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == StatId.Completed).Value.Basic.DisplayValue}");
+                        $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "kills").Value.Basic.DisplayValue} | " +
+                        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "completed").Value.Basic.DisplayValue}");
                 }
             }
             int breakHere = 0;
