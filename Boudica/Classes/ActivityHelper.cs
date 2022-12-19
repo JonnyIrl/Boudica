@@ -86,6 +86,10 @@ namespace Boudica.Classes
 
             if (forceCommand)
             {
+                if (existingRaid.CreatedByUserId == Context.User.Id)
+                {
+                    return true;
+                }
                 IGuildUser guildUser = Context.Guild.GetUser(Context.User.Id);
                 if (guildUser != null)
                 {

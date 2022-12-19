@@ -117,7 +117,7 @@ namespace Boudica.Commands
                 if (populateResult == false) return;
                 guardian = await _guardianService.GetGuardian(Context.User.Id);
             }
-            Tuple<bool, string> result = await _apiService.GetCharacterActivity(guardian.BungieMembershipType, guardian.BungieMembershipId, guardian.GuardianCharacters[0].Id);
+            Tuple<bool, string> result = await _apiService.GetCharacterActivity(guardian.BungieMembershipType, guardian.BungieMembershipId, guardian.GuardianCharacters[0].Id, guardian.AccessToken);
             if (result.Item1 == false)
             {
                 await Context.Interaction.ModifyOriginalResponseAsync(message =>
@@ -144,7 +144,10 @@ namespace Boudica.Commands
                 }
             }
             int breakHere = 0;
-            await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = sb.ToString());
+            if(sb.Length > 0)
+                await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = sb.ToString());
+            else
+                await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = "Nothing to see here");
         }
 
         [SlashCommand("manifest-info", "Get Guardian History")]

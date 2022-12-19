@@ -22,165 +22,124 @@ namespace Boudica.Services
 
 
         private const string ManifestJsonPath = "ManifestFiles/json";
-        private readonly HttpClient _httpClient;
         private GuardianService _guardianService;
         public string DestinyManifestVersion { get; internal set; } = "v0.0";
         public APIService(IServiceProvider services)
         {
-            _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri("https://www.bungie.net/");
             _guardianService = services.GetRequiredService<GuardianService>();
-        }
-
-        public async Task<Tuple<bool, string>> GetManifestInformation()
-        {
-#if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-#else
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-#endif
-
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
-
-            string destinyManifestVersion = item.Response.version;
-            if (!File.Exists($"{ManifestJsonPath}/{destinyManifestVersion}.json"))
-            {
-                Console.WriteLine($"Found new manifest v.{destinyManifestVersion}.");
-                await File.WriteAllTextAsync($"{ManifestJsonPath}/{destinyManifestVersion}.json", JsonConvert.SerializeObject(item, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"Found existing manifest v.{destinyManifestVersion}. No need to download.");
-            }
-
-            // Activities
-            string path = item.Response.jsonWorldComponentContentPaths.en["DestinyActivityDefinition"];
-            string fileName = path.Split('/').LastOrDefault();
-            if (!Directory.Exists($"{ManifestJsonPath}/DestinyActivityDefinition"))
-                Directory.CreateDirectory($"{ManifestJsonPath}/DestinyActivityDefinition");
-            //if (!File.Exists($"{ManifestJsonPath}/DestinyActivityDefinition/{fileName}"))
-            //{
-            Console.WriteLine($"[MANIFEST] Storing DestinyActivityDefinition locally...");
-            string activityListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en["DestinyActivityDefinition"]}";
-            response = await _httpClient.GetAsync(activityListUrl);
-            content = response.Content.ReadAsStringAsync().Result;
-            dynamic result2 = JsonConvert.DeserializeObject(content);
-            foreach (var result3 in result2)
-            {
-                Dictionary<long, string> dictionaryResults = JsonConvert.DeserializeObject<Dictionary<long, string>>(result3);
-            }
-
-            var activityList = JsonConvert.DeserializeObject<Dictionary<string, string>>(content);
-            int breakHere = 0;
-
-            //}
-
-            return new Tuple<bool, string>(true, content);
         }
 
         public async Task<Tuple<string, string>> GetValidDestinyMembership(string bungieTag)
         {
-#if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-#else
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-#endif
-            string membershipType = string.Empty;
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/-1/" + Uri.EscapeDataString(bungieTag));
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
-
-            if (IsBungieAPIDown(content))
+            using (HttpClient client = new HttpClient())
             {
-                return new Tuple<string, string>(string.Empty, membershipType);
-            }
+#if DEBUG
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#else
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+#endif
+                string membershipType = string.Empty;
+                var response = await client.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/-1/" + Uri.EscapeDataString(bungieTag));
+                var content = response.Content.ReadAsStringAsync().Result;
+                dynamic item = JsonConvert.DeserializeObject(content);
 
-            if (item != null)
-                for (var i = 0; i < item.Response.Count; i++)
+                if (IsBungieAPIDown(content))
                 {
-                    string memId = item.Response[i].membershipId;
-
-                    var memResponse = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/-1/Profile/{memId}/LinkedProfiles/?getAllMemberships=true");
-                    var memContent = await memResponse.Content.ReadAsStringAsync();
-                    dynamic memItem = JsonConvert.DeserializeObject(memContent);
-
-                    var lastPlayed = new DateTime();
-                    var goodProfile = -1;
-
-                    if (memItem == null || memItem.ErrorCode != 1) continue;
-
-                    for (var j = 0; j < memItem.Response.profiles.Count; j++)
-                    {
-                        if (memItem.Response.profiles[j].isCrossSavePrimary == true)
-                        {
-                            membershipType = memItem.Response.profiles[j].membershipType;
-                            return new Tuple<string, string>(memId, membershipType);
-                        }
-
-                        if (DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString()) <= lastPlayed) continue;
-
-                        lastPlayed = DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString());
-                        goodProfile = j;
-                    }
-
-                    if (goodProfile == -1) continue;
-                    return new Tuple<string, string>(memItem.Response.profiles[goodProfile].membershipId, memItem.Response.profiles[goodProfile].membershipType);
+                    return new Tuple<string, string>(string.Empty, membershipType);
                 }
 
-            return new Tuple<string, string>(string.Empty, string.Empty);
+                if (item != null)
+                    for (var i = 0; i < item.Response.Count; i++)
+                    {
+                        string memId = item.Response[i].membershipId;
+
+                        var memResponse = await client.GetAsync($"https://www.bungie.net/Platform/Destiny2/-1/Profile/{memId}/LinkedProfiles/?getAllMemberships=true");
+                        var memContent = await memResponse.Content.ReadAsStringAsync();
+                        dynamic memItem = JsonConvert.DeserializeObject(memContent);
+
+                        var lastPlayed = new DateTime();
+                        var goodProfile = -1;
+
+                        if (memItem == null || memItem.ErrorCode != 1) continue;
+
+                        for (var j = 0; j < memItem.Response.profiles.Count; j++)
+                        {
+                            if (memItem.Response.profiles[j].isCrossSavePrimary == true)
+                            {
+                                membershipType = memItem.Response.profiles[j].membershipType;
+                                return new Tuple<string, string>(memId, membershipType);
+                            }
+
+                            if (DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString()) <= lastPlayed) continue;
+
+                            lastPlayed = DateTime.Parse(memItem.Response.profiles[j].dateLastPlayed.ToString());
+                            goodProfile = j;
+                        }
+
+                        if (goodProfile == -1) continue;
+                        return new Tuple<string, string>(memItem.Response.profiles[goodProfile].membershipId, memItem.Response.profiles[goodProfile].membershipType);
+                    }
+
+                return new Tuple<string, string>(string.Empty, string.Empty);
+            }
         }
 
         public async Task<Tuple<bool, string>> GetGuardianCharacterInformation(string membershipType, string membershipId)
         {
+            using (HttpClient client = new HttpClient())
+            {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
 
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Profile/" + membershipId + "?components=100,200");
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
+                var response = await client.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Profile/" + membershipId + "?components=100,200");
+                var content = response.Content.ReadAsStringAsync().Result;
+                dynamic item = JsonConvert.DeserializeObject(content);
 
-            if (IsBungieAPIDown(content))
-            {
-                return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+                if (IsBungieAPIDown(content))
+                {
+                    return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+                }
+
+                if (item.ErrorCode != 1)
+                {
+                    return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
+                }
+
+                return new Tuple<bool, string>(true, content);
             }
-
-            if (item.ErrorCode != 1)
-            {
-                return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
-            }
-
-            return new Tuple<bool, string>(true, content);
         }
 
-        public async Task<Tuple<bool, string>> GetCharacterActivity(string membershipType, string membershipId, string characterId)
+        public async Task<Tuple<bool, string>> GetCharacterActivity(string membershipType, string membershipId, string characterId, string accessToken)
         {
-            Console.WriteLine("DebugKey" + BoudicaConfig.BungieApiKey);
+            using (HttpClient client = new HttpClient())
+            {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 #else
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 #endif
-            ///Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/Activities/ 
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Account/" + membershipId + "/Character/" + characterId + "/Stats/Activities/?count=10");
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
+                ///Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/Activities/ 
+                var response = await client.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Account/" + membershipId + "/Character/" + characterId + "/Stats/Activities/?count=10");
+                var content = await response.Content.ReadAsStringAsync();
+                dynamic item = JsonConvert.DeserializeObject(content);
 
-            if (IsBungieAPIDown(content))
-            {
-                return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+                if (IsBungieAPIDown(content))
+                {
+                    return new Tuple<bool, string>(false, "Bungie API is temporary down, try again later.");
+                }
+
+                if (item.ErrorCode != 1)
+                {
+                    return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
+                }
+
+                return new Tuple<bool, string>(true, content);
             }
-
-            if (item.ErrorCode != 1)
-            {
-                return new Tuple<bool, string>(false, $"An error occured with that account. Is there a connected Destiny 2 account?");
-            }
-
-            return new Tuple<bool, string>(true, content);
         }
 
         public bool IsBungieAPIDown(string jsonResponse)
@@ -193,20 +152,22 @@ namespace Boudica.Services
         public async Task<bool> IsPublicAccount(string bungieTag, int memId)
         {
             bool isPublic = false;
-
+            using (HttpClient client = new HttpClient())
+            {
 #if DEBUG
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #else
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
 #endif
 
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/{memId}/" + Uri.EscapeDataString(bungieTag));
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
+                var response = await client.GetAsync($"https://www.bungie.net/platform/Destiny2/SearchDestinyPlayer/{memId}/" + Uri.EscapeDataString(bungieTag));
+                var content = response.Content.ReadAsStringAsync().Result;
+                dynamic item = JsonConvert.DeserializeObject(content);
 
-            isPublic = item.Response[0].isPublic;
+                isPublic = item.Response[0].isPublic;
 
-            return isPublic;
+                return isPublic;
+            }
         }
 
         public async Task<Guardian> RefreshCode(Guardian guardian)
@@ -232,21 +193,23 @@ namespace Boudica.Services
                 };
 #endif
             var postContent = new FormUrlEncodedContent(values);
-
-            var response = await _httpClient.PostAsync("https://www.bungie.net/Platform/App/OAuth/Token/", postContent);
-            var content = await response.Content.ReadAsStringAsync();
-            dynamic item = JsonConvert.DeserializeObject(content);
-
-            if (item.refresh_token == null || item.access_token == null)
+            using (HttpClient client = new HttpClient())
             {
-                Console.WriteLine($"Received null tokens from refresh; keep all tokens the same as before.");
-                return guardian;
-            }
+                var response = await client.PostAsync("https://www.bungie.net/Platform/App/OAuth/Token/", postContent);
+                var content = await response.Content.ReadAsStringAsync();
+                dynamic item = JsonConvert.DeserializeObject(content);
 
-            guardian.RefreshToken = item.refresh_token;
-            guardian.AccessToken = item.access_token;
-            guardian.AccessExpiration = DateTime.Now.Add(TimeSpan.FromSeconds(double.Parse($"{item.expires_in}")));
-            guardian.RefreshExpiration = DateTime.Now.Add(TimeSpan.FromSeconds(double.Parse($"{item.refresh_expires_in}")));
+                if (item.refresh_token == null || item.access_token == null)
+                {
+                    Console.WriteLine($"Received null tokens from refresh; keep all tokens the same as before.");
+                    return guardian;
+                }
+
+                guardian.RefreshToken = item.refresh_token;
+                guardian.AccessToken = item.access_token;
+                guardian.AccessExpiration = DateTime.Now.Add(TimeSpan.FromSeconds(double.Parse($"{item.expires_in}")));
+                guardian.RefreshExpiration = DateTime.Now.Add(TimeSpan.FromSeconds(double.Parse($"{item.refresh_expires_in}")));
+            }
 
             await _guardianService.UpdateGuardianTokens(guardian.Id, guardian.AccessToken, guardian.RefreshToken, guardian.AccessExpiration, guardian.RefreshExpiration);
             return guardian;
@@ -324,13 +287,15 @@ namespace Boudica.Services
 
         public async Task<bool> IsNewManifestVersion()
         {
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
-            var content = response.Content.ReadAsStringAsync().Result;
-            dynamic item = JsonConvert.DeserializeObject(content);
-            if (item == null) return false;
-            return DestinyManifestVersion != $"{item.Response.version}";
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                var response = await client.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
+                var content = response.Content.ReadAsStringAsync().Result;
+                dynamic item = JsonConvert.DeserializeObject(content);
+                if (item == null) return false;
+                return DestinyManifestVersion != $"{item.Response.version}";
+            }
         }
 
         public async Task<bool> DownloadNewManifestFiles()
@@ -345,195 +310,197 @@ namespace Boudica.Services
                 Console.WriteLine("Manifest Directory already exists");
             }
 
-            _httpClient.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
-
-            var response = await _httpClient.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
-            var content = await response.Content.ReadAsStringAsync();
-            dynamic item = JsonConvert.DeserializeObject(content);
-            DestinyManifestVersion = item.Response.version;
-            if (!File.Exists($"{ManifestJsonPath}{DestinyManifestVersion}.json"))
+            using (HttpClient client = new HttpClient())
             {
-                Console.WriteLine($"Found v.{DestinyManifestVersion}. Downloading and storing locally...");
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{DestinyManifestVersion}.json", JsonConvert.SerializeObject(item, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"Found v.{DestinyManifestVersion}. No download needed.");
-                return true;
-            }
-
-            #region Inventory Items
-            string path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyInventoryItemDefinition)}"];
-            string fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyInventoryItemDefinition> invItemList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyInventoryItemDefinition)}");
-                string invItemUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyInventoryItemDefinition)}"]}";
-                response = await _httpClient.GetAsync(invItemUrl);
-                content = await response.Content.ReadAsStringAsync();
-                invItemList = JsonConvert.DeserializeObject<Dictionary<string, DestinyInventoryItemDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}/{fileName}", JsonConvert.SerializeObject(invItemList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyInventoryItemDefinition)} already exists");
-            }
-            #endregion
-
-            #region Vendors
-            // Vendors
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyVendorDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyVendorDefinition> vendorList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally... {nameof(DestinyVendorDefinition)}");
-                string vendorListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyVendorDefinition)}"]}";
-                response = await _httpClient.GetAsync(vendorListUrl);
-                content = await response.Content.ReadAsStringAsync();
-                vendorList = JsonConvert.DeserializeObject<Dictionary<string, DestinyVendorDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}/{fileName}", JsonConvert.SerializeObject(vendorList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyVendorDefinition)} already exists");
-            }
-            #endregion
-
-            #region Activities
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyActivityDefinition> activityList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyActivityDefinition)}");
-                string activityListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityDefinition)}"]}";
-                response = await _httpClient.GetAsync(activityListUrl);
-                content = await response.Content.ReadAsStringAsync();
-                activityList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}", JsonConvert.SerializeObject(activityList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyActivityDefinition)} already exists");
-                activityList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}"));
-            }
-            
-
-            #endregion
-
-            #region Places
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPlaceDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyPlaceDefinition> placeList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyPlaceDefinition)}");
-                string placeListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPlaceDefinition)}"]}";
-                response = await _httpClient.GetAsync(placeListUrl);
-                content = await response.Content.ReadAsStringAsync();
-                placeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPlaceDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}", JsonConvert.SerializeObject(placeList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyPlaceDefinition)} already exists");
-                placeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPlaceDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}"));
-            }
-            #endregion
-
-            #region Modifiers
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityModifierDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyActivityModifierDefinition> modifierList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyActivityModifierDefinition)}");
-                string modifierListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityModifierDefinition)}"]}";
-                response = await _httpClient.GetAsync(modifierListUrl);
-                content = await response.Content.ReadAsStringAsync();
-                modifierList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityModifierDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}/{fileName}", JsonConvert.SerializeObject(modifierList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
-            }
-            #endregion
-
-            #region Records/Triumphs
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyRecordDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyRecordDefinition> recordList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyRecordDefinition)}");
-                string recordUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyRecordDefinition)}"]}";
-                response = await _httpClient.GetAsync(recordUrl);
-                content = await response.Content.ReadAsStringAsync();
-                recordList = JsonConvert.DeserializeObject<Dictionary<string, DestinyRecordDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}/{fileName}", JsonConvert.SerializeObject(recordList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
-            }
-            #endregion
-
-            #region Presentation Nodes
-            path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPresentationNodeDefinition)}"];
-            fileName = path.Split('/').LastOrDefault();
-            Dictionary<string, DestinyPresentationNodeDefinition> presentNodeList = new();
-            if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}"))
-                Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}");
-            if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}/{fileName}"))
-            {
-                Console.WriteLine($"Storing locally...{nameof(DestinyPresentationNodeDefinition)}");
-                string presentNodeUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPresentationNodeDefinition)}"]}";
-                response = await _httpClient.GetAsync(presentNodeUrl);
-                content = await response.Content.ReadAsStringAsync();
-                presentNodeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPresentationNodeDefinition>>(content);
-                await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}/{fileName}", JsonConvert.SerializeObject(presentNodeList, Formatting.Indented));
-            }
-            else
-            {
-                Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
-            }
-            #endregion
-
-            foreach (var activity in activityList)
-            {
-                try
+                client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
+                var response = await client.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
+                var content = await response.Content.ReadAsStringAsync();
+                dynamic item = JsonConvert.DeserializeObject(content);
+                DestinyManifestVersion = item.Response.version;
+                if (!File.Exists($"{ManifestJsonPath}{DestinyManifestVersion}.json"))
                 {
-                    if (string.IsNullOrEmpty(activity.Value.DisplayProperties.Name))
-                    {
-                        if (placeList.ContainsKey($"{activity.Value.PlaceHash}"))
-                        {
-                            Activities.Add(activity.Value.Hash, placeList[$"{activity.Value.PlaceHash}"].DisplayProperties.Name);
-                            continue;
-                        }
-                    }
-
-                    Activities.Add(activity.Value.Hash, activity.Value.DisplayProperties.Name);
+                    Console.WriteLine($"Found v.{DestinyManifestVersion}. Downloading and storing locally...");
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{DestinyManifestVersion}.json", JsonConvert.SerializeObject(item, Formatting.Indented));
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine("Error assigning activity list item");
-                    Console.WriteLine(ex.Message);
-                    Console.WriteLine(ex);
+                    Console.WriteLine($"Found v.{DestinyManifestVersion}. No download needed.");
+                }
+
+                #region Inventory Items
+                string path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyInventoryItemDefinition)}"];
+                string fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyInventoryItemDefinition> invItemList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyInventoryItemDefinition)}");
+                    string invItemUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyInventoryItemDefinition)}"]}";
+                    response = await client.GetAsync(invItemUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    invItemList = JsonConvert.DeserializeObject<Dictionary<string, DestinyInventoryItemDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyInventoryItemDefinition)}/{fileName}", JsonConvert.SerializeObject(invItemList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyInventoryItemDefinition)} already exists");
+                }
+                #endregion
+
+                #region Vendors
+                // Vendors
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyVendorDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyVendorDefinition> vendorList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally... {nameof(DestinyVendorDefinition)}");
+                    string vendorListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyVendorDefinition)}"]}";
+                    response = await client.GetAsync(vendorListUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    vendorList = JsonConvert.DeserializeObject<Dictionary<string, DestinyVendorDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyVendorDefinition)}/{fileName}", JsonConvert.SerializeObject(vendorList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyVendorDefinition)} already exists");
+                }
+                #endregion
+
+                #region Activities
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyActivityDefinition> activityList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyActivityDefinition)}");
+                    string activityListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityDefinition)}"]}";
+                    response = await client.GetAsync(activityListUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    activityList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}", JsonConvert.SerializeObject(activityList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyActivityDefinition)} already exists");
+                    activityList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityDefinition)}/{fileName}"));
+                }
+
+
+                #endregion
+
+                #region Places
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPlaceDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyPlaceDefinition> placeList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyPlaceDefinition)}");
+                    string placeListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPlaceDefinition)}"]}";
+                    response = await client.GetAsync(placeListUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    placeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPlaceDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}", JsonConvert.SerializeObject(placeList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyPlaceDefinition)} already exists");
+                    placeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPlaceDefinition>>(await File.ReadAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPlaceDefinition)}/{fileName}"));
+                }
+                #endregion
+
+                #region Modifiers
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityModifierDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyActivityModifierDefinition> modifierList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyActivityModifierDefinition)}");
+                    string modifierListUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyActivityModifierDefinition)}"]}";
+                    response = await client.GetAsync(modifierListUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    modifierList = JsonConvert.DeserializeObject<Dictionary<string, DestinyActivityModifierDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyActivityModifierDefinition)}/{fileName}", JsonConvert.SerializeObject(modifierList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyActivityModifierDefinition)} already exists");
+                }
+                #endregion
+
+                #region Records/Triumphs
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyRecordDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyRecordDefinition> recordList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyRecordDefinition)}");
+                    string recordUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyRecordDefinition)}"]}";
+                    response = await client.GetAsync(recordUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    recordList = JsonConvert.DeserializeObject<Dictionary<string, DestinyRecordDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyRecordDefinition)}/{fileName}", JsonConvert.SerializeObject(recordList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyRecordDefinition)} already exists");
+                }
+                #endregion
+
+                #region Presentation Nodes
+                path = item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPresentationNodeDefinition)}"];
+                fileName = path.Split('/').LastOrDefault();
+                Dictionary<string, DestinyPresentationNodeDefinition> presentNodeList = new();
+                if (!Directory.Exists($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}"))
+                    Directory.CreateDirectory($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}");
+                if (!File.Exists($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}/{fileName}"))
+                {
+                    Console.WriteLine($"Storing locally...{nameof(DestinyPresentationNodeDefinition)}");
+                    string presentNodeUrl = $"https://www.bungie.net{item.Response.jsonWorldComponentContentPaths.en[$"{nameof(DestinyPresentationNodeDefinition)}"]}";
+                    response = await client.GetAsync(presentNodeUrl);
+                    content = await response.Content.ReadAsStringAsync();
+                    presentNodeList = JsonConvert.DeserializeObject<Dictionary<string, DestinyPresentationNodeDefinition>>(content);
+                    await File.WriteAllTextAsync($"{ManifestJsonPath}{nameof(DestinyPresentationNodeDefinition)}/{fileName}", JsonConvert.SerializeObject(presentNodeList, Formatting.Indented));
+                }
+                else
+                {
+                    Console.WriteLine($"{nameof(DestinyPresentationNodeDefinition)} already exists");
+                }
+                #endregion
+
+
+                foreach (var activity in activityList)
+                {
+                    try
+                    {
+                        if (string.IsNullOrEmpty(activity.Value.DisplayProperties.Name))
+                        {
+                            if (placeList.ContainsKey($"{activity.Value.PlaceHash}"))
+                            {
+                                Activities.Add(activity.Value.Hash, placeList[$"{activity.Value.PlaceHash}"].DisplayProperties.Name);
+                                continue;
+                            }
+                        }
+
+                        Activities.Add(activity.Value.Hash, activity.Value.DisplayProperties.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error assigning activity list item");
+                        Console.WriteLine(ex.Message);
+                        Console.WriteLine(ex);
+                    }
                 }
             }
 

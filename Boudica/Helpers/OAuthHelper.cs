@@ -127,8 +127,8 @@ namespace Boudica.Helpers
 #if DEBUG
                 var values = new Dictionary<string, string>
                 {
-                    { "client_id", $"{BoudicaConfig.DebugBungieClientId}" },
-                    { "client_secret", $"{BoudicaConfig.DebugBungieClientSecret}" },
+                    { "client_id", $"{BoudicaConfig.BungieClientId}" },
+                    { "client_secret", $"{BoudicaConfig.BungieClientSecret}" },
                     { "Authorization",  $"Basic {Code}" },
                     { "Content-Type", "application/x-www-form-urlencoded" },
                     { "grant_type", "authorization_code" },
