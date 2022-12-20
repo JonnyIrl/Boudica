@@ -114,6 +114,10 @@ namespace Boudica.Services
 
         public async Task<Tuple<bool, string>> GetCharacterActivity(string membershipType, string membershipId, string characterId, string accessToken)
         {
+            if(string.IsNullOrEmpty(characterId))
+            {
+                return new Tuple<bool, string>(false, "Could not find activity history for that Character.");
+            }
             using (HttpClient client = new HttpClient())
             {
 #if DEBUG
@@ -123,7 +127,7 @@ namespace Boudica.Services
                 client.DefaultRequestHeaders.Add("X-API-Key", BoudicaConfig.BungieApiKey);
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 #endif
-                ///Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/Activities/ 
+
                 var response = await client.GetAsync($"https://www.bungie.net/platform/Destiny2/" + (membershipType) + "/Account/" + membershipId + "/Character/" + characterId + "/Stats/Activities/?count=10");
                 var content = await response.Content.ReadAsStringAsync();
                 dynamic item = JsonConvert.DeserializeObject(content);

@@ -8,8 +8,8 @@ namespace Boudica.Enums
 {
     public enum GuardianClass
     {
-        Titan,
-        Warlock,
-        Hunter
+        Titan = 0,
+        Hunter = 1,
+        Warlock = 2
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Boudica.Attributes;
 using Boudica.Classes;
 using Boudica.Enums;
+using Boudica.Enums.Bungie;
 using Boudica.Helpers;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
@@ -107,7 +108,7 @@ namespace Boudica.Commands
 
         [SlashCommand("activity-history", "Get Guardian History")]
         [AccountLinked]
-        public async Task GetActivityHistory()
+        public async Task GetActivityHistory(GuardianClass guardianClass)
         {
             await DeferAsync();
             Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
@@ -117,7 +118,7 @@ namespace Boudica.Commands
                 if (populateResult == false) return;
                 guardian = await _guardianService.GetGuardian(Context.User.Id);
             }
-            Tuple<bool, string> result = await _apiService.GetCharacterActivity(guardian.BungieMembershipType, guardian.BungieMembershipId, guardian.GuardianCharacters[0].Id, guardian.AccessToken);
+            Tuple<bool, string> result = await _apiService.GetCharacterActivity(guardian.BungieMembershipType, guardian.BungieMembershipId, guardian.GuardianCharacters.FirstOrDefault(x => x.GuardianClass == guardianClass)?.Id, guardian.AccessToken);
             if (result.Item1 == false)
             {
                 await Context.Interaction.ModifyOriginalResponseAsync(message =>
@@ -138,7 +139,7 @@ namespace Boudica.Commands
                 {
                     sb.AppendLine($"" +
                         $"Activity Name: {match.Value} | " +
-                        //$"Description: {match.Value.DisplayProperties.Description} | " +
+                        $"Mode: {((ActivityModeType)bungieActivity.BungieActivityDetails.Mode).ToString()} | " +
                         $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "kills").Value.Basic.DisplayValue} | " +
                         $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "completed").Value.Basic.DisplayValue}");
                 }
