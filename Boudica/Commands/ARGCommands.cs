@@ -6,6 +6,7 @@ using Boudica.Helpers;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
+using Boudica.Extensions;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -31,6 +32,8 @@ namespace Boudica.Commands
         private readonly APIService _apiService;
         private readonly GifService _gifService;
         private readonly Giphy _giphy;
+        private readonly Emoji _successEmoji;
+        private readonly Emoji _failEmoji;
 
         public ARGCommands(IServiceProvider services, IConfiguration configuration)
         {
@@ -39,6 +42,8 @@ namespace Boudica.Commands
             _apiService = services.GetRequiredService<APIService>();
             _gifService = services.GetRequiredService<GifService>();
             _giphy = new Giphy(configuration[nameof(Mongosettings.GiphyApiKey)]);
+            _successEmoji = new Emoji("✅");
+            _failEmoji = new Emoji("❌");
             //_itemService = services.GetRequiredService<ItemService>();
             //_eververseService = services.GetRequiredService<EververseService>();
             //_inventoryService = services.GetRequiredService<InventoryService>();
@@ -112,7 +117,7 @@ namespace Boudica.Commands
         {
             await DeferAsync();
             Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
-            if(guardian.GuardianCharacters.Count == 0)
+            if (guardian.GuardianCharacters.Count == 0)
             {
                 bool populateResult = await PopulateGuardianInformation();
                 if (populateResult == false) return;
@@ -137,18 +142,35 @@ namespace Boudica.Commands
 
                 if (match.Key > 0)
                 {
-                    sb.AppendLine($"" +
-                        $"Activity Name: {match.Value} | " +
-                        $"Mode: {((ActivityModeType)bungieActivity.BungieActivityDetails.Mode).ToString()} | " +
-                        $"Kills: {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "kills").Value.Basic.DisplayValue} | " +
-                        $"Completed {bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "completed").Value.Basic.DisplayValue}");
+                    //More than likely Rift.
+                    if (bungieActivity.BungieActivityDetails.Mode == 0)
+                    {
+                        sb.AppendLine($"" +
+                           $"{((ActivityModeType)bungieActivity.BungieActivityDetails.Modes.First()).ToName()} - " +
+                           $"{match.Value} - ");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"" +
+                           $"{((ActivityModeType)bungieActivity.BungieActivityDetails.Mode).ToName()} - " +
+                           $"{match.Value} - ");
+                    }
+
+                    if(bungieActivity.Values.FirstOrDefault(x => x.Value.StatId == "completed").Value.Basic.DisplayValue == "Yes")
+                    {
+                        sb.Append($"{_successEmoji} ");
+                    }
+                    else
+                    {
+                        sb.Append($"{_failEmoji} ");
+                    }
                 }
             }
-            int breakHere = 0;
-            if(sb.Length > 0)
-                await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = sb.ToString());
+
+            if (sb.Length > 0)
+                await FollowupAsync(embed: EmbedHelper.CreateInfoReply(sb.ToString()).Build());
             else
-                await Context.Interaction.ModifyOriginalResponseAsync(x => x.Content = "Nothing to see here");
+                await FollowupAsync(embed: EmbedHelper.CreateInfoReply("Nothing to see here").Build());
         }
 
         [SlashCommand("manifest-info", "Get Guardian History")]
