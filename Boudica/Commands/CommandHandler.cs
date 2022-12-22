@@ -699,7 +699,7 @@ namespace Boudica.Commands
                         {
                             return;
                         }
-                        await _guardianService.IncreaseGlimmerAsync(user.Id, user.DisplayName, 1);
+                        await _guardianService.IncreaseGlimmerAsync(user.Id, user.DisplayName, (1 * 2));
                     }
                 }
             }
@@ -1515,7 +1515,7 @@ namespace Boudica.Commands
         private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
         {
             if (activityUsers == null) return new Tuple<int, bool>(-1, false);
-            int increaseAmount = 1 * activityUsers.Count(x => x.Reacted);
+            int increaseAmount = (1 * activityUsers.Count(x => x.Reacted)) * 2;
             bool awardedThisWeek = false;
             foreach (ActivityUser user in activityUsers)
             {
