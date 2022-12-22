@@ -79,9 +79,9 @@ namespace Boudica.Commands
                 List<PlayerVote> allPlayerVotes = await _trialsService.GetAllTrialsGuesses();
                 foreach (PlayerVote playerVote in allPlayerVotes)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 5);
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 5 * 2);
                 }
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}... sooo you're all winners! 5 Glimmer for everyone!!").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}... sooo you're all winners! 10 Glimmer for everyone!!").Build());
             }
             else
             {
@@ -89,7 +89,7 @@ namespace Boudica.Commands
                 sb.Append($"Congratulations to <@{winningPlayerVotes[0].Id}>, you were first to guess the correct map **{trialsMap}**!");
                 sb.AppendLine("");
                 sb.AppendJoin(", ", winningPlayerVotes.Select(x => x.Username));
-                sb.Append(" have been awarded 5 Glimmer for guessing correctly, everyone else has received 1 Glimmer for entering!");
+                sb.Append(" have been awarded 10 Glimmer for guessing correctly, everyone else has received 5 Glimmer for entering!");
 
                 List<PlayerVote> allPlayerVotes = await _trialsService.GetAllTrialsGuesses();
                 List<PlayerVote> oneGlimmerPlayers = new List<PlayerVote>();
@@ -103,12 +103,12 @@ namespace Boudica.Commands
 
                 foreach(PlayerVote playerVote in oneGlimmerPlayers)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 1);
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 5);
                 }
 
                 foreach (PlayerVote playerVote in winningPlayerVotes)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 5);
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 10);
                 }
 
                 await RespondAsync(sb.ToString());
