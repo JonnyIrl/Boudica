@@ -173,8 +173,8 @@ namespace Boudica.Commands
                 await FollowupAsync(embed: EmbedHelper.CreateInfoReply("Nothing to see here").Build());
         }
 
-        [SlashCommand("manifest-info", "Get Guardian History")]
-        [AccountLinked]
+        //[SlashCommand("manifest-info", "Get Guardian History")]
+        //[AccountLinked]
         public async Task GetManifestInfo()
         {
             await DeferAsync();
@@ -341,9 +341,9 @@ namespace Boudica.Commands
             if(user.UserId == Context.User.Id)
             {
                 //Reverse Uno
-                await ReplyAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
+                await RespondAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
                 await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
-                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
+                await FollowupAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
                 return;
             }
 
