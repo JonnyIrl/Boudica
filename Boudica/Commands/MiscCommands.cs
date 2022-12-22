@@ -21,12 +21,16 @@ namespace Boudica.Commands
 
         private readonly InsultService _insultService;
         private readonly AwardedGuardianService awardedGuardianService;
+        private readonly GuardianService _guardianService;
+        private readonly DailyGiftService _dailyGiftService;
 
         private const int CreatorPoints = 5;
         public MiscCommands(IServiceProvider services)
         {
             _insultService = services.GetRequiredService<InsultService>();
             awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
+            _guardianService = services.GetRequiredService<GuardianService>();
+            _dailyGiftService = services.GetRequiredService<DailyGiftService>();
         }
 
         [SlashCommand("insult", "Choose a player to insult")]
@@ -146,5 +150,69 @@ namespace Boudica.Commands
                 x.Embed = embed.Build();
             });
         }       
+
+        [SlashCommand("daily-gift", "Every day, get a free daily gift of 2-10 Glimmer!")]
+        public async Task DailyGift()
+        {
+            const string OneGlimmer = "https://i.imgur.com/bRbtWlE.gif";
+            const string TwoGlimmer = "https://i.imgur.com/KHkbILH.gif";
+            const string ThreeGlimmer = "https://i.imgur.com/8M22qQz.gif";
+            const string FourGlimmer = "https://i.imgur.com/iwXpEno.gif";
+            const string FiveGlimmer = "https://i.imgur.com/tvjtrm4.gif";
+            const string SixGlimmer = "https://i.imgur.com/wlxZVcq.gif";
+            const string SevenGlimmer = "https://i.imgur.com/LbYqjld.gif";
+            const string EightGlimmer = "https://i.imgur.com/v8e27qk.gif";
+            const string NineGlimmer = "https://i.imgur.com/iQ4k7ur.gif";
+            const string TenGlimmer = "https://i.imgur.com/KsRZ6eA.gif";
+
+            DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
+            if(dailyGift != null && dailyGift.DateTimeLastGifted.Date == DateTime.UtcNow.Date)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build());
+                return;
+            }
+            Random random = new Random();
+            int amount = random.Next(2, 11);
+            await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);
+            await _dailyGiftService.UpsertUsersDailyGift(Context.User.Id);
+            switch(amount)
+            {
+                case 1:
+                    await RespondAsync(OneGlimmer);
+                    break;
+                case 2:
+                    await RespondAsync(TwoGlimmer);
+                    break;
+                case 3:
+                    await RespondAsync(ThreeGlimmer);
+                    break;
+                case 4:
+                    await RespondAsync(FourGlimmer);
+                    break;
+                case 5:
+                    await RespondAsync(FiveGlimmer);
+                    break;
+                case 6:
+                    await RespondAsync(SixGlimmer);
+                    break;
+                case 7:
+                    await RespondAsync(SevenGlimmer);
+                    break;
+                case 8:
+                    await RespondAsync(EightGlimmer);
+                    break;
+                case 9:
+                    await RespondAsync(NineGlimmer);
+                    break;
+                case 10:
+                    await RespondAsync(TenGlimmer);
+                    break;
+                default:
+                    await RespondAsync(embed: EmbedHelper.CreateFailedReply("Something went wrong..").Build());
+                    break;
+            }
+            Thread.Sleep(5000);
+            await FollowupAsync(embed: EmbedHelper.CreateSuccessReply($"You have received {amount} Glimmer as your daily gift!").Build());
+        }
     }
 }
