@@ -47,6 +47,11 @@ namespace Boudica.Services
             return new Tuple<bool, string>(true, string.Empty);
         }
 
+        public async Task<AwardedGuardians> GetLastAwardedGuardian(ulong userId)
+        {
+            return await _awardedGuardiansCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        }
+
         public async Task<bool> AwardGuardian(ulong userId, ulong awardedGuardianId, string userName, int multiplier = 1, bool isSuperSub = false)
         {
             if (userId <= 0 || awardedGuardianId <= 0) throw new ArgumentNullException("Id must be provided to update");

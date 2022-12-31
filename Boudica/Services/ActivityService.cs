@@ -25,8 +25,8 @@ namespace Boudica.Services
         {
             _mongoDBContext = mongoDBContext;
 #if DEBUG
-            _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(typeof(MongoDB.Models.Raid).Name + "Test");
-            _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(typeof(MongoDB.Models.Fireteam).Name + "Test");
+            _raidCollection = _mongoDBContext.GetCollection<Raid>(typeof(Raid).Name + "Test");
+            _fireteamCollection = _mongoDBContext.GetCollection<Fireteam>(typeof(Fireteam).Name + "Test");
 #else
             _raidCollection = _mongoDBContext.GetCollection<MongoDB.Models.Raid>(typeof(MongoDB.Models.Raid).Name);
             _fireteamCollection = _mongoDBContext.GetCollection<MongoDB.Models.Fireteam>(typeof(MongoDB.Models.Fireteam).Name);
@@ -104,9 +104,13 @@ namespace Boudica.Services
 
             return await _fireteamCollection.Find(x => x.AwardedGlimmer && x.CreatedByUserId == userId).AnyAsync();
         }
-#endregion
+        public async Task<List<Raid>> GetAllRaids(ulong guildId)
+        {
+            return await _raidCollection.Find(x => x.GuidId == guildId).ToListAsync();
+        }
+        #endregion
 
-#region Mongo Fireteam
+        #region Mongo Fireteam
         public async Task<MongoDB.Models.Fireteam> CreateFireteamAsync(MongoDB.Models.Fireteam fireteam)
         {
             if (fireteam.CreatedByUserId <= 0) throw new ArgumentNullException("CreatedByUserId must be provided");
@@ -160,7 +164,11 @@ namespace Boudica.Services
                 .SortByDescending(x => x.Id)
                 .FirstOrDefaultAsync();
         }
-#endregion
+        public async Task<List<Fireteam>> GetAllFireteams(ulong guildId)
+        {
+            return await _fireteamCollection.Find(x => x.GuidId == guildId).ToListAsync();
+        }
+        #endregion
     }
 
     public static class DateTimeExtensions
