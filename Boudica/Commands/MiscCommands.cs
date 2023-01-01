@@ -160,7 +160,14 @@ namespace Boudica.Commands
         [SlashCommand("daily-gift", "Every day, get a free daily gift of 2-10 Glimmer!")]
         public async Task DailyGift()
         {
-            if(DateTime.UtcNow.Date == DateTime.Parse("2023-01-01 00:00:00").Date)
+            DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
+            if (dailyGift != null && dailyGift.DateTimeLastGifted.Date == DateTime.UtcNow.Date)
+            {
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build());
+                return;
+            }
+
+            if (DateTime.UtcNow.Date == DateTime.Parse("2023-01-01 00:00:00").Date)
             {
                 await DailyGift_NewYears();
                 return;
@@ -177,12 +184,7 @@ namespace Boudica.Commands
             //const string NineGlimmer = "https://i.imgur.com/iQ4k7ur.gif";
             //const string TenGlimmer = "https://i.imgur.com/KsRZ6eA.gif";
 
-            DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
-            if (dailyGift != null && dailyGift.DateTimeLastGifted.Date == DateTime.UtcNow.Date)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build());
-                return;
-            }
+           
             Random random = new Random();
             int amount = random.Next(2, 11);
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);

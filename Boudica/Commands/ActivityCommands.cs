@@ -217,7 +217,7 @@ namespace Boudica.Commands
         [SlashCommand("fireteam", "Create a Fireteam")]
         public async Task CreateFireteamCommand()
         {
-            await RespondWithModalAsync(ModalHelper.CreateFireteamModal());    
+            await RespondWithModalAsync(ModalHelper.CreateFireteamModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });    
         }
        
         private IRole GetRoleForChannel(ulong channelId)
