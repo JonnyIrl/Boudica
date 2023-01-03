@@ -1515,7 +1515,7 @@ namespace Boudica.Commands
         private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
         {
             if (activityUsers == null) return new Tuple<int, bool>(-1, false);
-            int increaseAmount = (1 * activityUsers.Count(x => x.Reacted)) * 2;
+            int increaseAmount = (1 * activityUsers.Count(x => x.Reacted));
             bool awardedThisWeek = false;
             foreach (ActivityUser user in activityUsers)
             {

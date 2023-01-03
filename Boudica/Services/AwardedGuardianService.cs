@@ -75,7 +75,7 @@ namespace Boudica.Services
                 success = result.IsAcknowledged;
             }
             if (!success) return false;
-            success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, (AwardedGlimmerAmount * multiplier) * 2);
+            success = await _guardianService.IncreaseGlimmerAsync(awardedGuardianId, userName, (AwardedGlimmerAmount * multiplier));
             return success;
 
 #endif
