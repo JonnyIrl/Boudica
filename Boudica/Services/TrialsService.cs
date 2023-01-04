@@ -106,7 +106,7 @@ namespace Boudica.Services
 
             var updateBuilder = Builders<TrialsVote>.Update;
             var updateResult = await _trialsCollection.UpdateOneAsync(x => x.Id == existingVote.Id, updateBuilder.AddToSet("PlayerVotes", existingPlayerVote));
-
+           
             return updateResult.IsAcknowledged;
         }
 
@@ -129,7 +129,6 @@ namespace Boudica.Services
 
             var updateBuilder = Builders<TrialsVote>.Update;
             var updateResult = await _trialsCollection.UpdateOneAsync(x => x.Id == existingVote.Id, updateBuilder.AddToSet("PlayerVotes", existingPlayerVote));
-
             return updateResult.IsAcknowledged;
         }
 

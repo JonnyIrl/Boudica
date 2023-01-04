@@ -138,6 +138,7 @@ class Program
             .AddSingleton<IMongoDBContext, MongoDBContext>()
             .AddSingleton<APIService>()
             .AddScoped<DailyGiftService>()
+            .AddScoped<HistoryService>()
             .BuildServiceProvider();
     }
 }

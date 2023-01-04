@@ -1,4 +1,5 @@
-﻿using Boudica.Helpers;
+﻿using Boudica.Enums;
+using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
@@ -17,6 +18,7 @@ namespace Boudica.Commands
         private CronService _cronService;
         private readonly TrialsService _trialsService;
         private readonly GuardianService _guardianService;
+        private readonly HistoryService _historyService;
         private const string CrucibleRole = "Crucible Contenders";
 
         public CrucibleCommands(IServiceProvider services)
@@ -24,6 +26,7 @@ namespace Boudica.Commands
             _cronService = services.GetRequiredService<CronService>();
             _trialsService = services.GetRequiredService<TrialsService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _historyService = services.GetRequiredService<HistoryService>();
         }
 
         [SlashCommand("trials-vote", "Vote on this weeks Trials map!")]
@@ -51,6 +54,7 @@ namespace Boudica.Commands
                 if (result)
                 {
                     await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Your vote for {trialsMap.ToName()} has been counted. Thank you for voting!").Build(), ephemeral: true);
+                    await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.TrialsVote);
                 }
                 else
                 {

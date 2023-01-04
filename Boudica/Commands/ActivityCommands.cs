@@ -827,6 +827,7 @@ namespace Boudica.Commands
     public class OtherActivityCommands : ActivityHelper
     {
         private static bool _subscribed = false;
+        private readonly HistoryService _historyService;
         public OtherActivityCommands(IServiceProvider services, CommandHandler handler): base(services, handler)
         {
             if (!_subscribed)
@@ -835,6 +836,8 @@ namespace Boudica.Commands
                 handler.OnAlertFireteamButtonClicked += OnAlertFireteamButtonClicked;
                 _subscribed = true;
             }
+
+            _historyService = services.GetRequiredService<HistoryService>();
         }
 
         private async Task<Result> OnAlertRaidButtonClicked(SocketMessageComponent component, int raidId)
@@ -963,6 +966,7 @@ namespace Boudica.Commands
                     {
                         sb.Append($"<@{userToRemove.UserId}>");
                         existingRaid.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
+                        await _historyService.InsertHistoryRecord(Context.User.Id, guildUser.Id, HistoryType.AddPlayer);
                     }
                 }
             }
@@ -1039,6 +1043,7 @@ namespace Boudica.Commands
                     {
                         sb.Append($"<@{userToRemove.UserId}>");
                         existingFireteam.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
+                        await _historyService.InsertHistoryRecord(Context.User.Id, guildUser.Id, HistoryType.AddPlayer);
                     }
                 }
             }
@@ -1131,7 +1136,11 @@ namespace Boudica.Commands
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not find player to remove from Raid {existingRaid.Id}").Build());
                 return;
             }
-
+            usersToRemove.ForEach(async x =>
+            {
+                await _historyService.InsertHistoryRecord(Context.User.Id, x.UserId, HistoryType.RemovePlayer);
+            });
+            
             await _activityService.UpdateRaidAsync(existingRaid);
 
             var modifiedEmbed = new EmbedBuilder();

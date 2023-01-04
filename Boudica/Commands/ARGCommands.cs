@@ -31,6 +31,7 @@ namespace Boudica.Commands
         private readonly AwardedGuardianService _awardedGuardianService;
         private readonly APIService _apiService;
         private readonly GifService _gifService;
+        private readonly HistoryService _historyService;
         private readonly Giphy _giphy;
         private readonly Emoji _successEmoji;
         private readonly Emoji _failEmoji;
@@ -41,6 +42,7 @@ namespace Boudica.Commands
             _awardedGuardianService = services.GetRequiredService<AwardedGuardianService>();
             _apiService = services.GetRequiredService<APIService>();
             _gifService = services.GetRequiredService<GifService>();
+            _historyService = services.GetRequiredService<HistoryService>();
             _giphy = new Giphy(configuration[nameof(Mongosettings.GiphyApiKey)]);
             _successEmoji = new Emoji("✅");
             _failEmoji = new Emoji("❌");
@@ -323,82 +325,86 @@ namespace Boudica.Commands
 
 
         [SlashCommand("award", "Award a player with 3 Glimmer daily")]
-        public async Task AwardPlayer(SocketGuildUser guildUser, string reasonForAward = null)
+        public async Task AwardPlayer(SocketGuildUser user, string reasonForAward = null)
         {
-            if (guildUser == null || guildUser.IsBot)
+            if (user == null || user.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /award @User").Build());
                 return;
             }
 
-            ActivityUser user = new ActivityUser(guildUser.Id, guildUser.DisplayName);
-            if(user == null)
+            ActivityUser activityUser = new ActivityUser(user.Id, user.DisplayName);
+            if(activityUser == null)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /award @User").Build());
                 return;
             }
 
-            if(user.UserId == Context.User.Id)
+            if(activityUser.UserId == Context.User.Id)
             {
                 //Reverse Uno
                 await RespondAsync("https://media.giphy.com/media/Wt6kNaMjofj1jHkF7t/giphy.gif");
-                await _guardianService.RemoveGlimmerAsync(user.UserId, 3);
-                await FollowupAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
+                await _guardianService.RemoveGlimmerAsync(activityUser.UserId, 3);
+                await FollowupAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer! *SIKE*, you have lost 3 glimmer.. nice try!");
                 return;
             }
 
-            Tuple<bool, string> canAwardPlayer = await _awardedGuardianService.CanAwardGlimmerToGuardian(Context.User.Id, user.UserId);
+            Tuple<bool, string> canAwardPlayer = await _awardedGuardianService.CanAwardGlimmerToGuardian(Context.User.Id, activityUser.UserId);
             if(canAwardPlayer.Item1 == false)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply(canAwardPlayer.Item2).Build());
                 return;
             }
 
-            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName);
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, activityUser.UserId, activityUser.DisplayName);
             try
             {
                 if(string.IsNullOrEmpty(reasonForAward))
-                    await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+                    await RespondAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer!");
                 else
-                    await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
+                    await RespondAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
+
+                await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.Award);
             }
             catch(Exception ex)
             {
                 if (string.IsNullOrEmpty(reasonForAward))
-                    await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer!");
+                    await ReplyAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer!");
                 else
-                    await ReplyAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
+                    await ReplyAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer for {reasonForAward}");
             }
         }
 
         [RequireUserPermission(GuildPermission.KickMembers)]
         [SlashCommand("supersub", "Award a Player with 6 Glimmer for being a Super Sub!")]
-        public async Task AwardSuperSubPlayer(SocketGuildUser guildUser, string reason = null)
+        public async Task AwardSuperSubPlayer(SocketGuildUser user, string reason = null)
         {
-            if(guildUser == null || guildUser.IsBot)
+            if(user == null || user.IsBot)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /supersub @User").Build());
                 return;
             }
-            ActivityUser user = new ActivityUser(guildUser.Id, guildUser.DisplayName);
-            if (user == null)
+            ActivityUser activityUser = new ActivityUser(user.Id, user.DisplayName);
+            if (activityUser == null)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("Invalid command, provide a user to get rewarded like /supersub @User").Build());
                 return;
             }
 
-            if (user.UserId == Context.User.Id)
+            if (activityUser.UserId == Context.User.Id)
             {
-                await _guardianService.RemoveGlimmerAsync(user.UserId, 9);
-                await RespondAsync($"<@{user.UserId}>, you have lost 9 glimmer!");
+                await _guardianService.RemoveGlimmerAsync(activityUser.UserId, 9);
+                await RespondAsync($"<@{activityUser.UserId}>, you have lost 9 glimmer!");
                 return;
             }
 
-            await _awardedGuardianService.AwardGuardian(Context.User.Id, user.UserId, user.DisplayName, 1, true);
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, activityUser.UserId, activityUser.DisplayName, 1, true);
             if(string.IsNullOrEmpty(reason))
-                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
+                await RespondAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
             else
-                await RespondAsync($"<@{user.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub and {reason}!");
+                await RespondAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub and {reason}!");
+
+            await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.SuperSub);
         }    
 
 

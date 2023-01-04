@@ -1,4 +1,5 @@
-﻿using Boudica.Helpers;
+﻿using Boudica.Enums;
+using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
@@ -24,6 +25,7 @@ namespace Boudica.Commands
         private readonly GuardianService _guardianService;
         private readonly ActivityService _activityService;
         private readonly DailyGiftService _dailyGiftService;
+        private readonly HistoryService _historyService;
 
         private const int CreatorPoints = 5;
 
@@ -37,6 +39,7 @@ namespace Boudica.Commands
             _guardianService = services.GetRequiredService<GuardianService>();
             _dailyGiftService = services.GetRequiredService<DailyGiftService>();
             _activityService = services.GetRequiredService<ActivityService>();
+            _historyService = services.GetRequiredService<HistoryService>();
         }
 
         [SlashCommand("insult", "Choose a player to insult")]
@@ -69,7 +72,7 @@ namespace Boudica.Commands
                 }
 
                 await _insultService.UpsertUsersInsult(Context.User.Id);
-
+                await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.Insult);
             }
             catch (Exception ex)
             {
@@ -95,7 +98,8 @@ namespace Boudica.Commands
                     else
                     {
                         string compliment = Compliments.GetRandomCompliment();
-                        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"<@{user.Id}> {compliment}").Build());
+                    await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.Compliment);
+                    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"<@{user.Id}> {compliment}").Build());
                     }
             }
             catch (Exception ex)
@@ -189,6 +193,7 @@ namespace Boudica.Commands
             int amount = random.Next(2, 11);
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);
             await _dailyGiftService.UpsertUsersDailyGift(Context.User.Id);
+            await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.DailyGift);
             await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"You have received {amount} Glimmer as your daily gift!").Build());
             //switch(amount)
             //{
