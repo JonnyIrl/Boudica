@@ -20,7 +20,11 @@ namespace Boudica.Services
         public InsultService(IMongoDBContext mongoDBContext)
         {
             _mongoDBContext = mongoDBContext;
+#if DEBUG
+            string name = typeof(Insult).Name + "Test";
+#else
             string name = typeof(Insult).Name;
+#endif
             _insultCollection = _mongoDBContext.GetCollection<Insult>(name);
         }
 

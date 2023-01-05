@@ -21,7 +21,12 @@ namespace Boudica.Services
         public AwardedGuardianService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
             _mongoDBContext = mongoDBContext;
-            _awardedGuardiansCollection = _mongoDBContext.GetCollection<AwardedGuardians>(typeof(AwardedGuardians).Name);
+#if DEBUG
+            string name = typeof(AwardedGuardians).Name + "Test";
+#else
+            string name = typeof(AwardedGuardians).Name;
+#endif
+            _awardedGuardiansCollection = _mongoDBContext.GetCollection<AwardedGuardians>(name);
             _settingsService = services.GetRequiredService<SettingsService>();
             _guardianService = services.GetRequiredService<GuardianService>();
 

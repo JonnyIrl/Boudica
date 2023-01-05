@@ -18,9 +18,9 @@ namespace Boudica.Services
         {
             _mongoDBContext = mongoDBContext;
 #if DEBUG
-            string name = typeof(UserChallenge).Name + "Test";
+            string name = typeof(HistoryRecord).Name + "Test";
 #else
-            string name = typeof(UserChallenge).Name;
+            string name = typeof(HistoryRecord).Name;
 #endif
             _historyRecordCollection = _mongoDBContext.GetCollection<HistoryRecord>(name);
         }

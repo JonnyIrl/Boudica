@@ -950,13 +950,13 @@ namespace Boudica.Commands
 
             List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
             StringBuilder sb = new StringBuilder();
-            foreach (ActivityUser userToRemove in usersToAdd)
+            foreach (ActivityUser userToAdd in usersToAdd)
             {
-                IGuildUser guildUser = Context.Guild.GetUser(userToRemove.UserId);
+                IGuildUser guildUser = Context.Guild.GetUser(userToAdd.UserId);
                 if (guildUser != null)
                 {
 
-                    ActivityUser existingUser = existingRaid.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId);
+                    ActivityUser existingUser = existingRaid.Players.FirstOrDefault(x => x.UserId == userToAdd.UserId);
                     //Already added
                     if (existingUser != null)
                     {
@@ -964,7 +964,7 @@ namespace Boudica.Commands
                     }
                     else if (existingRaid.Players.Count < existingRaid.MaxPlayerCount)
                     {
-                        sb.Append($"<@{userToRemove.UserId}>");
+                        sb.Append($"<@{userToAdd.UserId}>");
                         existingRaid.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
                         await _historyService.InsertHistoryRecord(Context.User.Id, guildUser.Id, HistoryType.AddPlayer);
                     }
@@ -1027,13 +1027,13 @@ namespace Boudica.Commands
 
             List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
             StringBuilder sb = new StringBuilder();
-            foreach (ActivityUser userToRemove in usersToAdd)
+            foreach (ActivityUser userToAdd in usersToAdd)
             {
-                IGuildUser guildUser = Context.Guild.GetUser(userToRemove.UserId);
+                IGuildUser guildUser = Context.Guild.GetUser(userToAdd.UserId);
                 if (guildUser != null)
                 {
 
-                    ActivityUser existingUser = existingFireteam.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId);
+                    ActivityUser existingUser = existingFireteam.Players.FirstOrDefault(x => x.UserId == userToAdd.UserId);
                     //Already added
                     if (existingUser != null)
                     {
@@ -1041,7 +1041,7 @@ namespace Boudica.Commands
                     }
                     else if (existingFireteam.Players.Count < existingFireteam.MaxPlayerCount)
                     {
-                        sb.Append($"<@{userToRemove.UserId}>");
+                        sb.Append($"<@{userToAdd.UserId}>");
                         existingFireteam.Players.Add(new ActivityUser(guildUser.Id, guildUser.DisplayName));
                         await _historyService.InsertHistoryRecord(Context.User.Id, guildUser.Id, HistoryType.AddPlayer);
                     }
@@ -1118,6 +1118,7 @@ namespace Boudica.Commands
 
             List<ActivityUser> usersToRemove = AddPlayersToNewActivity(playersToRemove);
             StringBuilder sb = new StringBuilder();
+            List<ulong> removeIds = new List<ulong>();
 
             foreach (ActivityUser userToRemove in usersToRemove)
             {
@@ -1125,7 +1126,11 @@ namespace Boudica.Commands
                 if (guildUser != null)
                 {
                     sb.Append($"<@{userToRemove.UserId}>");
-                    existingRaid.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                    if (existingRaid.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId) != null)
+                    {
+                        existingRaid.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                        removeIds.Add(userToRemove.UserId);
+                    }
                     _commandHandler.AddPlayerToManualEmoteList(guildUser.Id);
                     await message.RemoveReactionAsync(_jEmoji, guildUser);
                 }
@@ -1136,11 +1141,7 @@ namespace Boudica.Commands
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not find player to remove from Raid {existingRaid.Id}").Build());
                 return;
             }
-            usersToRemove.ForEach(async x =>
-            {
-                await _historyService.InsertHistoryRecord(Context.User.Id, x.UserId, HistoryType.RemovePlayer);
-            });
-            
+          
             await _activityService.UpdateRaidAsync(existingRaid);
 
             var modifiedEmbed = new EmbedBuilder();
@@ -1157,6 +1158,10 @@ namespace Boudica.Commands
             });
 
             await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Raid {existingRaid.Id}").Build());
+            removeIds.ForEach(async x =>
+            {
+                await _historyService.InsertHistoryRecord(Context.User.Id, x, HistoryType.RemovePlayer);
+            });
         }
         private async Task RemovePlayerFromFireteam(int fireteamId, string playersToRemove)
         {
@@ -1185,13 +1190,18 @@ namespace Boudica.Commands
 
             List<ActivityUser> usersToRemove = AddPlayersToNewActivity(playersToRemove);
             StringBuilder sb = new StringBuilder();
+            List<ulong> removeIds = new List<ulong>();
             foreach (ActivityUser userToRemove in usersToRemove)
             {
                 IGuildUser guildUser = Context.Guild.GetUser(userToRemove.UserId);
                 if (guildUser != null)
                 {
                     sb.Append($"<@{userToRemove.UserId}>");
-                    existingFireteam.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                    if (existingFireteam.Players.FirstOrDefault(x => x.UserId == userToRemove.UserId) != null)
+                    {
+                        existingFireteam.Players.RemoveAll(x => x.UserId == userToRemove.UserId);
+                        removeIds.Add(userToRemove.UserId);
+                    }
                     _commandHandler.AddPlayerToManualEmoteList(guildUser.Id);
                     await message.RemoveReactionAsync(_jEmoji, guildUser);
                 }
@@ -1220,7 +1230,10 @@ namespace Boudica.Commands
 
             await message.ReplyAsync(null, false, EmbedHelper.CreateSuccessReply($"{sb.ToString()} has been removed from the Fireteam {existingFireteam.Id}").Build());
             await RespondAsync("Success", ephemeral: true);
-
+            removeIds.ForEach(async x =>
+            {
+                await _historyService.InsertHistoryRecord(Context.User.Id, x, HistoryType.RemovePlayer);
+            });
         }
         private ActivityUser CreateActivityUser(SocketGuildUser user)
         {

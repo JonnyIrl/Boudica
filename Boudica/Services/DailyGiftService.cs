@@ -16,7 +16,11 @@ namespace Boudica.Services
         public DailyGiftService(IMongoDBContext mongoDBContext)
         {
             _mongoDBContext = mongoDBContext;
+#if DEBUG
+            string name = typeof(DailyGift).Name + "Test";
+#else
             string name = typeof(DailyGift).Name;
+#endif
             _dailyGiftCollection = _mongoDBContext.GetCollection<DailyGift>(name);
         }
 
