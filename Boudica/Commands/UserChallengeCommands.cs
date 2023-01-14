@@ -19,11 +19,13 @@ namespace Boudica.Commands
     {
         private readonly UserChallengeService _userChallengeService;
         private readonly GuardianService _guardianService;
+        private readonly HistoryService _historyService;
         private static bool _subscribed = false;
         public UserChallengeCommands(IServiceProvider services, CommandHandler handler)
         {
             _userChallengeService = services.GetRequiredService<UserChallengeService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _historyService = services.GetRequiredService<HistoryService>();
             if (!_subscribed)
             {
                 handler.OnAcceptChallengeButtonClicked += OnAcceptChallengeButtonClicked;
@@ -31,6 +33,121 @@ namespace Boudica.Commands
                 handler.OnEnterGuessModalSubmitted += OnEnterGuessModalSubmitted;
                 _subscribed = true;
             }
+        }
+
+        [SlashCommand("challenge", "Challenge a User")]
+        public async Task CreateUserChallenge(
+            [Summary("personToChallenge", "Person to Challenge")] SocketGuildUser personToChallenge,
+            [Summary("wager", "The amount to bet")] int wager,
+            [Summary("challenge", "Choose a Challenge")] Challenge challenge)
+        {
+            if (challenge == Challenge.RandomNumber)
+            {
+                await RespondAsync("Currently a work in progress and will be released soon..");
+                return;
+            }
+            Guardian challenger = await _guardianService.GetGuardian(Context.User.Id);
+            Guardian contender = await _guardianService.GetGuardian(personToChallenge.Id);
+            if (challenger.Glimmer < wager)
+            {
+                await RespondAsync("You do not have enough glimmer to bet");
+                return;
+            }
+            if (contender.Glimmer < wager)
+            {
+                await RespondAsync($"{personToChallenge.Username} does not have enough glimmer to accept");
+                return;
+            }
+
+
+            UserChallenge userChallenge = await _userChallengeService.CreateUserChallenge(
+                Context.User.Id,
+                Context.User.Username,
+                personToChallenge.Id,
+                personToChallenge.Username,
+                wager,
+                challenge);
+
+            EmbedBuilder embedBuilder = CreateChallengeEmbed(challenge);
+            var acceptButton = new ComponentBuilder()
+                .WithButton("Accept Challenge", $"{(int)ButtonCustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
+            await RespondAsync(text: $"<@{personToChallenge.Id}> click the accept button if you accept the challenge. With a wager of **{wager}** Glimmer!", embed: embedBuilder.Build(), components: acceptButton.Build());
+            IUserMessage newMessage = await GetOriginalResponseAsync();
+            if (newMessage != null)
+            {
+                await _userChallengeService.UpdateChallengeMessageDetails(userChallenge.SessionId, Context.Guild.Id, Context.Channel.Id, newMessage.Id);
+            }
+            await _historyService.InsertHistoryRecord(new HistoryRecord() { UserId = Context.User.Id, TargetUserId = personToChallenge.Id, HistoryType = HistoryType.UserChallenge });
+        }
+
+        private async Task<Result> OnAcceptChallengeButtonClicked(SocketMessageComponent component, long sessionId)
+        {
+            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
+            if (userChallenge == null)
+            {
+                return new Result(false, "Could not find challenge to accept");
+            }
+            if (userChallenge.Contender.UserId != component.User.Id)
+            {
+                return new Result(false, "You were not challenged so you cannot accept");
+            }
+
+            CommandResult result = await _userChallengeService.AcceptUserChallenge(sessionId, component.User.Id);
+            if (!result.Success)
+            {
+                if (userChallenge.ExpiredDateTime < DateTime.UtcNow)
+                {
+                    IUserMessage expiredMessage = (IUserMessage)await component.Channel.GetMessageAsync(userChallenge.MessageId, CacheMode.AllowDownload);
+                    if (expiredMessage != null)
+                    {
+                        await expiredMessage.DeleteAsync();
+                    }
+                }
+                return new Result(false, result.Message);
+            }
+
+            await component.RespondAsync("You have accepted the challenge, check the original message and press the Enter Guess button", ephemeral: true);
+
+            IUserMessage message = (IUserMessage)await component.Channel.GetMessageAsync(userChallenge.MessageId, CacheMode.AllowDownload);
+            if (message == null)
+            {
+                return new Result(false, "Could not find message to accept");
+            }
+
+            if (userChallenge.ChallengeType == Challenge.RandomNumber)
+            {
+                await message.ModifyAsync(x =>
+                {
+                    var enterGuessButton = new ComponentBuilder()
+                    .WithButton("Enter Guess", $"{(int)ButtonCustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
+                    x.Components = enterGuessButton.Build();
+                    x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
+                    x.Embed = x.Embed;
+                });
+            }
+            else if (userChallenge.ChallengeType == Challenge.RockPaperScissors)
+            {
+                await message.ModifyAsync(x =>
+                {
+                    var selectMenuBuilder = new SelectMenuBuilder()
+                    {
+
+                        CustomId = $"{(int)SelectMenuCustomId.RockPaperScissors}-{userChallenge.SessionId}",
+                        Placeholder = "Select an option!",
+                        MaxValues = 1,
+                        MinValues = 1
+                    };
+                    selectMenuBuilder.AddOption("Rock", $"{RockPaperScissors.Rock}");
+                    selectMenuBuilder.AddOption("Paper", $"{RockPaperScissors.Paper}");
+                    selectMenuBuilder.AddOption("Scissors", $"{RockPaperScissors.Scissors}");
+
+                    x.Components = new ComponentBuilder().WithSelectMenu(selectMenuBuilder).Build();
+                    x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
+                    x.Embed = x.Embed;
+                });
+            }
+
+            return new Result(true, string.Empty);
         }
 
         private async Task<Result> OnEnterGuessModalSubmitted(SocketModal modal, long sessionId, string guess)
@@ -249,194 +366,6 @@ namespace Boudica.Commands
             }
 
             return new Result(true, string.Empty);
-        }
-
-        private async Task<Result> OnAcceptChallengeButtonClicked(SocketMessageComponent component, long sessionId)
-        {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
-            if(userChallenge == null)
-            {
-                return new Result(false, "Could not find challenge to accept");
-            }
-            if(userChallenge.Contender.UserId != component.User.Id)
-            {
-                return new Result(false, "You were not challenged so you cannot accept");
-            }
-
-            CommandResult result = await _userChallengeService.AcceptUserChallenge(sessionId, component.User.Id);
-            if(!result.Success)
-            {
-                if(userChallenge.ExpiredDateTime < DateTime.UtcNow)
-                {
-                    IUserMessage expiredMessage = (IUserMessage)await component.Channel.GetMessageAsync(userChallenge.MessageId, CacheMode.AllowDownload);
-                    if (expiredMessage != null)
-                    {
-                        await expiredMessage.DeleteAsync();
-                    }
-                }
-                return new Result(false, result.Message);
-            }
-
-            await component.RespondAsync("You have accepted the challenge, check the original message and press the Enter Guess button", ephemeral: true);
-
-            IUserMessage message = (IUserMessage) await component.Channel.GetMessageAsync(userChallenge.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                return new Result(false, "Could not find message to accept");
-            }
-
-            if (userChallenge.ChallengeType == Challenge.RandomNumber)
-            {
-                await message.ModifyAsync(x =>
-                {
-                    var enterGuessButton = new ComponentBuilder()
-                    .WithButton("Enter Guess", $"{(int)ButtonCustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
-                    x.Components = enterGuessButton.Build();
-                    x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
-                    x.Embed = x.Embed;
-                });
-            }
-            else if(userChallenge.ChallengeType == Challenge.RockPaperScissors)
-            {
-                await message.ModifyAsync(x =>
-                {
-                    var selectMenuBuilder = new SelectMenuBuilder()
-                    {
-                        
-                        CustomId = $"{(int)SelectMenuCustomId.RockPaperScissors}-{userChallenge.SessionId}",
-                        Placeholder = "Select an option!",
-                        MaxValues = 1,
-                        MinValues = 1
-                    };
-                    selectMenuBuilder.AddOption("Rock", $"{RockPaperScissors.Rock}");
-                    selectMenuBuilder.AddOption("Paper", $"{RockPaperScissors.Paper}");
-                    selectMenuBuilder.AddOption("Scissors", $"{RockPaperScissors.Scissors}");
-
-                    x.Components = new ComponentBuilder().WithSelectMenu(selectMenuBuilder).Build();
-                    x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
-                    x.Embed = x.Embed;
-                });
-            }
-
-            return new Result(true, string.Empty);
-        }
-
-        [SlashCommand("challenge", "Challenge a User")]
-        public async Task CreateUserChallenge(
-            [Summary("personToChallenge", "Person to Challenge")] SocketGuildUser personToChallenge,
-            [Summary("wager", "The amount to bet")] int wager,
-            [Summary("challenge", "Choose a Challenge")] Challenge challenge)
-        {
-            if(challenge == Challenge.RandomNumber)
-            {
-                await RespondAsync("Current a work in progress and will be released soon..");
-                return;
-            }
-            Guardian challenger = await _guardianService.GetGuardian(Context.User.Id);
-            Guardian contender = await _guardianService.GetGuardian(personToChallenge.Id);
-            if(challenger.Glimmer < wager)
-            {
-                await RespondAsync("You do not have enough glimmer to bet");
-                return;
-            }
-            if(contender.Glimmer < wager)
-            {
-                await RespondAsync($"{personToChallenge.Username} does not have enough glimmer to accept");
-                return;
-            }
-
-
-            UserChallenge userChallenge = await _userChallengeService.CreateUserChallenge(
-                Context.User.Id, 
-                Context.User.Username, 
-                personToChallenge.Id, 
-                personToChallenge.Username, 
-                wager, 
-                challenge);
-
-            EmbedBuilder embedBuilder = CreateChallengeEmbed(challenge);
-            var acceptButton = new ComponentBuilder()
-                .WithButton("Accept Challenge", $"{(int)ButtonCustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
-            await RespondAsync(text: $"<@{personToChallenge.Id}> click the accept button if you accept the challenge. With a wager of **{wager}** Glimmer!", embed: embedBuilder.Build(), components: acceptButton.Build());
-            IUserMessage newMessage = await GetOriginalResponseAsync();
-            if(newMessage != null)
-            {
-                await _userChallengeService.UpdateChallengeMessageDetails(userChallenge.SessionId, Context.Guild.Id, Context.Channel.Id, newMessage.Id);
-            }
-        }
-
-        [SlashCommand("accept-challenge", "Accept a challenge")]
-        public async Task AcceptChallenge([Summary("challengeId", "Challenge Id")]int challengeId)
-        {
-            CommandResult result = await _userChallengeService.AcceptUserChallenge(challengeId, Context.User.Id);
-            if(result.Success == false)
-            {
-                await RespondAsync(result.Message);
-                return;
-            }
-            else
-            {
-                UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(challengeId);
-                await RespondAsync($"<@{userChallenge.Challenger.UserId}>, your challenge has been accepted!\n\nUse {GenerateUserChallengeCommand(userChallenge)} to play!");
-            }
-        }
-
-        public async Task RockPaperScissors2(long challengeId, RockPaperScissors guess)
-        {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(challengeId);
-            if (userChallenge == null)
-            {
-                await RespondAsync("Could not find challenge");
-                return;
-            }
-            else if (userChallenge.Contender.UserId == Context.User.Id)
-            {
-                if (string.IsNullOrEmpty(userChallenge.Contender.Answer))
-                {
-                    userChallenge.Contender.Answer = ((int)guess).ToString();
-                    await RespondAsync("Your guess has been locked in!");
-                }
-                else
-                {
-                    await RespondAsync("You cannot change your guess", ephemeral: true);
-                }
-            }
-            else if (userChallenge.Challenger.UserId == Context.User.Id)
-            {
-                if (string.IsNullOrEmpty(userChallenge.Challenger.Answer))
-                {
-                    userChallenge.Challenger.Answer = ((int)guess).ToString();
-                    await RespondAsync("Your guess has been locked in!");
-                }
-                else
-                {
-                    await RespondAsync("You cannot change your guess", ephemeral: true);
-                }
-            }
-            else
-            {
-                await RespondAsync("You are not part of this challenge");
-                return;
-            }
-
-            userChallenge = await _userChallengeService.GetUserChallenge(challengeId);
-            if(string.IsNullOrEmpty(userChallenge.Contender.Answer) == false && string.IsNullOrEmpty(userChallenge.Challenger.Answer) == false)
-            {
-
-            }
-        }
-
-        private string GenerateUserChallengeCommand(UserChallenge userChallenge)
-        {
-            switch(userChallenge.ChallengeType)
-            {
-                case Challenge.RockPaperScissors:
-                    return $"/challenge-rps {userChallenge.SessionId} Rock/Paper/Scissors";
-                case Challenge.RandomNumber:
-                    return $"/challenge-random {userChallenge.SessionId} Your Guess";
-                default:
-                    return "Something went wrong";
-            }
         }
 
         private EmbedBuilder CreateChallengeEmbed(Challenge challenge)
