@@ -91,6 +91,18 @@ namespace Boudica.Commands
             {
                 return new Result(false, "You were not challenged so you cannot accept");
             }
+            Guardian challenger = await _guardianService.GetGuardian(userChallenge.Challenger.UserId);
+            Guardian contender = await _guardianService.GetGuardian(userChallenge.Contender.UserId);
+            if (challenger.Glimmer < userChallenge.Wager)
+            {
+                await RespondAsync($"{userChallenge.Challenger.UserName} does not have enough glimmer to bet");
+                return new Result(true, string.Empty);
+            }
+            if (contender.Glimmer < userChallenge.Wager)
+            {
+                await RespondAsync($"{userChallenge.Contender.UserName} does not have enough glimmer to bet");
+                return new Result(true, string.Empty);
+            }
 
             CommandResult result = await _userChallengeService.AcceptUserChallenge(sessionId, component.User.Id);
             if (!result.Success)
@@ -145,6 +157,59 @@ namespace Boudica.Commands
                     x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
                     x.Embed = x.Embed;
                 });
+            }
+
+            return new Result(true, string.Empty);
+        }
+
+        private async Task<Result> OnEnterGuessChallengeButtonClicked(SocketMessageComponent component, long sessionId, string guess)
+        {
+            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
+            if (userChallenge == null)
+            {
+                return new Result(false, "Could not find challenge to accept");
+            }
+            else if (userChallenge.Contender.UserId == component.User.Id)
+            {
+                if (string.IsNullOrEmpty(userChallenge.Contender.Answer))
+                {
+                    switch (userChallenge.ChallengeType)
+                    {
+                        case Challenge.RockPaperScissors:
+                            return await RockPaperScissorsGame(component, userChallenge, guess);
+                        case Challenge.RandomNumber:
+                            return new Result(false, "this is not an option yet");
+                        default:
+                            return new Result(false, "Something went wrong");
+                    }
+                }
+                else
+                {
+                    await component.RespondAsync("You cannot change your guess", ephemeral: true);
+                }
+            }
+            else if (userChallenge.Challenger.UserId == component.User.Id)
+            {
+                if (string.IsNullOrEmpty(userChallenge.Challenger.Answer))
+                {
+                    switch (userChallenge.ChallengeType)
+                    {
+                        case Challenge.RockPaperScissors:
+                            return await RockPaperScissorsGame(component, userChallenge, guess);
+                        case Challenge.RandomNumber:
+                            return new Result(false, "this is not an option yet");
+                        default:
+                            return new Result(false, "Something went wrong");
+                    }
+                }
+                else
+                {
+                    await component.RespondAsync("You cannot change your guess", ephemeral: true);
+                }
+            }
+            else
+            {
+                await component.RespondAsync("You are not part of this challenge", ephemeral: true);
             }
 
             return new Result(true, string.Empty);
@@ -313,59 +378,6 @@ namespace Boudica.Commands
             }
 
             return string.Empty;
-        }
-
-        private async Task<Result> OnEnterGuessChallengeButtonClicked(SocketMessageComponent component, long sessionId, string guess)
-        {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
-            if (userChallenge == null)
-            {
-                return new Result(false, "Could not find challenge to accept");
-            }
-            else if (userChallenge.Contender.UserId == component.User.Id)
-            {
-                if (string.IsNullOrEmpty(userChallenge.Contender.Answer))
-                {
-                    switch (userChallenge.ChallengeType)
-                    {
-                        case Challenge.RockPaperScissors:
-                            return await RockPaperScissorsGame(component, userChallenge, guess);
-                        case Challenge.RandomNumber:
-                            return new Result(false, "this is not an option yet");
-                        default:
-                            return new Result(false, "Something went wrong");
-                    }
-                }
-                else
-                {
-                    await component.RespondAsync("You cannot change your guess", ephemeral: true);
-                }
-            }
-            else if (userChallenge.Challenger.UserId == component.User.Id)
-            {
-                if (string.IsNullOrEmpty(userChallenge.Challenger.Answer))
-                {
-                    switch (userChallenge.ChallengeType)
-                    {
-                        case Challenge.RockPaperScissors:
-                            return await RockPaperScissorsGame(component, userChallenge, guess);
-                        case Challenge.RandomNumber:
-                            return new Result(false, "this is not an option yet");
-                        default:
-                            return new Result(false, "Something went wrong");
-                    }
-                }
-                else
-                {
-                    await component.RespondAsync("You cannot change your guess", ephemeral: true);
-                }
-            }
-            else
-            {
-                await component.RespondAsync("You are not part of this challenge");
-            }
-
-            return new Result(true, string.Empty);
         }
 
         private EmbedBuilder CreateChallengeEmbed(Challenge challenge)
