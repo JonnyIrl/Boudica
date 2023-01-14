@@ -6,13 +6,10 @@ using System.Threading.Tasks;
 
 namespace Boudica.Enums
 {
-    public enum ModalInputType
+    public enum RockPaperScissors
     {
-        InputTitle,
-        InputDescription,
-        Select,
-        FireteamSize,
-        AlertChannel,
-        Guess
+        Rock = 0,
+        Paper = 1,
+        Scissors = 2
     }
 }

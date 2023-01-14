@@ -50,6 +50,15 @@ namespace Boudica.Commands
         public event AlertFireteamButtonClicked OnAlertFireteamButtonClicked;
         #endregion
 
+        #region User Challenge Buttons
+        public delegate Task<Result> AcceptChallengeButtonClicked(SocketMessageComponent component, long sessionId);
+        public event AcceptChallengeButtonClicked OnAcceptChallengeButtonClicked;
+        public delegate Task<Result> EnterGuessChallengeButtonClicked(SocketMessageComponent component, long sessionId, string guess);
+        public event EnterGuessChallengeButtonClicked OnEnterGuessChallengeButtonClicked;
+        public delegate Task<Result> EnterGuessModalSubmitted(SocketModal modal, long sessionId, string guess);
+        public event EnterGuessModalSubmitted OnEnterGuessModalSubmitted;
+        #endregion
+
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
@@ -139,6 +148,8 @@ namespace Boudica.Commands
             _client.ModalSubmitted += ModalSubmitted;
 
             _client.ButtonExecuted += ButtonExecuted;
+
+            _client.SelectMenuExecuted += SelectMenuHandler;
             BoudicaInstance.Client = _client;
         }
 
@@ -258,11 +269,82 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to close fireteam", ephemeral: true);
                     break;
+                case ButtonCustomId.AcceptChallenge:
+                    if (OnAcceptChallengeButtonClicked != null)
+                    {
+                        Result result = await OnAcceptChallengeButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to accept challenge - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to accept challenge", ephemeral: true);
+                    break;
+                case ButtonCustomId.EnterGuess:
+                    //if (OnEnterGuessChallengeButtonClicked != null)
+                    //{
+                    //    Result result = await OnEnterGuessChallengeButtonClicked.Invoke(component, id);
+                    //    if (result.Success)
+                    //    {
+
+                    //    }
+                    //    else
+                    //    {
+                    //        await component.RespondAsync("Failed to enter guess - " + result.Message, ephemeral: true);
+                    //    }
+                    //    return;
+                    //}
+                    //await component.RespondAsync("Failed to enter guess", ephemeral: true);
+                    break;
                 default:
                     await component.RespondAsync("Failed", ephemeral: true);
                     break;
             }
             //await component.RespondAsync($"Button click. Type: {buttonClicked}, Id: {id}", ephemeral: true);
+        }
+
+        private async Task SelectMenuHandler(SocketMessageComponent component)
+        {
+            string switchStatement = component.Data.CustomId.Substring(0, component.Data.CustomId.IndexOf("-"));
+            if (int.TryParse(switchStatement, out int swap) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            if (int.TryParse(component.Data.CustomId.Replace(switchStatement + "-", string.Empty).Trim(), out int id) == false)
+            {
+                await component.RespondAsync("Command failed", ephemeral: true);
+                return;
+            }
+            string value = component.Data.Values.First();
+            SelectMenuCustomId selectMenuOption = (SelectMenuCustomId)swap;
+            switch (selectMenuOption)
+            {
+                case SelectMenuCustomId.RockPaperScissors:
+                    if (OnEnterGuessChallengeButtonClicked != null)
+                    {
+                        Result result = await OnEnterGuessChallengeButtonClicked.Invoke(component, id, value);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to enter guess - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to enter guess", ephemeral: true);
+                    break;
+                default:
+                    await component.RespondAsync("Failed", ephemeral: true);
+                    break;
+            }
         }
 
         private async Task UserJoined(SocketGuildUser arg)
@@ -376,6 +458,7 @@ namespace Boudica.Commands
             string description = string.Empty;
             string fireteamSize = string.Empty;
             bool alertChannel = false;
+            string guess = string.Empty;
             foreach (SocketMessageComponentData component in components)
             {
                 if(int.TryParse(component.CustomId, out int modalInputType))
@@ -397,8 +480,9 @@ namespace Boudica.Commands
                         case ModalInputType.AlertChannel:
                             if(string.IsNullOrEmpty(component.Value) == false && component.Value.ToLower() == "yes")
                                 alertChannel = true;
-
-                            Console.WriteLine($"Alert Channel:  { alertChannel}");
+                            break;
+                        case ModalInputType.Guess:
+                            guess = component.Value;
                             break;
                         default:
                             break;
@@ -474,6 +558,22 @@ namespace Boudica.Commands
                         return;
                     }
                     await modal.RespondAsync("Failed to create fireteam", ephemeral: true);
+                    break;
+                case ButtonCustomId.EnterGuess:
+                    if (OnEnterGuessModalSubmitted != null)
+                    {
+                        Result result = await OnEnterGuessModalSubmitted.Invoke(modal, id, guess);
+                        if (result.Success)
+                        {
+                            await modal.FollowupAsync("Successfully entered guess", ephemeral: true);
+                        }
+                        else
+                        {
+                            await modal.RespondAsync("Failed to enter guess - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await modal.RespondAsync("Failed to enter guess", ephemeral: true);
                     break;
                 default:
                     await modal.RespondAsync("Failed", ephemeral: true);

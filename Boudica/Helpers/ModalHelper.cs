@@ -54,5 +54,15 @@ namespace Boudica.Helpers
                  .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, required: false, maxLength: 400);
             return builder.Build();
         }
+
+        public static Modal EditRockPaperScissorsModal(long sessionId)
+        {
+            ModalBuilder builder = new ModalBuilder()
+                 .WithCustomId($"{(int)ButtonCustomId.EnterGuess}-{sessionId}")
+                 .WithTitle("Rock Paper Scissors Guess")
+                 .AddTextInput("For Rock type R, For Paper type P, For Scissors type S",
+                 $"{(int)ModalInputType.Guess}", TextInputStyle.Short, required: true, maxLength: 1);
+            return builder.Build();
+        }
     }
 }

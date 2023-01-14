@@ -16,6 +16,8 @@ namespace Boudica.Enums
         CloseRaid,
         CloseFireteam,
         CreateRaid,
-        CreateFireteam
+        CreateFireteam,
+        AcceptChallenge,
+        EnterGuess,
     }
 }

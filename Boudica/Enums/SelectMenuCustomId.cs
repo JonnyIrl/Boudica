@@ -6,13 +6,8 @@ using System.Threading.Tasks;
 
 namespace Boudica.Enums
 {
-    public enum ModalInputType
+    public enum SelectMenuCustomId
     {
-        InputTitle,
-        InputDescription,
-        Select,
-        FireteamSize,
-        AlertChannel,
-        Guess
+        RockPaperScissors = 0,
     }
 }

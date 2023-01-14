@@ -13,22 +13,31 @@ namespace Boudica.MongoDB.Models
         [BsonId]
         public Guid Id { get; set; }
         public long SessionId { get; set; }
-        public ulong ChallengerId { get; set; }
-        public string ChallengerName { get; set; }
-        public ulong ContenderId { get; set; }
-        public string ContenderName { get; set; }
+        public UserChallengeUser Challenger { get; set; }
+        public UserChallengeUser Contender { get; set; }
         public Challenge ChallengeType { get; set; }
+        public ulong GuildId { get; set; }
+        public ulong ChannelId { get; set; }
+        public ulong MessageId { get; set; }
         public bool Accepted { get; set; }
-        public ulong WinnerId { get; set; }
+        public ulong? WinnerId { get; set; }
         public int Wager { get; set; }
         public DateTime ExpiredDateTime { get; set; }
 
         public UserChallenge(ulong challengerId, string challengerName, ulong contenderId, string contenderName, int wager, Challenge challenge)
         {
-            ChallengerId = challengerId;
-            ChallengerName = challengerName;
-            ContenderId = contenderId;
-            ContenderName = contenderName;
+            Challenger = new UserChallengeUser()
+            {
+                UserId = challengerId,
+                UserName = challengerName,
+                Answer = null
+            };
+            Contender = new UserChallengeUser()
+            {
+                UserId = contenderId,
+                UserName = contenderName,
+                Answer = null
+            };
             Wager = wager;
             ChallengeType = challenge;
         }

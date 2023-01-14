@@ -139,6 +139,7 @@ class Program
             .AddSingleton<APIService>()
             .AddScoped<DailyGiftService>()
             .AddScoped<HistoryService>()
+            .AddScoped<UserChallengeService>()
             .BuildServiceProvider();
     }
 }
