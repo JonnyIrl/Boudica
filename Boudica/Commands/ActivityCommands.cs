@@ -30,7 +30,7 @@ namespace Boudica.Commands
             }
         }
 
-        private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize)
+        private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize, bool alertChannel)
         {
             if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -91,7 +91,7 @@ namespace Boudica.Commands
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannelModal(guildUser, channel.Id);
-            if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount)
+            if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount && alertChannel)
             {
                 await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
                 newMessage = await modal.GetOriginalResponseAsync();
@@ -116,7 +116,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description)
+        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel)
         {
             if(string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -169,7 +169,7 @@ namespace Boudica.Commands
 
                 IUserMessage newMessage;
                 IRole role = GetRoleForChannelModal(guildUser, channel.Id);
-                if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount)
+                if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount && alertChannel)
                 {
                     // this will reply with the embed
                     await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
@@ -211,13 +211,13 @@ namespace Boudica.Commands
         [SlashCommand("raid", "Create a Raid")]
         public async Task CreateRaidCommand()
         {
-            await RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+            await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]
         public async Task CreateFireteamCommand()
         {
-            await RespondWithModalAsync(ModalHelper.CreateFireteamModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });    
+            await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateFireteamModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });    
         }
        
         private IRole GetRoleForChannel(ulong channelId)
@@ -560,7 +560,8 @@ namespace Boudica.Commands
                 x.Components = null;
             });
 
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue)
+            //Has to be more than 1 player in a Raid/Fireteam in order to award glimmer
+            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.Players.Count > 1)
             {
                 await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
                 IUserMessage responseMessage = await GetOriginalResponseAsync();
@@ -664,7 +665,8 @@ namespace Boudica.Commands
                 x.Components = null;
             });
 
-            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            //Has to be more than 1 player in a Raid/Fireteam in order to award glimmer
+            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.Players.Count > 1)
             {
                 await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
                 IUserMessage responseMessage = await GetOriginalResponseAsync();

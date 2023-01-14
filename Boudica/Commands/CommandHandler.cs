@@ -20,7 +20,7 @@ namespace Boudica.Commands
     {
         #region Raid Modals
         public delegate Task<Result> EditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId);
-        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description);
+        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel);
         public event CreateRaidModalSubmitted OnCreateRaidModalSubmitted;
         public event EditRaidModalSubmitted OnEditRaidModalSubmitted;
         #endregion
@@ -36,7 +36,7 @@ namespace Boudica.Commands
 
         #region Fireteam Modals
         public delegate Task<Result> EditFireteamModalSubmitted(ITextChannel channel, string title, string description, int fireteamId);
-        public delegate Task<Result> CreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize);
+        public delegate Task<Result> CreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize, bool alertChannel);
         public event CreateFireteamModalSubmitted OnCreateFireteamModalSubmitted;
         public event EditFireteamModalSubmitted OnEditFireteamModalSubmitted;
         #endregion
@@ -375,6 +375,7 @@ namespace Boudica.Commands
             string title = string.Empty;
             string description = string.Empty;
             string fireteamSize = string.Empty;
+            bool alertChannel = false;
             foreach (SocketMessageComponentData component in components)
             {
                 if(int.TryParse(component.CustomId, out int modalInputType))
@@ -392,6 +393,12 @@ namespace Boudica.Commands
                             break;
                         case ModalInputType.FireteamSize:
                             fireteamSize = component.Value;
+                            break;
+                        case ModalInputType.AlertChannel:
+                            if(string.IsNullOrEmpty(component.Value) == false && component.Value.ToLower() == "yes")
+                                alertChannel = true;
+
+                            Console.WriteLine($"Alert Channel:  { alertChannel}");
                             break;
                         default:
                             break;
@@ -439,7 +446,7 @@ namespace Boudica.Commands
                 case ButtonCustomId.CreateRaid:
                     if (OnCreateRaidModalSubmitted != null)
                     {
-                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description);
+                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, alertChannel);
                         if (result.Success)
                         {
                             await modal.FollowupAsync("Successfully created raid", ephemeral: true);
@@ -455,7 +462,7 @@ namespace Boudica.Commands
                 case ButtonCustomId.CreateFireteam:
                     if (OnCreateFireteamModalSubmitted != null)
                     {
-                        Result result = await OnCreateFireteamModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, fireteamSize);
+                        Result result = await OnCreateFireteamModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, fireteamSize, alertChannel);
                         if (result.Success)
                         {
                             await modal.FollowupAsync("Successfully created fireteam", ephemeral: true);

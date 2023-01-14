@@ -161,13 +161,13 @@ namespace Boudica.Commands
             });
         }       
 
-        [SlashCommand("daily-gift", "Every day, get a free daily gift of 2-10 Glimmer!")]
+        [SlashCommand("daily-gift", "Every day, get a free daily gift of 1-10 Glimmer!")]
         public async Task DailyGift()
         {
             DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
             if (dailyGift != null && dailyGift.DateTimeLastGifted.Date == DateTime.UtcNow.Date)
             {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build());
+                await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build(), ephemeral: true);
                 return;
             }
 
@@ -190,7 +190,7 @@ namespace Boudica.Commands
 
            
             Random random = new Random();
-            int amount = random.Next(2, 11);
+            int amount = random.Next(1, 11);
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);
             await _dailyGiftService.UpsertUsersDailyGift(Context.User.Id);
             await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.DailyGift);

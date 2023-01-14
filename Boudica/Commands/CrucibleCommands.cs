@@ -53,7 +53,7 @@ namespace Boudica.Commands
                 bool result = await _trialsService.AddPlayersVote(Context.User.Id, Context.User.Username, trialsMap);
                 if (result)
                 {
-                    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Your vote for {trialsMap.ToName()} has been counted. Thank you for voting!").Build(), ephemeral: true);
+                    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Your vote for {trialsMap.ToName()} has been counted. Thank you for voting!").Build(), ephemeral: false);
                     await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.TrialsVote);
                 }
                 else

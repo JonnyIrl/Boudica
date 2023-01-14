@@ -11,6 +11,7 @@ namespace Boudica.Enums
         InputTitle,
         InputDescription,
         Select,
-        FireteamSize
+        FireteamSize,
+        AlertChannel
     }
 }
