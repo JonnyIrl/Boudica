@@ -46,6 +46,16 @@ namespace Boudica.Commands
                 await RespondAsync("Currently a work in progress and will be released soon..");
                 return;
             }
+            if(personToChallenge.Id == Context.User.Id)
+            {
+                await RespondAsync("You can't challenge yourself.. dumbass");
+                return;
+            }
+            if(wager <= 0)
+            {
+                await RespondAsync("You must enter a valid number to bet");
+                return;
+            }
             Guardian challenger = await _guardianService.GetGuardian(Context.User.Id);
             Guardian contender = await _guardianService.GetGuardian(personToChallenge.Id);
             if (challenger.Glimmer < wager)
@@ -306,6 +316,8 @@ namespace Boudica.Commands
                     {
                         await _userChallengeService.UpdateChallengeWinnerId(updatedUserChallenge.SessionId, 0);
                     }
+
+                    await _userChallengeService.UpdateClosedChallenge(updatedUserChallenge.SessionId);
                 }
             }
             else

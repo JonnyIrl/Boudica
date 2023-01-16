@@ -23,6 +23,7 @@ namespace Boudica.MongoDB.Models
         public ulong? WinnerId { get; set; }
         public int Wager { get; set; }
         public DateTime ExpiredDateTime { get; set; }
+        public bool IsClosed { get; set; }
 
         public UserChallenge(ulong challengerId, string challengerName, ulong contenderId, string contenderName, int wager, Challenge challenge)
         {

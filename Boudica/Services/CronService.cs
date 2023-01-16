@@ -18,6 +18,7 @@ namespace Boudica.Services
     {
         private readonly Timer _actionTimer;
         private readonly TrialsService _trialsService;
+        private readonly UserChallengeService _userChallengeService;
         private const int FiveMinute = 300000;
         private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
@@ -49,6 +50,7 @@ namespace Boudica.Services
             _cronTaskCollection = _mongoDBContext.GetCollection<CronTask>(typeof(CronTask).Name);
 #endif
             _trialsService = services.GetRequiredService<TrialsService>();
+            _userChallengeService = services.GetRequiredService<UserChallengeService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             if (_actionTimer == null)
             {
@@ -89,6 +91,8 @@ namespace Boudica.Services
         {
             try
             {
+                await CloseAnyOpenChallenges();
+
                 List<CronTask> tasks = await GetTasksToAction();
                 if (tasks.Count == 0)
                 {
@@ -159,11 +163,48 @@ namespace Boudica.Services
                     }
 
                 }
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception happened in CronService");
                 Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private async Task CloseAnyOpenChallenges()
+        {
+            List<UserChallenge> expiredChallenges = await _userChallengeService.GetExpiredChallenges();
+            if(expiredChallenges.Count == 0)
+            {
+                Console.WriteLine("No challenges to be closed");
+                return;
+            }
+
+            foreach(UserChallenge challenge in expiredChallenges)
+            {
+                Console.WriteLine("Closing Challenge: " + challenge.SessionId);
+                await _userChallengeService.UpdateClosedChallenge(challenge.SessionId);
+                SocketGuild guild = _client.GetGuild(challenge.GuildId);
+                if (guild == null)
+                {
+                    Console.WriteLine("Could not find guild");
+                    continue;
+                }
+                SocketTextChannel channel = guild.GetTextChannel(challenge.ChannelId);
+                if (channel == null)
+                {
+                    Console.WriteLine("Could not find channel");
+                    continue;
+                }
+                IUserMessage message = (IUserMessage) await channel.GetMessageAsync(challenge.MessageId);
+                if(message == null)
+                {
+                    Console.WriteLine("Could not find message for Session Id");
+                    continue;
+                }
+
+                await message.DeleteAsync();
             }
         }
 

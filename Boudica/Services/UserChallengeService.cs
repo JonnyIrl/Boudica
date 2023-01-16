@@ -104,5 +104,16 @@ namespace Boudica.Services
 
             return result.IsAcknowledged;
         }
+        public async Task<bool> UpdateClosedChallenge(long sessionId)
+        {
+            var updateBuilder = Builders<UserChallenge>.Update;
+            var result = await _userChallengeCollection.UpdateOneAsync(x => x.SessionId == sessionId,
+                updateBuilder.Set(x => x.IsClosed, true));
+            return result.IsAcknowledged;
+        }
+        public async Task<List<UserChallenge>> GetExpiredChallenges()
+        {
+            return await _userChallengeCollection.Find(x => x.ExpiredDateTime < DateTime.UtcNow && x.Accepted == false && x.IsClosed == false).ToListAsync();
+        }
     }
 }
