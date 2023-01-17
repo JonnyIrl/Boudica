@@ -140,6 +140,7 @@ class Program
             .AddScoped<DailyGiftService>()
             .AddScoped<HistoryService>()
             .AddScoped<UserChallengeService>()
+            .AddScoped<BotChallengeService>()
             .BuildServiceProvider();
     }
 }

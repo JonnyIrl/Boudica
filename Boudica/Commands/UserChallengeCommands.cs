@@ -39,11 +39,11 @@ namespace Boudica.Commands
         public async Task CreateUserChallenge(
             [Summary("personToChallenge", "Person to Challenge")] SocketGuildUser personToChallenge,
             [Summary("wager", "The amount to bet")] int wager,
-            [Summary("challenge", "Choose a Challenge")] Challenge challenge)
+            [Summary("challenge", "Choose a Challenge")] UserChallenges challenge)
         {
-            if (challenge == Challenge.RandomNumber)
+            if (challenge == UserChallenges.RandomNumber)
             {
-                await RespondAsync("Currently a work in progress and will be released soon..");
+                await base.RespondAsync("Currently a work in progress and will be released soon..");
                 return;
             }
             if(personToChallenge.Id == Context.User.Id)
@@ -92,7 +92,7 @@ namespace Boudica.Commands
 
         private async Task<Result> OnAcceptChallengeButtonClicked(SocketMessageComponent component, long sessionId)
         {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
+            MongoDB.Models.UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
             if (userChallenge == null)
             {
                 return new Result(false, "Could not find challenge to accept");
@@ -136,7 +136,7 @@ namespace Boudica.Commands
                 return new Result(false, "Could not find message to accept");
             }
 
-            if (userChallenge.ChallengeType == Challenge.RandomNumber)
+            if (userChallenge.ChallengeType == Enums.UserChallenges.RandomNumber)
             {
                 await message.ModifyAsync(x =>
                 {
@@ -147,7 +147,7 @@ namespace Boudica.Commands
                     x.Embed = x.Embed;
                 });
             }
-            else if (userChallenge.ChallengeType == Challenge.RockPaperScissors)
+            else if (userChallenge.ChallengeType == Enums.UserChallenges.RockPaperScissors)
             {
                 await message.ModifyAsync(x =>
                 {
@@ -174,7 +174,7 @@ namespace Boudica.Commands
 
         private async Task<Result> OnEnterGuessChallengeButtonClicked(SocketMessageComponent component, long sessionId, string guess)
         {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
+            MongoDB.Models.UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
             if (userChallenge == null)
             {
                 return new Result(false, "Could not find challenge to accept");
@@ -185,9 +185,9 @@ namespace Boudica.Commands
                 {
                     switch (userChallenge.ChallengeType)
                     {
-                        case Challenge.RockPaperScissors:
+                        case Enums.UserChallenges.RockPaperScissors:
                             return await RockPaperScissorsGame(component, userChallenge, guess);
-                        case Challenge.RandomNumber:
+                        case Enums.UserChallenges.RandomNumber:
                             return new Result(false, "this is not an option yet");
                         default:
                             return new Result(false, "Something went wrong");
@@ -204,9 +204,9 @@ namespace Boudica.Commands
                 {
                     switch (userChallenge.ChallengeType)
                     {
-                        case Challenge.RockPaperScissors:
+                        case Enums.UserChallenges.RockPaperScissors:
                             return await RockPaperScissorsGame(component, userChallenge, guess);
-                        case Challenge.RandomNumber:
+                        case Enums.UserChallenges.RandomNumber:
                             return new Result(false, "this is not an option yet");
                         default:
                             return new Result(false, "Something went wrong");
@@ -227,7 +227,7 @@ namespace Boudica.Commands
 
         private async Task<Result> OnEnterGuessModalSubmitted(SocketModal modal, long sessionId, string guess)
         {
-            UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
+            MongoDB.Models.UserChallenge userChallenge = await _userChallengeService.GetUserChallenge(sessionId);
             if (userChallenge == null)
             {
                 return new Result(false, "Could not find challenge to accept");
@@ -235,14 +235,14 @@ namespace Boudica.Commands
 
             switch(userChallenge.ChallengeType)
             {
-                case Challenge.RandomNumber:
+                case Enums.UserChallenges.RandomNumber:
                     return new Result(false, "this is not an option yet");
                 default:
                     return new Result(false, "Something went wrong");
             }
         }
 
-        private async Task<Result> RockPaperScissorsGame(SocketMessageComponent component, UserChallenge userChallenge, string guess)
+        private async Task<Result> RockPaperScissorsGame(SocketMessageComponent component, MongoDB.Models.UserChallenge userChallenge, string guess)
         {
             if(guess.ToLower() == "rock")
             {
@@ -328,7 +328,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        private string GetRockPaperScissorsWinnerText(ref UserChallenge userChallenge)
+        private string GetRockPaperScissorsWinnerText(ref MongoDB.Models.UserChallenge userChallenge)
         {
             if(userChallenge.Challenger.Answer == userChallenge.Contender.Answer)
             {
@@ -377,13 +377,13 @@ namespace Boudica.Commands
             }
         }
 
-        private string GetUserChallengeUserMessage(Challenge challenge, UserChallengeUser userChallengeUser)
+        private string GetUserChallengeUserMessage(Enums.UserChallenges challenge, UserChallengeUser userChallengeUser)
         {
             switch (challenge)
             {
-                case Challenge.RockPaperScissors:
+                case Enums.UserChallenges.RockPaperScissors:
                     return $"{userChallengeUser.UserName} guessed {(RockPaperScissors)int.Parse(userChallengeUser.Answer)}.";
-                case Challenge.RandomNumber:
+                case Enums.UserChallenges.RandomNumber:
                     break;
                 default:
                     return "Something went wrong";
@@ -392,7 +392,7 @@ namespace Boudica.Commands
             return string.Empty;
         }
 
-        private EmbedBuilder CreateChallengeEmbed(Challenge challenge)
+        private EmbedBuilder CreateChallengeEmbed(Enums.UserChallenges challenge)
         {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.WithTitle(GetEmbedChallengeTitle(challenge));
@@ -401,26 +401,26 @@ namespace Boudica.Commands
             return embedBuilder;
         }
 
-        private string GetEmbedChallengeTitle(Challenge challenge)
+        private string GetEmbedChallengeTitle(Enums.UserChallenges challenge)
         {
             switch (challenge)
             {
-                case Challenge.RockPaperScissors:
+                case Enums.UserChallenges.RockPaperScissors:
                     return "Rock Paper Scissors";
-                case Challenge.RandomNumber:
+                case Enums.UserChallenges.RandomNumber:
                     return "Random Number Game";
                 default:
                     return "Something went wrong..";
             }
         }
 
-        private string GetEmbedDescription(Challenge challenge)
+        private string GetEmbedDescription(Enums.UserChallenges challenge)
         {
             switch (challenge)
             {
-                case Challenge.RockPaperScissors:
+                case Enums.UserChallenges.RockPaperScissors:
                     return "Both players will enter their guess, a winner will be decided. In the event of a draw both players will get their glimmer back!";
-                case Challenge.RandomNumber:
+                case Enums.UserChallenges.RandomNumber:
                     return "Both players will enter a number between 1-50 inclusive. The person who guess correctly or is closest to the random number wins";
                 default:
                     return "Something went wrong..";
