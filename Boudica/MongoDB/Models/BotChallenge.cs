@@ -22,6 +22,8 @@ namespace Boudica.MongoDB.Models
         public ulong? WinnerId { get; set; }
         public int Wager { get; set; }
         public DateTime ExpiryDateTime { get; set; }
+        public List<BotRound> Rounds { get; set; }
+        public int CurrentRound { get; set; }
         public bool IsClosed { get; set; }
 
         public BotChallenge(ulong challengerId, string challengerName, int wager, BotChallenges challenge)
@@ -34,6 +36,8 @@ namespace Boudica.MongoDB.Models
             };
             Wager = wager;
             ChallengeType = challenge;
+            CurrentRound = 0;
+            Rounds = new List<BotRound>();
         }
     }
 }

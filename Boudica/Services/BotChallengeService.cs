@@ -36,7 +36,7 @@ namespace Boudica.Services
             return BotChallenge;
         }
 
-        public async Task<CommandResult> AcceptBotChallenge(long sessionId, ulong contenderId)
+        public async Task<CommandResult> AcceptBotChallenge(long sessionId)
         {
             BotChallenge botChallenge = await _botChallengeCollection.Find(x => x.SessionId == sessionId).FirstOrDefaultAsync();
             if (botChallenge == null) return new CommandResult(false, "Could not find a challenge with this session id");
