@@ -45,7 +45,12 @@ namespace Boudica.Services
             var updateBuilder = Builders<BotChallenge>.Update;
             var filter = builder.Eq(x => x.SessionId, sessionId);
             UpdateResult result = await _botChallengeCollection.UpdateOneAsync(filter,
-                updateBuilder.Set(x => x.Accepted, true), new UpdateOptions() { IsUpsert = false }); ;
+                updateBuilder.Set(x => x.Accepted, true)
+                .Set(x => x.CurrentRound, (int)RoundNumber.FirstRound)
+                .Push(x => x.Rounds, new BotRound(RoundNumber.FirstRound))
+                .Push(x => x.Rounds, new BotRound(RoundNumber.SecondRound))
+                .Push(x => x.Rounds, new BotRound(RoundNumber.FinalRound))
+                , new UpdateOptions() { IsUpsert = false }); ;
 
             if (result.IsAcknowledged == false)
                 return new CommandResult(false, "Could not update Challenge.. Jonnys issue not yours");
@@ -71,6 +76,21 @@ namespace Boudica.Services
                 updateBuilder.Set(x => x.GuildId, guildId)
                 .Set(x => x.ChannelId, channelId)
                 .Set(x => x.MessageId, messageId));
+            return result.IsAcknowledged;
+        }
+
+        public async Task<bool> UpdateRoundInformation(RoundNumber roundNumber, BotRound botRound, long sessionId)
+        {
+            var updateBuilder = Builders<BotChallenge>.Update;
+            var result = await _botChallengeCollection.UpdateOneAsync(
+                x => x.SessionId == sessionId, updateBuilder.Set(x => x.Rounds[(int)roundNumber], botRound));
+            return result.IsAcknowledged;
+        }
+        public async Task<bool> UpdateNextRoundInformation(RoundNumber roundNumber, long sessionId)
+        {
+            var updateBuilder = Builders<BotChallenge>.Update;
+            var result = await _botChallengeCollection.UpdateOneAsync(
+                x => x.SessionId == sessionId, updateBuilder.Set(x => x.CurrentRound, (int)roundNumber));
             return result.IsAcknowledged;
         }
 

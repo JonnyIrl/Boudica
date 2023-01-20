@@ -59,6 +59,13 @@ namespace Boudica.Commands
         public event EnterGuessModalSubmitted OnEnterGuessModalSubmitted;
         #endregion
 
+        #region Bot Challenge Buttons
+        public delegate Task<Result> HigherButtonClicked(SocketMessageComponent component, long sessionId);
+        public event HigherButtonClicked OnHigherButtonClicked;
+        public delegate Task<Result> LowerButtonClicked(SocketMessageComponent component, long sessionId);
+        public event HigherButtonClicked OnLowerButtonClicked;
+        #endregion
+
         private const string RaidIsClosed = "This raid is now closed";
         private const string ActivityIsClosed = "This activity is now closed";
         // setup fields to be set later in the constructor
@@ -300,6 +307,38 @@ namespace Boudica.Commands
                     //    return;
                     //}
                     //await component.RespondAsync("Failed to enter guess", ephemeral: true);
+                    break;
+                case ButtonCustomId.Higher:
+                    if (OnHigherButtonClicked != null)
+                    {
+                        Result result = await OnHigherButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to count guess - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to count guess", ephemeral: true);
+                    break;
+                case ButtonCustomId.Lower:
+                    if (OnLowerButtonClicked != null)
+                    {
+                        Result result = await OnLowerButtonClicked.Invoke(component, id);
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to count guess - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to count guess", ephemeral: true);
                     break;
                 default:
                     await component.RespondAsync("Failed", ephemeral: true);

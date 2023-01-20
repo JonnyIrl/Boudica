@@ -19,5 +19,7 @@ namespace Boudica.Enums
         CreateFireteam,
         AcceptChallenge,
         EnterGuess,
+        Higher,
+        Lower
     }
 }
