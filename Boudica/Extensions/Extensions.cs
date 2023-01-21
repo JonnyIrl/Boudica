@@ -1,4 +1,5 @@
-﻿using Boudica.Enums.Bungie;
+﻿using Boudica.Enums;
+using Boudica.Enums.Bungie;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -173,6 +174,23 @@ namespace Boudica.Extensions
             }
 
             return "None";
+        }
+
+        public static string ToName(this RoundNumber roundNumber)
+        {
+            switch (roundNumber)
+            {
+                case RoundNumber.FirstRound:
+                    return "Round One";
+                case RoundNumber.SecondRound:
+                    return "Round Two";
+                case RoundNumber.FinalRound:
+                    return "Final Round";
+                case RoundNumber.GameOverRound:
+                    return "Game Over";
+                default:
+                    return "-";
+            }
         }
     }
 }

@@ -37,7 +37,13 @@ namespace Boudica.MongoDB.Models
             Wager = wager;
             ChallengeType = challenge;
             CurrentRound = 0;
-            Rounds = new List<BotRound>();
+            Rounds = new List<BotRound>()
+            {
+                new BotRound(RoundNumber.FirstRound),
+                new BotRound(RoundNumber.SecondRound),
+                new BotRound(RoundNumber.FinalRound),
+                new BotRound(RoundNumber.GameOverRound)
+            };
         }
     }
 }

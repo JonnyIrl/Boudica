@@ -16,6 +16,7 @@ namespace Boudica.Enums
         RemovePlayer = 5,
         DailyGift = 6,
         TrialsVote = 7,
-        UserChallenge = 8
+        UserChallenge = 8,
+        BotChallengeHigherOrLower = 9
     }
 }

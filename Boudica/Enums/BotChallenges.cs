@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Discord.Interactions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,7 @@ namespace Boudica.Enums
 {
     public enum BotChallenges
     {
+        [ChoiceDisplay("Higher or Lower")]
         HigherOrLower = 1
     }
 }

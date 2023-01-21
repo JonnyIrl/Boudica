@@ -45,12 +45,10 @@ namespace Boudica.Services
             var updateBuilder = Builders<BotChallenge>.Update;
             var filter = builder.Eq(x => x.SessionId, sessionId);
             UpdateResult result = await _botChallengeCollection.UpdateOneAsync(filter,
-                updateBuilder.Set(x => x.Accepted, true)
-                .Set(x => x.CurrentRound, (int)RoundNumber.FirstRound)
-                .Push(x => x.Rounds, new BotRound(RoundNumber.FirstRound))
-                .Push(x => x.Rounds, new BotRound(RoundNumber.SecondRound))
-                .Push(x => x.Rounds, new BotRound(RoundNumber.FinalRound))
-                , new UpdateOptions() { IsUpsert = false }); ;
+                updateBuilder
+                .Set(x => x.Accepted, true)
+                .Set(x => x.CurrentRound, (int)RoundNumber.FirstRound), 
+                new UpdateOptions() { IsUpsert = false }); ;
 
             if (result.IsAcknowledged == false)
                 return new CommandResult(false, "Could not update Challenge.. Jonnys issue not yours");
@@ -73,7 +71,8 @@ namespace Boudica.Services
         {
             var updateBuilder = Builders<BotChallenge>.Update;
             var result = await _botChallengeCollection.UpdateOneAsync(x => x.SessionId == sessionId,
-                updateBuilder.Set(x => x.GuildId, guildId)
+                updateBuilder
+                .Set(x => x.GuildId, guildId)
                 .Set(x => x.ChannelId, channelId)
                 .Set(x => x.MessageId, messageId));
             return result.IsAcknowledged;
@@ -83,14 +82,16 @@ namespace Boudica.Services
         {
             var updateBuilder = Builders<BotChallenge>.Update;
             var result = await _botChallengeCollection.UpdateOneAsync(
-                x => x.SessionId == sessionId, updateBuilder.Set(x => x.Rounds[(int)roundNumber], botRound));
+                x => x.SessionId == sessionId, 
+                updateBuilder.Set(x => x.Rounds[(int)roundNumber - 1], botRound));
             return result.IsAcknowledged;
         }
         public async Task<bool> UpdateNextRoundInformation(RoundNumber roundNumber, long sessionId)
         {
             var updateBuilder = Builders<BotChallenge>.Update;
             var result = await _botChallengeCollection.UpdateOneAsync(
-                x => x.SessionId == sessionId, updateBuilder.Set(x => x.CurrentRound, (int)roundNumber));
+                x => x.SessionId == sessionId, 
+                updateBuilder.Set(x => x.CurrentRound, (int)roundNumber));
             return result.IsAcknowledged;
         }
 
@@ -110,7 +111,7 @@ namespace Boudica.Services
             var filter = builder.Eq(x => x.SessionId, sessionId);
             UpdateResult result = await _botChallengeCollection.UpdateOneAsync(filter,
                 updateBuilder
-                .Set(x => x.Accepted, true)
+                .Set(x => x.IsClosed, true)
                 .Set(x => x.WinnerId, winnerId),
                 new UpdateOptions() { IsUpsert = false });
 
@@ -119,8 +120,11 @@ namespace Boudica.Services
         public async Task<bool> UpdateClosedChallenge(long sessionId)
         {
             var updateBuilder = Builders<BotChallenge>.Update;
-            var result = await _botChallengeCollection.UpdateOneAsync(x => x.SessionId == sessionId,
-                updateBuilder.Set(x => x.IsClosed, true));
+            var result = await _botChallengeCollection
+                .UpdateOneAsync(x => x.SessionId == sessionId,
+                updateBuilder
+                .Set(x => x.IsClosed, true)
+                .Set(x => x.WinnerId, null));
             return result.IsAcknowledged;
         }
         public async Task<List<BotChallenge>> GetExpiredChallenges()
