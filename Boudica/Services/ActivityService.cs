@@ -34,7 +34,7 @@ namespace Boudica.Services
         }
 
         #region MongoDB Raid
-        public async Task<MongoDB.Models.Raid> CreateRaidAsync(MongoDB.Models.Raid raid)
+        public async Task<Raid> CreateRaidAsync(Raid raid)
         {
             if (raid.CreatedByUserId <= 0) throw new ArgumentNullException("CreatedByUserId must be provided");
             if (raid.ChannelId <= 0) throw new ArgumentNullException("ChannelId must be provided");

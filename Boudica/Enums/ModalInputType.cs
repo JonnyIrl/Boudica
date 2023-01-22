@@ -13,6 +13,7 @@ namespace Boudica.Enums
         Select,
         FireteamSize,
         AlertChannel,
-        Guess
+        Guess,
+        ExistingPlayers
     }
 }

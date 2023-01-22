@@ -269,6 +269,51 @@ namespace Boudica.Classes
             return activityUsers;
         }
 
+        public async Task<List<ActivityUser>> AddPlayersToNewActivityModal(SocketModal component, string args, int maxCount = 5, bool removePlayer = false)
+        {
+            string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
+            List<ActivityUser> activityUsers = new List<ActivityUser>();
+            if (sanitisedSplit.Contains("@") == false) return activityUsers;
+            string[] users = sanitisedSplit.Split('@');
+            foreach (string user in users)
+            {
+                string sanitisedUser = string.Empty;
+                int space = user.IndexOf(' ');
+                if (space == -1)
+                    sanitisedUser = user.Trim();
+                else
+                {
+                    sanitisedUser = user.Substring(0, space).Trim();
+                }
+                if (string.IsNullOrEmpty(sanitisedUser)) continue;
+                if (IsDigitsOnly(sanitisedUser) == false) continue;
+
+                if (ulong.TryParse(sanitisedUser, out ulong userId))
+                {
+                    if (userId == component.User.Id) continue;
+                    if (removePlayer)
+                    {
+                        activityUsers.Add(new ActivityUser(userId, string.Empty));
+                    }
+                    else
+                    {
+                        IGuildUser guildUser = (IGuildUser) await component.Channel.GetUserAsync(userId);
+                        if (guildUser != null && guildUser.IsBot == false)
+                        {
+                            if (activityUsers.FirstOrDefault(x => x.UserId == userId) == null)
+                                activityUsers.Add(new ActivityUser(userId, guildUser.DisplayName));
+                        }
+                    }
+                }
+            }
+
+            while (activityUsers.Count > maxCount)
+            {
+                activityUsers.RemoveAt(activityUsers.Count - 1);
+            }
+            return activityUsers;
+        }
+
         bool IsDigitsOnly(string str)
         {
             foreach (char c in str)

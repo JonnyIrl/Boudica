@@ -33,6 +33,18 @@ namespace Boudica.Helpers
             return builder.Build();
         }
 
+        public static Modal CreateRaidModal(string existingPlayers)
+        {
+            ModalBuilder builder = new ModalBuilder()
+                .WithCustomId($"{(int)ButtonCustomId.CreateRaid}-0")
+                .WithTitle("Create Raid")
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
+                .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes")
+                .AddTextInput("Existing Players (dont change anything here)", $"{(int)ModalInputType.ExistingPlayers}", TextInputStyle.Short, required: false, value: existingPlayers);
+            return builder.Build();
+        }
+
         public static Modal CreateFireteamModal()
         {
             ModalBuilder builder = new ModalBuilder()
@@ -42,6 +54,19 @@ namespace Boudica.Helpers
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
                 .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true)
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes");
+            return builder.Build();
+        }
+
+        public static Modal CreateFireteamModal(string existingPlayers)
+        {
+            ModalBuilder builder = new ModalBuilder()
+                .WithCustomId($"{(int)ButtonCustomId.CreateFireteam}-0")
+                .WithTitle("Create Fireteam")
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
+                .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true)
+                .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes")
+                .AddTextInput("Existing Players (dont change anything here)", $"{(int)ModalInputType.ExistingPlayers}", TextInputStyle.Short, required: false, value: existingPlayers);
             return builder.Build();
         }
 

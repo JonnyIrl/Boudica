@@ -30,7 +30,7 @@ namespace Boudica.Commands
             }
         }
 
-        private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize, bool alertChannel)
+        private async Task<Result> OnCreateFireteamModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, string fireteamSize, bool alertChannel, string existingPlayers)
         {
             if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -64,6 +64,16 @@ namespace Boudica.Commands
                     new ActivityUser(guildUser.Id, guildUser.Username, true)
                 }
             };
+
+            if (string.IsNullOrEmpty(existingPlayers) == false)
+            {
+                List<ActivityUser> usersToAdd = await AddPlayersToNewActivityModal(modal, existingPlayers, fireteamSizeResult);
+                foreach(ActivityUser users in usersToAdd)
+                {
+                    if (newFireteam.Players.Count < fireteamSizeResult)
+                        newFireteam.Players.Add(users);
+                }
+            }
 
             newFireteam = await _activityService.CreateFireteamAsync(newFireteam);
             if (newFireteam.Id <= 0)
@@ -116,7 +126,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel)
+        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel, string existingPlayers)
         {
             if(string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -143,6 +153,17 @@ namespace Boudica.Commands
                         new ActivityUser(guildUser.Id, guildUser.Username, true)
                     }
                 };
+
+                if (string.IsNullOrEmpty(existingPlayers) == false)
+                {
+                    List<ActivityUser> usersToAdd = await AddPlayersToNewActivityModal(modal, existingPlayers);
+                    foreach (ActivityUser users in usersToAdd)
+                    {
+                        if (newRaid.Players.Count < 6)
+                            newRaid.Players.Add(users);
+                    }
+                }
+
                 newRaid = await _activityService.CreateRaidAsync(newRaid);
                 if (newRaid.Id <= 0)
                 {
@@ -209,15 +230,23 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("raid", "Create a Raid")]
-        public async Task CreateRaidCommand()
+        public async Task CreateRaidCommand([Summary("playersToAdd", "Players to be automatically added")] string playersToAdd = null)
         {
-            await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+            if(string.IsNullOrEmpty(playersToAdd))
+                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+            else
+                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]
-        public async Task CreateFireteamCommand()
+        public async Task CreateFireteamCommand(
+            [Summary("playersToAdd", "Players to be automatically added")] string playersToAdd = null)
         {
-            await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateFireteamModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });    
+
+            if (string.IsNullOrEmpty(playersToAdd))
+                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateFireteamModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+            else
+                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateFireteamModal(playersToAdd), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
         }
        
         private IRole GetRoleForChannel(ulong channelId)
