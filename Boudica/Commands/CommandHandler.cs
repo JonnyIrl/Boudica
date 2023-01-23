@@ -27,10 +27,10 @@ namespace Boudica.Commands
 
         #region Raid Buttons
         public delegate Task<Result> EditRaidButtonClicked(SocketMessageComponent component, int raidId);
-        public delegate Task<Result> CloseRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> CloseRaidMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType);
         public delegate Task<Result> AlertRaidButtonClicked(SocketMessageComponent component, int raidId);
         public event EditRaidButtonClicked OnEditRaidButtonClicked;
-        public event CloseRaidButtonClicked OnCloseRaidButtonClicked;
+        public event CloseRaidMenuItemSelected OnCloseRaidMenuItemSelected;
         public event AlertRaidButtonClicked OnAlertRaidButtonClicked;
         #endregion
 
@@ -244,22 +244,6 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to edit fireteam", ephemeral: true);
                     break;
-                case ButtonCustomId.CloseRaid:
-                    if (OnCloseRaidButtonClicked != null)
-                    {
-                        Result result = await OnCloseRaidButtonClicked.Invoke(component, id);
-                        if (result.Success)
-                        {
-
-                        }
-                        else
-                        {
-                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
-                        }
-                        return;
-                    }
-                    await component.RespondAsync("Failed to close raid", ephemeral: true);
-                    break;
                 case ButtonCustomId.CloseFireteam:
                     if (OnCloseFireteamButtonClicked != null)
                     {
@@ -379,6 +363,22 @@ namespace Boudica.Commands
                         return;
                     }
                     await component.RespondAsync("Failed to enter guess", ephemeral: true);
+                    break;
+                case SelectMenuCustomId.CloseRaid:
+                    if (OnCloseRaidMenuItemSelected != null)
+                    {
+                        Result result = await OnCloseRaidMenuItemSelected.Invoke(component, id, (ClosedActivityType)int.Parse(value));
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close raid", ephemeral: true);
                     break;
                 default:
                     await component.RespondAsync("Failed", ephemeral: true);

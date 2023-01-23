@@ -182,10 +182,22 @@ namespace Boudica.Commands
 
                 EmbedHelper.UpdateFooterOnEmbed(embed, newRaid);
 
-                var buttons = new ComponentBuilder()
+                var selectMenuBuilder = new SelectMenuBuilder()
+                {
+
+                    CustomId = $"{(int)SelectMenuCustomId.CloseRaid}-{newRaid.Id}",
+                    Placeholder = "Close Raid Options",
+                    MaxValues = 1,
+                    MinValues = 1
+                };
+                selectMenuBuilder.AddOption("Close Raid - Completed Successfully", $"{ClosedActivityType.CloseRaidSuccess}");
+                selectMenuBuilder.AddOption("Close Raid - Did not complete", $"{ClosedActivityType.CloseRaidFailure}");
+                selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{ClosedActivityType.ForceCloseRaid}");
+
+                var componentBuilder = new ComponentBuilder()
                     .WithButton("Edit Raid", $"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}", ButtonStyle.Primary)
                     .WithButton("Alert Raid", $"{(int)ButtonCustomId.RaidAlert}-{newRaid.Id}", ButtonStyle.Primary)
-                    .WithButton("Close Raid", $"{(int)ButtonCustomId.CloseRaid}-{newRaid.Id}", ButtonStyle.Danger);
+                    .WithSelectMenu(selectMenuBuilder);
 
 
                 IUserMessage newMessage;
@@ -193,13 +205,13 @@ namespace Boudica.Commands
                 if (role != null && newRaid.Players.Count != newRaid.MaxPlayerCount && alertChannel)
                 {
                     // this will reply with the embed
-                    await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
+                    await modal.RespondAsync(role.Mention, embed: embed.Build(), components: componentBuilder.Build());
                     newMessage = await modal.GetOriginalResponseAsync();
                 }
                 else
                 {
                     // this will reply with the embed
-                    await modal.RespondAsync(embed: embed.Build(), components: buttons.Build());
+                    await modal.RespondAsync(null, embed: embed.Build(), components: componentBuilder.Build());
                     newMessage = await modal.GetOriginalResponseAsync();
                 }
 
@@ -526,13 +538,13 @@ namespace Boudica.Commands
         {
             if (!_subscribed)
             {
-                handler.OnCloseRaidButtonClicked += OnCloseRaidButtonClicked;
+                handler.OnCloseRaidMenuItemSelected += OnCloseRaidMenuItemSelected;
                 handler.OnCloseFireteamButtonClicked += OnCloseFireteamButtonClicked;
                 _subscribed = true;
             }
         }
 
-        private async Task<Result> OnCloseRaidButtonClicked(SocketMessageComponent component, int raidId)
+        private Task<Result> OnCloseRaidMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
         {
             return await CloseRaidButtonClick(raidId, component);
         }
@@ -710,7 +722,7 @@ namespace Boudica.Commands
             }
         }
 
-        public async Task<Result> CloseRaidButtonClick(int raidId, SocketMessageComponent component)
+        public async Task<Result> CloseRaidButtonClick(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
         {
             SocketGuildUser user = component.User as SocketGuildUser;
             if(user == null)
@@ -724,6 +736,7 @@ namespace Boudica.Commands
             existingRaid.DateTimeClosed = DateTime.UtcNow;
             await _activityService.UpdateRaidAsync(existingRaid);
 
+            //TODO IMPLEMENT GLIMMER CALCULATION HERE
             if (existingRaid.DateTimeClosed != DateTime.MinValue)
             {
                 await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());

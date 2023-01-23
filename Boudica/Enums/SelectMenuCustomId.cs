@@ -9,5 +9,6 @@ namespace Boudica.Enums
     public enum SelectMenuCustomId
     {
         RockPaperScissors = 0,
+        CloseRaid = 1,
     }
 }
