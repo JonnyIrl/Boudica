@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Enums
 {
-    public enum ButtonCustomId
+    public enum CustomId
     {
         Invalid,
         RaidAlert,
@@ -20,6 +20,7 @@ namespace Boudica.Enums
         AcceptChallenge,
         EnterGuess,
         Higher,
-        Lower
+        Lower,
+        RockPaperScissors
     }
 }

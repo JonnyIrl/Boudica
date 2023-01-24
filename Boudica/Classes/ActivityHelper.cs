@@ -162,7 +162,8 @@ namespace Boudica.Classes
                 return new Result(false, "This raid is already closed");
             }
 
-            if (forceCommand)
+            //Force Command should only work for users who did not create the raid.
+            if (forceCommand && existingRaid.CreatedByUserId != user.Id)
             {
                 if (user != null)
                 {

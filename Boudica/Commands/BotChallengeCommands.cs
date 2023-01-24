@@ -167,8 +167,8 @@ namespace Boudica.Commands
 
             EmbedBuilder embed = CreateHigherOrLowerEmbed(RoundNumber.FirstRound, randomNumber, wager);
             var higherOrLowerButtons = new ComponentBuilder()
-               .WithButton("Higher", $"{(int)ButtonCustomId.Higher}-{newChallenge.SessionId}", ButtonStyle.Success)
-               .WithButton("Lower", $"{(int)ButtonCustomId.Lower}-{newChallenge.SessionId}", ButtonStyle.Danger);
+               .WithButton("Higher", $"{(int)CustomId.Higher}-{newChallenge.SessionId}", ButtonStyle.Success)
+               .WithButton("Lower", $"{(int)CustomId.Lower}-{newChallenge.SessionId}", ButtonStyle.Danger);
             await RespondAsync(embed: embed.Build(), components: higherOrLowerButtons.Build());
             IUserMessage newMessage = await GetOriginalResponseAsync();
             if (newMessage != null)

@@ -80,7 +80,7 @@ namespace Boudica.Commands
 
             EmbedBuilder embedBuilder = CreateChallengeEmbed(challenge);
             var acceptButton = new ComponentBuilder()
-                .WithButton("Accept Challenge", $"{(int)ButtonCustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
+                .WithButton("Accept Challenge", $"{(int)CustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
             await RespondAsync(text: $"<@{personToChallenge.Id}> click the accept button if you accept the challenge. With a wager of **{wager}** Glimmer!", embed: embedBuilder.Build(), components: acceptButton.Build());
             IUserMessage newMessage = await GetOriginalResponseAsync();
             if (newMessage != null)
@@ -141,7 +141,7 @@ namespace Boudica.Commands
                 await message.ModifyAsync(x =>
                 {
                     var enterGuessButton = new ComponentBuilder()
-                    .WithButton("Enter Guess", $"{(int)ButtonCustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
+                    .WithButton("Enter Guess", $"{(int)CustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
                     x.Components = enterGuessButton.Build();
                     x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
                     x.Embed = x.Embed;
@@ -154,7 +154,7 @@ namespace Boudica.Commands
                     var selectMenuBuilder = new SelectMenuBuilder()
                     {
 
-                        CustomId = $"{(int)SelectMenuCustomId.RockPaperScissors}-{userChallenge.SessionId}",
+                        CustomId = $"{(int)CustomId.RockPaperScissors}-{userChallenge.SessionId}",
                         Placeholder = "Select an option!",
                         MaxValues = 1,
                         MinValues = 1

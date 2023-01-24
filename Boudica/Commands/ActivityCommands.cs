@@ -95,9 +95,9 @@ namespace Boudica.Commands
             EmbedHelper.UpdateFooterOnEmbed(embed, newFireteam);
 
             var buttons = new ComponentBuilder()
-                   .WithButton("Edit Fireteam", $"{(int)ButtonCustomId.EditFireteam}-{newFireteam.Id}", ButtonStyle.Primary)
-                   .WithButton("Alert Fireteam", $"{(int)ButtonCustomId.FireteamAlert}-{newFireteam.Id}", ButtonStyle.Primary)
-                   .WithButton("Close Fireteam", $"{(int)ButtonCustomId.CloseFireteam}-{newFireteam.Id}", ButtonStyle.Danger);
+                   .WithButton("Edit Fireteam", $"{(int)CustomId.EditFireteam}-{newFireteam.Id}", ButtonStyle.Primary)
+                   .WithButton("Alert Fireteam", $"{(int)CustomId.FireteamAlert}-{newFireteam.Id}", ButtonStyle.Primary)
+                   .WithButton("Close Fireteam", $"{(int)CustomId.CloseFireteam}-{newFireteam.Id}", ButtonStyle.Danger);
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannelModal(guildUser, channel.Id);
@@ -185,18 +185,18 @@ namespace Boudica.Commands
                 var selectMenuBuilder = new SelectMenuBuilder()
                 {
 
-                    CustomId = $"{(int)SelectMenuCustomId.CloseRaid}-{newRaid.Id}",
+                    CustomId = $"{(int)CustomId.CloseRaid}-{newRaid.Id}",
                     Placeholder = "Close Raid Options",
                     MaxValues = 1,
                     MinValues = 1
                 };
-                selectMenuBuilder.AddOption("Close Raid - Completed Successfully", $"{ClosedActivityType.CloseRaidSuccess}");
-                selectMenuBuilder.AddOption("Close Raid - Did not complete", $"{ClosedActivityType.CloseRaidFailure}");
-                selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{ClosedActivityType.ForceCloseRaid}");
+                selectMenuBuilder.AddOption("Close Raid - Completed Successfully", $"{(int)ClosedActivityType.CloseRaidSuccess}");
+                selectMenuBuilder.AddOption("Close Raid - Did not complete", $"{(int)ClosedActivityType.CloseRaidFailure}");
+                selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{(int)ClosedActivityType.ForceCloseRaid}");
 
                 var componentBuilder = new ComponentBuilder()
-                    .WithButton("Edit Raid", $"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}", ButtonStyle.Primary)
-                    .WithButton("Alert Raid", $"{(int)ButtonCustomId.RaidAlert}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Edit Raid", $"{(int)CustomId.EditRaid}-{newRaid.Id}", ButtonStyle.Primary)
+                    .WithButton("Alert Raid", $"{(int)CustomId.RaidAlert}-{newRaid.Id}", ButtonStyle.Primary)
                     .WithSelectMenu(selectMenuBuilder);
 
 
@@ -533,9 +533,11 @@ namespace Boudica.Commands
     [Group("close", "Close an activity")]
     public class CloseActivityCommands : ActivityHelper
     {
+        private readonly HiringService _hiringService;
         private static bool _subscribed = false;
         public CloseActivityCommands(IServiceProvider services, CommandHandler handler) : base(services, handler)
         {
+            _hiringService = services.GetRequiredService<HiringService>();
             if (!_subscribed)
             {
                 handler.OnCloseRaidMenuItemSelected += OnCloseRaidMenuItemSelected;
@@ -544,9 +546,9 @@ namespace Boudica.Commands
             }
         }
 
-        private Task<Result> OnCloseRaidMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
+        private async Task<Result> OnCloseRaidMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
         {
-            return await CloseRaidButtonClick(raidId, component);
+            return await CloseRaidButtonClick(component, raidId, activityType);
         }
 
         private async Task<Result> OnCloseFireteamButtonClicked(SocketMessageComponent component, int fireteamId)
@@ -725,45 +727,71 @@ namespace Boudica.Commands
         public async Task<Result> CloseRaidButtonClick(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
         {
             SocketGuildUser user = component.User as SocketGuildUser;
-            if(user == null)
+            if (user == null)
             {
                 return new Result(false, "Failed, could not find user");
             }
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            Result exisingRaidResult = await CheckExistingRaidIsValidButtonClick(component, existingRaid, user, false);
+            if (existingRaid == null)
+            {
+                return new Result(false, "Could not find raid to close");
+            }
+            //If force closing pass true
+            Result exisingRaidResult = await CheckExistingRaidIsValidButtonClick(component, existingRaid, user, activityType == ClosedActivityType.ForceCloseRaid ? true : false);
             if (exisingRaidResult.Success == false) return exisingRaidResult;
 
             existingRaid.DateTimeClosed = DateTime.UtcNow;
             await _activityService.UpdateRaidAsync(existingRaid);
 
-            //TODO IMPLEMENT GLIMMER CALCULATION HERE
-            if (existingRaid.DateTimeClosed != DateTime.MinValue)
+            StringBuilder updateMessageText = new StringBuilder();
+            switch (activityType)
             {
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await component.GetOriginalResponseAsync();
-                if (responseMessage != null)
-                    await responseMessage.AddReactionsAsync(_successFailEmotes);
+                case ClosedActivityType.ForceCloseRaid:
+                    updateMessageText.Append($"The activity was force closed by {user.Username} so no Glimmer has been awarded");
+                    break;
+                case ClosedActivityType.CloseRaidFailure:
+                    updateMessageText.Append("The activity did not complete so no Glimmer has been awarded.");
+                    break;
+                case ClosedActivityType.CloseRaidSuccess:
+                    Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingRaid.Players, existingRaid.CreatedByUserId, true);
+                    updateMessageText.AppendJoin(", ", existingRaid.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
+                    updateMessageText.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                    if (glimmerResult.Item2 == false)
+                    {
+                        Console.WriteLine("glimmerResult.Item2 == false");
+                        string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
+                        if (string.IsNullOrEmpty(creatorName) == false)
+                            updateMessageText.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                    }
+                    break;
             }
-            else
-            {
-                existingRaid.AwardedGlimmer = true;
-                await _activityService.UpdateRaidAsync(existingRaid);
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
-            }
-
             IUserMessage message = component.Message as IUserMessage;
             if (message == null)
             {
                 return new Result(false, "Could not find message to close");
             }
-            var modifiedEmbed = new EmbedBuilder();
             var embed = message.Embeds.FirstOrDefault();
+            if (message != null && embed != null && !string.IsNullOrEmpty(embed.Title))
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {embed.Title} has been closed!").Build());
+            }
+            else
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
+            }
+            existingRaid.AwardedGlimmer = true;
+            await _activityService.UpdateRaidAsync(existingRaid);
+
+           
+            var modifiedEmbed = new EmbedBuilder();
+            string originalTitle = embed.Title;
             EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
             EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
             EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
             modifiedEmbed.Title = "This raid is now closed";
             modifiedEmbed.Color = Color.Red;
+            modifiedEmbed.Description = $"{updateMessageText.ToString()}";
             await message.UnpinAsync();
             await message.ModifyAsync(x =>
             {
@@ -772,6 +800,55 @@ namespace Boudica.Commands
             });
 
             return new Result(true, string.Empty);
+        }
+
+        private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
+        {
+            if (activityUsers == null) return new Tuple<int, bool>(-1, false);
+            int increaseAmount = (1 * activityUsers.Count(x => x.Reacted));
+            bool awardedThisWeek = false;
+            foreach (ActivityUser user in activityUsers)
+            {
+                if (user.UserId == creatorId)
+                {
+                    await _hiringService.UpdateCreatedPost(user.UserId);
+
+                    if (isRaid)
+                        awardedThisWeek = await CreatedRaidThisWeek(creatorId);
+                    else
+                        awardedThisWeek = await CreatedFireteamThisWeek(creatorId);
+
+                    //Give bonus of 3 for first activity each week.
+                    if (awardedThisWeek == false)
+                    {
+                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
+                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
+                    }
+                    else
+                    {
+                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
+                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
+                    }
+                }
+                else if (user.Reacted)
+                {
+                    await _hiringService.UpdateJoinedPost(user.UserId, DateTime.UtcNow);
+                    await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
+                    Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
+                }
+            }
+
+            return new Tuple<int, bool>(increaseAmount, awardedThisWeek);
+        }
+
+        private async Task<bool> CreatedRaidThisWeek(ulong userId)
+        {
+            return await _activityService.CreatedRaidThisWeek(userId);
+        }
+
+        private async Task<bool> CreatedFireteamThisWeek(ulong userId)
+        {
+            return await _activityService.CreatedFireteamThisWeek(userId);
         }
 
         public async Task<Result> CloseFireteamButtonClick(int fireteamId, SocketMessageComponent component)
