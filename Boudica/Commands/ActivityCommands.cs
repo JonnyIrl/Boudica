@@ -541,7 +541,7 @@ namespace Boudica.Commands
             if (!_subscribed)
             {
                 handler.OnCloseRaidMenuItemSelected += OnCloseRaidMenuItemSelected;
-                handler.OnCloseFireteamButtonClicked += OnCloseFireteamButtonClicked;
+                handler.OnCloseFireteamMenuItemSelected += OnCloseFireteamMenuItemSelected;
                 _subscribed = true;
             }
         }
@@ -551,9 +551,9 @@ namespace Boudica.Commands
             return await CloseRaidButtonClick(component, raidId, activityType);
         }
 
-        private async Task<Result> OnCloseFireteamButtonClicked(SocketMessageComponent component, int fireteamId)
+        private async Task<Result> OnCloseFireteamMenuItemSelected(SocketMessageComponent component, int fireteamId, ClosedActivityType activityType)
         {
-            return await CloseFireteamButtonClick(fireteamId, component);
+            return await CloseFireteamButtonClick(component, fireteamId, activityType);
         }
 
         [SlashCommand("fireteam", "Close a Fireteam")]
@@ -615,112 +615,6 @@ namespace Boudica.Commands
                 existingFireteam.AwardedGlimmer = true;
                 await _activityService.UpdateFireteamAsync(existingFireteam);
                 await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
-            }
-        }
-
-        [DefaultMemberPermissions(GuildPermission.KickMembers)]
-        [SlashCommand("fireteam-forceclose", "Force close a Fireteam")]
-        public async Task ForceCloseFireteam(int fireteamId)
-        {
-            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
-            if (existingFireteamResult == false) return;
-
-            if (existingFireteam.DateTimeClosed == DateTime.MinValue)
-            {
-                existingFireteam.DateTimeClosed = DateTime.UtcNow;
-                await _activityService.UpdateFireteamAsync(existingFireteam);
-            }
-
-            ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-                return;
-            }
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            if (embed?.Title == "This activity is now closed")
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
-                return;
-            }
-
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            modifiedEmbed.Title = "This activity is now closed";
-            modifiedEmbed.Color = Color.Red;
-            await message.UnpinAsync();
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-            });
-
-            existingFireteam.AwardedGlimmer = true;
-            await _activityService.UpdateFireteamAsync(existingFireteam);
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
-        }
-
-
-        [SlashCommand("raid", "Close a Raid")]
-        public async Task CloseRaid(int raidId)
-        {
-            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
-            if (exisingRaidResult == false) return;
-
-            existingRaid.DateTimeClosed = DateTime.UtcNow;
-            await _activityService.UpdateRaidAsync(existingRaid);
-
-            ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
-                return;
-            }
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            modifiedEmbed.Title = "This raid is now closed";
-            modifiedEmbed.Color = Color.Red;
-            await message.UnpinAsync();
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-                x.Components = null;
-            });
-
-            //Has to be more than 1 player in a Raid/Fireteam in order to award glimmer
-            if (existingRaid.DateTimeClosed != DateTime.MinValue && existingRaid.Players.Count > 1)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid {raidId} has been closed! <@{existingRaid.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await GetOriginalResponseAsync();
-                if(responseMessage != null) 
-                    await responseMessage.AddReactionsAsync(_successFailEmotes);
-            }
-            else
-            {
-                existingRaid.AwardedGlimmer = true;
-                await _activityService.UpdateRaidAsync(existingRaid);
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
             }
         }
 
@@ -801,6 +695,77 @@ namespace Boudica.Commands
 
             return new Result(true, string.Empty);
         }
+        public async Task<Result> CloseFireteamButtonClick(SocketMessageComponent component, int fireteamId, ClosedActivityType activityType)
+        {
+            SocketGuildUser user = component.User as SocketGuildUser;
+            if (user == null)
+            {
+                return new Result(false, "Failed, could not find user");
+            }
+            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+            Result exisingFireteamResult = await CheckExistingFireteamIsValidButtonClick(component, existingFireteam, user, activityType == ClosedActivityType.ForceCloseFireteam ? true : false);
+            if (exisingFireteamResult.Success == false) return exisingFireteamResult;
+
+            existingFireteam.DateTimeClosed = DateTime.UtcNow;
+            await _activityService.UpdateFireteamAsync(existingFireteam);
+
+            StringBuilder updateMessageText = new StringBuilder();
+            switch (activityType)
+            {
+                case ClosedActivityType.ForceCloseFireteam:
+                    updateMessageText.Append($"The activity was force closed by {user.Username} so no Glimmer has been awarded");
+                    break;
+                case ClosedActivityType.CloseFireteamFailure:
+                    updateMessageText.Append("The activity did not complete so no Glimmer has been awarded.");
+                    break;
+                case ClosedActivityType.CloseFireteamSuccess:
+                    Tuple<int, bool> glimmerResult = await CalculateGlimmerForActivity(existingFireteam.Players, existingFireteam.CreatedByUserId, true);
+                    updateMessageText.AppendJoin(", ", existingFireteam.Players.Where(x => x.Reacted).Select(x => x.DisplayName));
+                    updateMessageText.Append($" received {glimmerResult.Item1} Glimmer for completing this activity.");
+                    if (glimmerResult.Item2 == false)
+                    {
+                        string creatorName = existingFireteam.Players.FirstOrDefault(x => x.UserId == existingFireteam.CreatedByUserId)?.DisplayName;
+                        if (string.IsNullOrEmpty(creatorName) == false)
+                            updateMessageText.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                    }
+                    break;
+            }
+
+            IUserMessage message = component.Message as IUserMessage;
+            if (message == null)
+            {
+                return new Result(false, "Could not find message to close");
+            }
+            var embed = message.Embeds.FirstOrDefault();
+            if (embed != null && !string.IsNullOrEmpty(embed.Title))
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {embed.Title} has been closed!").Build());
+            }
+            else
+            {
+                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam Id {fireteamId} has been closed!").Build());
+            }
+            existingFireteam.AwardedGlimmer = true;
+            await _activityService.UpdateFireteamAsync(existingFireteam);
+
+            var modifiedEmbed = new EmbedBuilder();
+            string originalTitle = embed.Title;
+            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+            modifiedEmbed.Title = "This fireteam is now closed";
+            modifiedEmbed.Color = Color.Red;
+            modifiedEmbed.Description = $"{updateMessageText.ToString()}";
+            await message.UnpinAsync();
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = modifiedEmbed.Build();
+                x.Components = null;
+            });
+
+            return new Result(true, string.Empty);
+        }
 
         private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
         {
@@ -851,97 +816,7 @@ namespace Boudica.Commands
             return await _activityService.CreatedFireteamThisWeek(userId);
         }
 
-        public async Task<Result> CloseFireteamButtonClick(int fireteamId, SocketMessageComponent component)
-        {
-            SocketGuildUser user = component.User as SocketGuildUser;
-            if (user == null)
-            {
-                return new Result(false, "Failed, could not find user");
-            }
-            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-            Result exisingFireteamResult = await CheckExistingFireteamIsValidButtonClick(component, existingFireteam, user);
-            if (exisingFireteamResult.Success == false) return exisingFireteamResult;
-
-            existingFireteam.DateTimeClosed = DateTime.UtcNow;
-            await _activityService.UpdateFireteamAsync(existingFireteam);
-
-            IUserMessage message = component.Message as IUserMessage;
-            if (message == null)
-            {
-                return new Result(false, "Could not find message to close");
-            }
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            modifiedEmbed.Title = "This fireteam is now closed";
-            modifiedEmbed.Color = Color.Red;
-            await message.UnpinAsync();
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-                x.Components = null;
-            });
-
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue)
-            {
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {existingFireteam.Id} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await component.GetOriginalResponseAsync();
-                if (responseMessage != null)
-                    await responseMessage.AddReactionsAsync(_successFailEmotes);
-                return new Result(true, string.Empty);
-            }
-            else
-            {
-                existingFireteam.AwardedGlimmer = true;
-                await _activityService.UpdateFireteamAsync(existingFireteam);
-                await component.RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam Id {existingFireteam.Id} has been closed!").Build());
-                return new Result(true, string.Empty);
-            }
-        }
-
-        [DefaultMemberPermissions(GuildPermission.KickMembers)]
-        [SlashCommand("raid-forceclose", "Used to force close raids")]
-        public async Task ForceCloseRaid(int raidId)
-        {
-            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool exisingRaidResult = await CheckExistingRaidIsValid(existingRaid, true);
-            if (exisingRaidResult == false) return;
-
-            existingRaid.DateTimeClosed = DateTime.UtcNow;
-            existingRaid.AwardedGlimmer = true;
-            await _activityService.UpdateRaidAsync(existingRaid);
-
-            ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to close").Build());
-                return;
-            }
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            modifiedEmbed.Title = "This raid is now closed";
-            modifiedEmbed.Color = Color.Red;
-            await message.UnpinAsync();
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-            });
-
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Raid Id {raidId} has been closed!").Build());
-        }
+        
 
     }
 

@@ -43,10 +43,10 @@ namespace Boudica.Commands
 
         #region Fireteam Buttons
         public delegate Task<Result> EditFireteamButtonClicked(SocketMessageComponent component, int raidId);
-        public delegate Task<Result> CloseFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
+        public delegate Task<Result> CloseFireteamMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType);
         public delegate Task<Result> AlertFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
         public event EditFireteamButtonClicked OnEditFireteamButtonClicked;
-        public event CloseFireteamButtonClicked OnCloseFireteamButtonClicked;
+        public event CloseFireteamMenuItemSelected OnCloseFireteamMenuItemSelected;
         public event AlertFireteamButtonClicked OnAlertFireteamButtonClicked;
         #endregion
 
@@ -244,22 +244,6 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to edit fireteam", ephemeral: true);
                     break;
-                case CustomId.CloseFireteam:
-                    if (OnCloseFireteamButtonClicked != null)
-                    {
-                        Result result = await OnCloseFireteamButtonClicked.Invoke(component, id);
-                        if (result.Success)
-                        {
-
-                        }
-                        else
-                        {
-                            await component.RespondAsync("Failed to close fireteam - " + result.Message, ephemeral: true);
-                        }
-                        return;
-                    }
-                    await component.RespondAsync("Failed to close fireteam", ephemeral: true);
-                    break;
                 case CustomId.AcceptChallenge:
                     if (OnAcceptChallengeButtonClicked != null)
                     {
@@ -379,6 +363,22 @@ namespace Boudica.Commands
                         return;
                     }
                     await component.RespondAsync("Failed to close raid", ephemeral: true);
+                    break;
+                case CustomId.CloseFireteam:
+                    if (OnCloseFireteamMenuItemSelected != null)
+                    {
+                        Result result = await OnCloseFireteamMenuItemSelected.Invoke(component, id, (ClosedActivityType)int.Parse(value));
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close fireteam", ephemeral: true);
                     break;
                 default:
                     await component.RespondAsync("Failed", ephemeral: true);
