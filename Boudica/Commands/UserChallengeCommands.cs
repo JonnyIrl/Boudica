@@ -1,4 +1,5 @@
-﻿using Boudica.Classes;
+﻿using Boudica.Attributes;
+using Boudica.Classes;
 using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
@@ -36,6 +37,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("challenge", "Challenge a User")]
+        [GeneralChannelOnly]
         public async Task CreateUserChallenge(
             [Summary("personToChallenge", "Person to Challenge")] SocketGuildUser personToChallenge,
             [Summary("wager", "The amount to bet")] int wager,
@@ -80,7 +82,7 @@ namespace Boudica.Commands
 
             EmbedBuilder embedBuilder = CreateChallengeEmbed(challenge);
             var acceptButton = new ComponentBuilder()
-                .WithButton("Accept Challenge", $"{(int)ButtonCustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
+                .WithButton("Accept Challenge", $"{(int)CustomId.AcceptChallenge}-{userChallenge.SessionId}", ButtonStyle.Success);
             await RespondAsync(text: $"<@{personToChallenge.Id}> click the accept button if you accept the challenge. With a wager of **{wager}** Glimmer!", embed: embedBuilder.Build(), components: acceptButton.Build());
             IUserMessage newMessage = await GetOriginalResponseAsync();
             if (newMessage != null)
@@ -141,7 +143,7 @@ namespace Boudica.Commands
                 await message.ModifyAsync(x =>
                 {
                     var enterGuessButton = new ComponentBuilder()
-                    .WithButton("Enter Guess", $"{(int)ButtonCustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
+                    .WithButton("Enter Guess", $"{(int)CustomId.EnterGuess}-{userChallenge.SessionId}", ButtonStyle.Primary);
                     x.Components = enterGuessButton.Build();
                     x.Content = $"<@{userChallenge.Challenger.UserId}> your challenge has been accepted. Both players please press the button below to enter your guess!";
                     x.Embed = x.Embed;
@@ -154,7 +156,7 @@ namespace Boudica.Commands
                     var selectMenuBuilder = new SelectMenuBuilder()
                     {
 
-                        CustomId = $"{(int)SelectMenuCustomId.RockPaperScissors}-{userChallenge.SessionId}",
+                        CustomId = $"{(int)CustomId.RockPaperScissors}-{userChallenge.SessionId}",
                         Placeholder = "Select an option!",
                         MaxValues = 1,
                         MinValues = 1
@@ -284,7 +286,25 @@ namespace Boudica.Commands
                 {
                     await component.RespondAsync("Your guess has been entered and the results are in.. check the original message to see the winner!", ephemeral: true);
                     Console.WriteLine("Getting winner text");
-                    string winnersText = GetRockPaperScissorsWinnerText(ref updatedUserChallenge);                    
+                    string winnersText = GetRockPaperScissorsWinnerText(ref updatedUserChallenge);
+                    int challengerGlimmer = await _guardianService.GetGuardianGlimmer(updatedUserChallenge.Challenger.UserId);
+                    int contenderGlimmer = await _guardianService.GetGuardianGlimmer(updatedUserChallenge.Contender.UserId);
+                    StringBuilder sb = new StringBuilder();
+                    if (challengerGlimmer < updatedUserChallenge.Wager)
+                    {
+                        sb.AppendLine($"{updatedUserChallenge.Challenger.UserName} did not have enough glimmer to complete this challenge so no glimmer has been awarded to anybody");
+                        updatedUserChallenge.WinnerId = null;
+                    }
+                    if (contenderGlimmer < updatedUserChallenge.Wager)
+                    {
+                        sb.AppendLine($"{updatedUserChallenge.Contender.UserName} did not have enough glimmer to complete this challenge so no glimmer has been awarded to anybody");
+                        updatedUserChallenge.WinnerId = null;
+                    }
+                    if(string.IsNullOrEmpty(sb.ToString()) == false)
+                    {
+                        winnersText = sb.ToString();
+                    }
+
                     await message.ModifyAsync(x =>
                     {
                         x.Components = null;
@@ -294,7 +314,7 @@ namespace Boudica.Commands
                         $"{winnersText}").Build();
                         x.Content = null;
                     });
-
+                  
                     if (updatedUserChallenge.WinnerId != null)
                     {
                         if (updatedUserChallenge.Challenger.UserId == updatedUserChallenge.WinnerId)

@@ -162,7 +162,8 @@ namespace Boudica.Classes
                 return new Result(false, "This raid is already closed");
             }
 
-            if (forceCommand)
+            //Force Command should only work for users who did not create the raid.
+            if (forceCommand && existingRaid.CreatedByUserId != user.Id)
             {
                 if (user != null)
                 {
@@ -209,16 +210,31 @@ namespace Boudica.Classes
 
             return true;
         }
-        public async Task<Result> CheckExistingFireteamIsValidButtonClick(SocketMessageComponent component, Fireteam existingFireteam, SocketGuildUser user)
+        public async Task<Result> CheckExistingFireteamIsValidButtonClick(SocketMessageComponent component, Fireteam existingFireteam, SocketGuildUser user, bool forceCommand = false)
         {
             if (existingFireteam == null)
             {
                 return new Result(false, "Could not find a Fireteam with that Id");
             }
 
-            if (existingFireteam.CreatedByUserId != user.Id)
+            //Force Command should only work for users who did not create the raid.
+            if (forceCommand && existingFireteam.CreatedByUserId != user.Id)
             {
-                return new Result(false, "Only the Guardian who created the Fireteam or an Admin can edit/close a raid");
+                if (user != null)
+                {
+                    if (user.GuildPermissions.ModerateMembers)
+                    {
+                        return new Result(true, string.Empty);
+                    }
+                }
+                return new Result(false, "Only a Moderator or Admin can edit/close a fireteam with this command.");
+            }
+            else
+            {
+                if (existingFireteam.CreatedByUserId != user.Id)
+                {
+                    return new Result(false, "Only the Guardian who created the fireteam can edit/close a fireteam");
+                }
             }
 
             return new Result(true, string.Empty);

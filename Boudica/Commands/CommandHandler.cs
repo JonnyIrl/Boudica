@@ -27,10 +27,10 @@ namespace Boudica.Commands
 
         #region Raid Buttons
         public delegate Task<Result> EditRaidButtonClicked(SocketMessageComponent component, int raidId);
-        public delegate Task<Result> CloseRaidButtonClicked(SocketMessageComponent component, int raidId);
+        public delegate Task<Result> CloseRaidMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType);
         public delegate Task<Result> AlertRaidButtonClicked(SocketMessageComponent component, int raidId);
         public event EditRaidButtonClicked OnEditRaidButtonClicked;
-        public event CloseRaidButtonClicked OnCloseRaidButtonClicked;
+        public event CloseRaidMenuItemSelected OnCloseRaidMenuItemSelected;
         public event AlertRaidButtonClicked OnAlertRaidButtonClicked;
         #endregion
 
@@ -43,10 +43,10 @@ namespace Boudica.Commands
 
         #region Fireteam Buttons
         public delegate Task<Result> EditFireteamButtonClicked(SocketMessageComponent component, int raidId);
-        public delegate Task<Result> CloseFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
+        public delegate Task<Result> CloseFireteamMenuItemSelected(SocketMessageComponent component, int raidId, ClosedActivityType activityType);
         public delegate Task<Result> AlertFireteamButtonClicked(SocketMessageComponent component, int fireteamId);
         public event EditFireteamButtonClicked OnEditFireteamButtonClicked;
-        public event CloseFireteamButtonClicked OnCloseFireteamButtonClicked;
+        public event CloseFireteamMenuItemSelected OnCloseFireteamMenuItemSelected;
         public event AlertFireteamButtonClicked OnAlertFireteamButtonClicked;
         #endregion
 
@@ -174,13 +174,13 @@ namespace Boudica.Commands
                 await component.RespondAsync("Command failed", ephemeral: true);
                 return;
             }
-            ButtonCustomId buttonClicked = (ButtonCustomId) swap;
+            CustomId buttonClicked = (CustomId) swap;
             switch (buttonClicked)
             {
-                case ButtonCustomId.Invalid:
+                case CustomId.Invalid:
                     await component.RespondAsync("Failed", ephemeral: true);
                     break;
-                case ButtonCustomId.RaidAlert:
+                case CustomId.RaidAlert:
                     if (OnAlertRaidButtonClicked != null)
                     {
                         Result result = await OnAlertRaidButtonClicked.Invoke(component, id);
@@ -196,7 +196,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to alert raid", ephemeral: true);
                     break;
-                case ButtonCustomId.FireteamAlert:
+                case CustomId.FireteamAlert:
                     if (OnAlertFireteamButtonClicked != null)
                     {
                         Result result = await OnAlertFireteamButtonClicked.Invoke(component, id);
@@ -212,7 +212,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to alert fireteam", ephemeral: true);
                     break;
-                case ButtonCustomId.EditRaid:
+                case CustomId.EditRaid:
                     if (OnEditRaidButtonClicked != null)
                     {
                         Result result = await OnEditRaidButtonClicked.Invoke(component, id);
@@ -228,7 +228,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to edit raid", ephemeral: true);
                     break;
-                case ButtonCustomId.EditFireteam:
+                case CustomId.EditFireteam:
                     if (OnEditFireteamButtonClicked != null)
                     {
                         Result result = await OnEditFireteamButtonClicked.Invoke(component, id);
@@ -244,39 +244,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to edit fireteam", ephemeral: true);
                     break;
-                case ButtonCustomId.CloseRaid:
-                    if (OnCloseRaidButtonClicked != null)
-                    {
-                        Result result = await OnCloseRaidButtonClicked.Invoke(component, id);
-                        if (result.Success)
-                        {
-
-                        }
-                        else
-                        {
-                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
-                        }
-                        return;
-                    }
-                    await component.RespondAsync("Failed to close raid", ephemeral: true);
-                    break;
-                case ButtonCustomId.CloseFireteam:
-                    if (OnCloseFireteamButtonClicked != null)
-                    {
-                        Result result = await OnCloseFireteamButtonClicked.Invoke(component, id);
-                        if (result.Success)
-                        {
-
-                        }
-                        else
-                        {
-                            await component.RespondAsync("Failed to close fireteam - " + result.Message, ephemeral: true);
-                        }
-                        return;
-                    }
-                    await component.RespondAsync("Failed to close fireteam", ephemeral: true);
-                    break;
-                case ButtonCustomId.AcceptChallenge:
+                case CustomId.AcceptChallenge:
                     if (OnAcceptChallengeButtonClicked != null)
                     {
                         Result result = await OnAcceptChallengeButtonClicked.Invoke(component, id);
@@ -292,7 +260,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to accept challenge", ephemeral: true);
                     break;
-                case ButtonCustomId.EnterGuess:
+                case CustomId.EnterGuess:
                     //if (OnEnterGuessChallengeButtonClicked != null)
                     //{
                     //    Result result = await OnEnterGuessChallengeButtonClicked.Invoke(component, id);
@@ -308,7 +276,7 @@ namespace Boudica.Commands
                     //}
                     //await component.RespondAsync("Failed to enter guess", ephemeral: true);
                     break;
-                case ButtonCustomId.Higher:
+                case CustomId.Higher:
                     if (OnHigherButtonClicked != null)
                     {
                         Result result = await OnHigherButtonClicked.Invoke(component, id);
@@ -324,7 +292,7 @@ namespace Boudica.Commands
                     }
                     await component.RespondAsync("Failed to count guess", ephemeral: true);
                     break;
-                case ButtonCustomId.Lower:
+                case CustomId.Lower:
                     if (OnLowerButtonClicked != null)
                     {
                         Result result = await OnLowerButtonClicked.Invoke(component, id);
@@ -361,10 +329,10 @@ namespace Boudica.Commands
                 return;
             }
             string value = component.Data.Values.First();
-            SelectMenuCustomId selectMenuOption = (SelectMenuCustomId)swap;
+            CustomId selectMenuOption = (CustomId)swap;
             switch (selectMenuOption)
             {
-                case SelectMenuCustomId.RockPaperScissors:
+                case CustomId.RockPaperScissors:
                     if (OnEnterGuessChallengeButtonClicked != null)
                     {
                         Result result = await OnEnterGuessChallengeButtonClicked.Invoke(component, id, value);
@@ -379,6 +347,38 @@ namespace Boudica.Commands
                         return;
                     }
                     await component.RespondAsync("Failed to enter guess", ephemeral: true);
+                    break;
+                case CustomId.CloseRaid:
+                    if (OnCloseRaidMenuItemSelected != null)
+                    {
+                        Result result = await OnCloseRaidMenuItemSelected.Invoke(component, id, (ClosedActivityType)int.Parse(value));
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close raid - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close raid", ephemeral: true);
+                    break;
+                case CustomId.CloseFireteam:
+                    if (OnCloseFireteamMenuItemSelected != null)
+                    {
+                        Result result = await OnCloseFireteamMenuItemSelected.Invoke(component, id, (ClosedActivityType)int.Parse(value));
+                        if (result.Success)
+                        {
+
+                        }
+                        else
+                        {
+                            await component.RespondAsync("Failed to close fireteam - " + result.Message, ephemeral: true);
+                        }
+                        return;
+                    }
+                    await component.RespondAsync("Failed to close fireteam", ephemeral: true);
                     break;
                 default:
                     await component.RespondAsync("Failed", ephemeral: true);
@@ -533,12 +533,12 @@ namespace Boudica.Commands
                 }
             }
 
-            ButtonCustomId buttonClicked = (ButtonCustomId)swap;
+            CustomId buttonClicked = (CustomId)swap;
             switch (buttonClicked)
             {
-                case ButtonCustomId.Invalid:
+                case CustomId.Invalid:
                     break;
-                case ButtonCustomId.EditRaid:
+                case CustomId.EditRaid:
                     if (OnEditRaidModalSubmitted != null)
                     {
                         Result result = await OnEditRaidModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
@@ -554,7 +554,7 @@ namespace Boudica.Commands
                     }
                     await modal.RespondAsync("Failed to edit raid", ephemeral: true);
                     break;
-                case ButtonCustomId.EditFireteam:
+                case CustomId.EditFireteam:
                     if (OnEditFireteamModalSubmitted != null)
                     {
                         Result result = await OnEditFireteamModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
@@ -570,7 +570,7 @@ namespace Boudica.Commands
                     }
                     await modal.RespondAsync("Failed to edit fireteam", ephemeral: true);
                     break;
-                case ButtonCustomId.CreateRaid:
+                case CustomId.CreateRaid:
                     if (OnCreateRaidModalSubmitted != null)
                     {
                         Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, alertChannel, existingPlayers);
@@ -586,7 +586,7 @@ namespace Boudica.Commands
                     }
                     await modal.RespondAsync("Failed to create raid", ephemeral: true);
                     break;
-                case ButtonCustomId.CreateFireteam:
+                case CustomId.CreateFireteam:
                     if (OnCreateFireteamModalSubmitted != null)
                     {
                         Result result = await OnCreateFireteamModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, fireteamSize, alertChannel, existingPlayers);
@@ -602,7 +602,7 @@ namespace Boudica.Commands
                     }
                     await modal.RespondAsync("Failed to create fireteam", ephemeral: true);
                     break;
-                case ButtonCustomId.EnterGuess:
+                case CustomId.EnterGuess:
                     if (OnEnterGuessModalSubmitted != null)
                     {
                         Result result = await OnEnterGuessModalSubmitted.Invoke(modal, id, guess);
@@ -739,14 +739,14 @@ namespace Boudica.Commands
 
             return Task.CompletedTask;
         }
-        private Task SlashCommandExecuted(SlashCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
+        private async Task SlashCommandExecuted(SlashCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
         {
             if (!arg3.IsSuccess)
             {
                 switch (arg3.Error)
                 {
                     case InteractionCommandError.UnmetPrecondition:
-                        // implement
+                        await arg2.Interaction.RespondAsync(arg3.ErrorReason, ephemeral: true);
                         break;
                     case InteractionCommandError.UnknownCommand:
                         // implement
@@ -764,8 +764,6 @@ namespace Boudica.Commands
                         break;
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
