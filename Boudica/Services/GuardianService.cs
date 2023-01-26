@@ -120,6 +120,13 @@ namespace Boudica.Services
             return await _guardianCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
         }
 
+        public async Task<int> GetGuardianGlimmer(ulong userId)
+        {
+            Guardian guardian = await _guardianCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+            if (guardian == null) return 0;
+            return guardian.Glimmer;
+        }
+
         public async Task<Guardian> InsertGuardian(Guardian guardian)
         {
             try

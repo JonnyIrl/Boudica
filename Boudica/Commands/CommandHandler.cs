@@ -739,14 +739,14 @@ namespace Boudica.Commands
 
             return Task.CompletedTask;
         }
-        private Task SlashCommandExecuted(SlashCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
+        private async Task SlashCommandExecuted(SlashCommandInfo arg1, Discord.IInteractionContext arg2, IResult arg3)
         {
             if (!arg3.IsSuccess)
             {
                 switch (arg3.Error)
                 {
                     case InteractionCommandError.UnmetPrecondition:
-                        // implement
+                        await arg2.Interaction.RespondAsync(arg3.ErrorReason, ephemeral: true);
                         break;
                     case InteractionCommandError.UnknownCommand:
                         // implement
@@ -764,8 +764,6 @@ namespace Boudica.Commands
                         break;
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)

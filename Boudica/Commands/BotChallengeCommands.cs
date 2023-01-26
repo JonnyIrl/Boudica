@@ -1,4 +1,5 @@
-﻿using Boudica.Classes;
+﻿using Boudica.Attributes;
+using Boudica.Classes;
 using Boudica.Enums;
 using Boudica.Extensions;
 using Boudica.Helpers;
@@ -137,7 +138,9 @@ namespace Boudica.Commands
             return await component.Channel.GetMessageAsync(messageId, CacheMode.AllowDownload) as IUserMessage;
         }
 
+
         [SlashCommand("challenge-boudica", "Challenge Boudica")]
+        [GeneralChannelOnly]
         public async Task ChallengeBoudica(
             [Summary("wager", "The amount to bet and potentially win!")] int wager,
             [Summary("challenge", "Choose a Challenge")] BotChallenges challenge)

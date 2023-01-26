@@ -94,21 +94,33 @@ namespace Boudica.Commands
 
             EmbedHelper.UpdateFooterOnEmbed(embed, newFireteam);
 
-            var buttons = new ComponentBuilder()
+            var selectMenuBuilder = new SelectMenuBuilder()
+            {
+
+                CustomId = $"{(int)CustomId.CloseFireteam}-{newFireteam.Id}",
+                Placeholder = "Close Fireteam Options",
+                MaxValues = 1,
+                MinValues = 1
+            };
+            selectMenuBuilder.AddOption("Close Fireteam - Completed Successfully", $"{(int)ClosedActivityType.CloseFireteamSuccess}");
+            selectMenuBuilder.AddOption("Close Fireteam - Did not complete", $"{(int)ClosedActivityType.CloseFireteamFailure}");
+            selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{(int)ClosedActivityType.ForceCloseFireteam}");
+
+            var componentBuilder = new ComponentBuilder()
                    .WithButton("Edit Fireteam", $"{(int)CustomId.EditFireteam}-{newFireteam.Id}", ButtonStyle.Primary)
-                   .WithButton("Alert Fireteam", $"{(int)CustomId.FireteamAlert}-{newFireteam.Id}", ButtonStyle.Primary)
-                   .WithButton("Close Fireteam", $"{(int)CustomId.CloseFireteam}-{newFireteam.Id}", ButtonStyle.Danger);
+                   .WithButton("Alert Fireteam", $"{(int)CustomId.FireteamAlert}-{newFireteam.Id}", ButtonStyle.Primary);
+            componentBuilder.WithSelectMenu(selectMenuBuilder);
 
             IUserMessage newMessage;
             IRole role = GetRoleForChannelModal(guildUser, channel.Id);
             if (role != null && newFireteam.Players.Count != newFireteam.MaxPlayerCount && alertChannel)
             {
-                await modal.RespondAsync(role.Mention, embed: embed.Build(), components: buttons.Build());
+                await modal.RespondAsync(role.Mention, embed: embed.Build(), components: componentBuilder.Build());
                 newMessage = await modal.GetOriginalResponseAsync();
             }
             else
             {
-                await modal.RespondAsync(embed: embed.Build(), components: buttons.Build());
+                await modal.RespondAsync(embed: embed.Build(), components: componentBuilder.Build());
                 newMessage = await modal.GetOriginalResponseAsync();
             }
 
