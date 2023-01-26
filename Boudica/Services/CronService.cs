@@ -19,9 +19,11 @@ namespace Boudica.Services
         private readonly Timer _actionTimer;
         private readonly TrialsService _trialsService;
         private readonly UserChallengeService _userChallengeService;
+        private readonly ActivityService _activityService;
         private const int FiveMinute = 300000;
         private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
+        private bool _fixOldRaids = false;
 
         private readonly IMongoDBContext _mongoDBContext;
         private readonly DiscordSocketClient _client;
@@ -51,6 +53,7 @@ namespace Boudica.Services
 #endif
             _trialsService = services.GetRequiredService<TrialsService>();
             _userChallengeService = services.GetRequiredService<UserChallengeService>();
+            _activityService = services.GetRequiredService<ActivityService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             if (_actionTimer == null)
             {
@@ -389,6 +392,57 @@ namespace Boudica.Services
 
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
+        }
+
+        private async Task UpdateRaidButtons(List<Raid> raids)
+        {
+            foreach (Raid raid in raids)
+            {
+                SocketTextChannel channel = (SocketTextChannel) _client.GetChannel(raid.ChannelId);
+                if (channel == null)
+                {
+                    Console.WriteLine("Updating raids.. channel is null");
+                    continue;
+                }
+                IUserMessage message = (IUserMessage)await channel.GetMessageAsync(raid.MessageId);
+                if(message == null)
+                {
+                    Console.WriteLine("Updating raids.. message is null");
+                    continue;
+                }
+
+                var selectMenuBuilder = new SelectMenuBuilder()
+                {
+
+                    CustomId = $"{(int)CustomId.CloseRaid}-{raid.Id}",
+                    Placeholder = "Close Raid Options",
+                    MaxValues = 1,
+                    MinValues = 1
+                };
+                selectMenuBuilder.AddOption("Close Raid - Completed Successfully", $"{(int)ClosedActivityType.CloseRaidSuccess}");
+                selectMenuBuilder.AddOption("Close Raid - Did not complete", $"{(int)ClosedActivityType.CloseRaidFailure}");
+                selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{(int)ClosedActivityType.ForceCloseRaid}");
+
+                var componentBuilder = new ComponentBuilder()
+                    .WithButton("Edit Raid", $"{(int)CustomId.EditRaid}-{raid.Id}", ButtonStyle.Primary)
+                    .WithButton("Alert Raid", $"{(int)CustomId.RaidAlert}-{raid.Id}", ButtonStyle.Primary)
+                    .WithSelectMenu(selectMenuBuilder);
+
+                await message.ModifyAsync(x =>
+                {
+                    x.Components = componentBuilder.Build();
+                });
+            }
+        }
+
+        private async Task<List<Raid>> GetRaids()
+        {
+            //135 136 137
+            List<Raid> raids = new List<Raid>();
+            raids.Add(await _activityService.GetMongoRaidAsync(135));
+            raids.Add(await _activityService.GetMongoRaidAsync(136));
+            raids.Add(await _activityService.GetMongoRaidAsync(137));
+            return raids;
         }
     }
 }

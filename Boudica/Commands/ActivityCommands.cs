@@ -1438,7 +1438,6 @@ namespace Boudica.Commands
         }
 
 
-
         [SlashCommand("list-open-raids", "List all open Raids")]
         [RequireUserPermission(Discord.GuildPermission.KickMembers)]
         public async Task ListOpenRaids()
