@@ -13,5 +13,13 @@ namespace Boudica.MongoDB.Models
         public string Username { get; set; }
         public PollOption VotedPollOption { get; set; }
         public DateTime DateTimeVoted { get; set; }
+
+        public PlayerPollVote(ulong userId, string username, PollOption option)
+        {
+            Id = userId;
+            Username = username;
+            VotedPollOption = option;
+            DateTimeVoted = DateTime.UtcNow;
+        }
     }
 }

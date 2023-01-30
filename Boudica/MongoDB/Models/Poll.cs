@@ -11,7 +11,7 @@ namespace Boudica.MongoDB.Models
     public class Poll
     {
         [BsonId]
-        public Guid Id { get; set; }
+        public long Id { get; set; }
         public string Question { get; set; }
         public List<PlayerPollVote> Votes { get; set; }
         public List<CreatedPollOption> CreatedOptions { get; set; }
