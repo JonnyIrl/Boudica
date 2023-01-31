@@ -11,5 +11,11 @@ namespace Boudica.MongoDB.Models
     {
         public string DisplayText { get; set; }
         public PollOption PollOption { get; set; }
+
+        public CreatedPollOption(string displayText, PollOption pollOption)
+        {
+            DisplayText = displayText;
+            PollOption = pollOption;
+        }
     }
 }

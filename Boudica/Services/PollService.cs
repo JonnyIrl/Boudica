@@ -41,6 +41,13 @@ namespace Boudica.Services
             return poll;
         }
 
+        public async Task<bool> UpdatePollMessageId(long pollId, ulong messageId)
+        {
+            var updateBuilder = Builders<Poll>.Update;
+            var result = await _pollCollection.UpdateOneAsync(x => x.Id == pollId, updateBuilder.Set(x => x.MessageId, messageId));
+            return result.IsAcknowledged;
+        }
+
         public async Task<Result> AddPlayerPollVote(ulong userId, string userName, long pollId, PollOption votedOption)
         {
             Poll existingPoll = await _pollCollection.Find(x => x.Id == pollId).FirstOrDefaultAsync();
