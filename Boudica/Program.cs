@@ -141,6 +141,7 @@ class Program
             .AddScoped<HistoryService>()
             .AddScoped<UserChallengeService>()
             .AddScoped<BotChallengeService>()
+            .AddScoped<PollService>()
             .BuildServiceProvider();
     }
 }

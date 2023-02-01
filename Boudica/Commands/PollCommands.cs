@@ -60,7 +60,7 @@ namespace Boudica.Commands
             }
             List<string> validOptions = GetValidOptionsList(option1, option2, option3, option4, option5, option6, option7, option8, option9, option10, option11, option12, option13, option14, option15, option16, option17, option18, option19, option20);
             List<PollOption> pollOptions = GetPollOptions(validOptions.Count);
-            Poll createdPoll = await _pollService.CreatePollAsync(CreatePoll(question, validOptions, pollOptions));
+            Poll createdPoll = await _pollService.CreatePollAsync(CreatePoll(question, validOptions, pollOptions, entryGlimmerAmount, winningGlimmerAmount));
             List<Emoji> emojiOptions = GetEmojiListOfOptions(validOptions.Count);
             EmbedBuilder embedBuilder = CreatePollEmbed(question, validOptions, emojiOptions, createdPoll.Id);
 
@@ -86,6 +86,12 @@ namespace Boudica.Commands
             if(existingPoll.IsClosed)
             {
                 await RespondAsync("This poll is closed", ephemeral: true);
+                return;
+            }
+            if(existingPoll.CreatedOptions.FirstOrDefault(x => x.PollOption == option) == null)
+            {
+                await RespondAsync("This is not a valid option to vote on", ephemeral: true);
+                return;
             }
             PlayerPollVote existingVote = existingPoll.Votes.FirstOrDefault(x => x.Id == Context.User.Id);
             if (existingVote != null)
@@ -97,7 +103,7 @@ namespace Boudica.Commands
             if (result.Success == false)
                 await RespondAsync(result.Message, ephemeral: true);
             else
-                await RespondAsync($"You vote for {existingPoll.CreatedOptions[(int)option]} has been counted!", ephemeral: true);
+                await RespondAsync($"You vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted!", ephemeral: true);
         }
 
         [SlashCommand("close-poll", "Close an open Poll")]
@@ -115,10 +121,98 @@ namespace Boudica.Commands
             }
 
             existingPoll.IsClosed = true;
-            //TODO Finish off.
+            EmbedBuilder embedBuilder = CreateClosedPollEmbed(ref existingPoll);
+            await _pollService.ClosePoll(existingPoll);
+            await RespondAsync(embed: embedBuilder.Build());
+
+            ITextChannel channel = (ITextChannel) Context.Guild.GetChannel(existingPoll.ChannelId);
+            if (channel == null) return;
+            IUserMessage message = (IUserMessage) await channel.GetMessageAsync(existingPoll.MessageId);
+            if(message == null) return;
+            IEmbed embed = message.Embeds.FirstOrDefault();
+            if (embed == null) return;
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.Title = embed.Title + " - This Poll is now closed";
+            builder.Color = Color.Red;
+            builder.Description = embed.Description;
+            if(embed.Footer != null)
+                builder.Footer = new EmbedFooterBuilder() { Text = embed.Footer.Value.ToString() };
+            await message.ModifyAsync(x =>
+            {
+                x.Embed = builder.Build();
+            });
         }
 
-        private Poll CreatePoll(string question, List<string> validOptions, List<PollOption> pollOptions)
+        private EmbedBuilder CreateClosedPollEmbed(ref Poll poll)
+        {
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.Title = $"Results of the {poll.Question} Poll";
+            embedBuilder.Color = Color.Green;
+            var groupedResults = poll.Votes.GroupBy(x => x.VotedPollOption).OrderByDescending(x => x.Count());
+            StringBuilder sb = new StringBuilder();
+
+            int lastGroupResult = groupedResults.First().Count();
+            List<PollOption> drawingOptions = new List<PollOption>();
+            foreach(var groupResult in groupedResults.Skip(1))
+            {
+                if (groupResult.Count() == lastGroupResult)
+                {
+                    drawingOptions.Add(groupResult.First().VotedPollOption);
+                    //drawStringBuilder.Append($"{poll.CreatedOptions[(int)groupResult.First().VotedPollOption]}");
+                }
+                else break;
+            }
+            //There was a draw
+            if(drawingOptions.Count > 0)
+            {
+                sb.Append("There was a draw between the following choices");
+                drawingOptions.Add(groupedResults.First().First().VotedPollOption);
+                List<string> results = new List<string>();
+                foreach(PollOption option in drawingOptions)
+                {
+                    results.Add(poll.CreatedOptions[(int)option].DisplayText);
+                }
+                string drawString = string.Join(", ", results);
+                sb.AppendLine(drawString);
+                sb.AppendLine("");
+                sb.AppendLine($"The following players have all been awarded {poll.WinnerGlimmerAmount} Glimmer!");
+                List<PlayerPollVote> winningPlayerPollVotes = poll.Votes.Where(x => drawingOptions.Contains(x.VotedPollOption) != false).ToList();
+                sb.AppendLine(string.Join(", ", winningPlayerPollVotes.Select(x => x.Username).ToList()));
+                sb.AppendLine("");
+                sb.AppendLine($"Everyone else has been awarded {poll.EntryGlimmerAmount} Glimmer!");
+                embedBuilder.Description += sb.ToString();
+                poll.WinningOptions = drawingOptions;
+            }
+            //One winning option
+            else
+            {
+                sb.AppendLine($"The following players have all been awarded {poll.WinnerGlimmerAmount} Glimmer for winning the Poll!");
+                List<PlayerPollVote> winningPlayerPollVotes = poll.Votes.Where(x => x.VotedPollOption == groupedResults.First().First().VotedPollOption).ToList();
+                sb.AppendLine(string.Join(", ", winningPlayerPollVotes.Select(x => x.Username).ToList()));
+                sb.AppendLine("");
+                sb.AppendLine($"Everyone else has been awarded {poll.EntryGlimmerAmount} Glimmer!");
+                embedBuilder.Description += sb.ToString();
+                poll.WinningOptions = new List<PollOption>();
+                poll.WinningOptions.Add(groupedResults.First().First().VotedPollOption);
+            }
+            StringBuilder breakdownStringBuilder = new StringBuilder();
+            foreach (CreatedPollOption pollOption in poll.CreatedOptions)
+            {
+                var matchingGroupResult = groupedResults.FirstOrDefault(x => x.FirstOrDefault()?.VotedPollOption == pollOption.PollOption);
+                if(matchingGroupResult != null)
+                {
+                    breakdownStringBuilder.AppendLine($"{pollOption.DisplayText} had a total of {matchingGroupResult.Count()} votes");
+                }
+                else
+                {
+                    breakdownStringBuilder.AppendLine($"{pollOption.DisplayText} had a total of 0 votes");
+                }
+            }
+            embedBuilder.AddField("Vote Breakdown", breakdownStringBuilder.ToString());
+            return embedBuilder;
+        }
+
+        private Poll CreatePoll(string question, List<string> validOptions, List<PollOption> pollOptions, int entryCount, int winningCount)
         {
             Poll poll = new Poll();
             poll.CreatedOptions = new List<CreatedPollOption>();
@@ -130,6 +224,8 @@ namespace Boudica.Commands
             poll.Votes = new List<PlayerPollVote>();
             poll.GuildId = Context.Guild.Id;
             poll.ChannelId = Context.Channel.Id;
+            poll.EntryGlimmerAmount = entryCount;
+            poll.WinnerGlimmerAmount = winningCount;
             return poll;
         }
 
