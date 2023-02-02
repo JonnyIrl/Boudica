@@ -119,7 +119,7 @@ namespace Boudica.Commands
             if (result.Success == false)
                 await RespondAsync(result.Message, ephemeral: true);
             else
-                await RespondAsync($"You vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(guardianGlimmer * 2)} Glimmer. Best of luck!");
+                await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(guardianGlimmer * 2)} Glimmer. Best of luck!");
 
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, (betAmount * -1));
         }
@@ -137,6 +137,10 @@ namespace Boudica.Commands
             if (existingPoll.IsLocked)
             {
                 await RespondAsync("This poll is already locked", ephemeral: true);
+            }
+            if (existingPoll.IsClosed)
+            {
+                await RespondAsync("This poll is already closed", ephemeral: true);
             }
 
             await _betPollService.LockBetPoll(existingPoll.Id);
@@ -191,7 +195,7 @@ namespace Boudica.Commands
             IEmbed embed = message.Embeds.FirstOrDefault();
             if (embed == null) return;
             EmbedBuilder builder = new EmbedBuilder();
-            builder.Title = "This Poll is now closed - " + embed.Title;
+            builder.Title = "This Poll is now closed - " + existingPoll.Question;
             builder.Color = Color.Red;
             builder.Description = embed.Description;
             foreach (EmbedField field in embed.Fields)
@@ -225,7 +229,7 @@ namespace Boudica.Commands
             }
 
             if (losingPlayerPollVotes.Count == 0)
-                winnersStringBuilder.AppendLine("Nobody lost!");
+                losersStringBuilder.AppendLine("Nobody lost!");
             else
             {
                 foreach (PlayerPollVote loser in losingPlayerPollVotes)
