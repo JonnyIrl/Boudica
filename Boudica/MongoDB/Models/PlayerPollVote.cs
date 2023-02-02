@@ -13,13 +13,14 @@ namespace Boudica.MongoDB.Models
         public string Username { get; set; }
         public PollOption VotedPollOption { get; set; }
         public DateTime DateTimeVoted { get; set; }
-
-        public PlayerPollVote(ulong userId, string username, PollOption option)
+        public int BetAmount { get; set; }
+        public PlayerPollVote(ulong userId, string username, PollOption option, int betAmount = 0)
         {
             Id = userId;
             Username = username;
             VotedPollOption = option;
             DateTimeVoted = DateTime.UtcNow;
+            BetAmount = betAmount;
         }
     }
 }
