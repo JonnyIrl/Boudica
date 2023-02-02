@@ -23,6 +23,7 @@ namespace Boudica.Commands
             _guardianService = services.GetRequiredService<GuardianService>();
         }
 
+        [DefaultMemberPermissions(GuildPermission.ModerateMembers)]
         [SlashCommand("create-poll", "Creates a Poll that will award glimmer to winners")]
         public async Task CreatePoll(
             [Summary("entryGlimmerAmount", "The amount of glimmer each entry will get")]
@@ -106,6 +107,7 @@ namespace Boudica.Commands
                 await RespondAsync($"You vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted!", ephemeral: true);
         }
 
+        [DefaultMemberPermissions(GuildPermission.ModerateMembers)]
         [SlashCommand("close-poll", "Close an open Poll")]
         public async Task ClosePoll([Summary("pollId", "The Id of the poll")] long pollId)
         {
@@ -132,9 +134,11 @@ namespace Boudica.Commands
             IEmbed embed = message.Embeds.FirstOrDefault();
             if (embed == null) return;
             EmbedBuilder builder = new EmbedBuilder();
-            builder.Title = embed.Title + " - This Poll is now closed";
+            builder.Title = "This Poll is now closed - " + embed.Title;
             builder.Color = Color.Red;
             builder.Description = embed.Description;
+            foreach(EmbedField field in embed.Fields)
+                builder.Fields.Add(new EmbedFieldBuilder() { Name = field.Name, Value = field.Value });
             if(embed.Footer != null)
                 builder.Footer = new EmbedFooterBuilder() { Text = embed.Footer.Value.ToString() };
             await message.ModifyAsync(x =>
@@ -146,7 +150,7 @@ namespace Boudica.Commands
         private EmbedBuilder CreateClosedPollEmbed(ref Poll poll)
         {
             EmbedBuilder embedBuilder = new EmbedBuilder();
-            embedBuilder.Title = $"Results of the {poll.Question} Poll";
+            embedBuilder.Title = $"Results of the **{poll.Question}** Poll";
             embedBuilder.Color = Color.Green;
             var groupedResults = poll.Votes.GroupBy(x => x.VotedPollOption).OrderByDescending(x => x.Count());
             StringBuilder sb = new StringBuilder();
@@ -165,9 +169,10 @@ namespace Boudica.Commands
             //There was a draw
             if(drawingOptions.Count > 0)
             {
-                sb.Append("There was a draw between the following choices");
+                sb.Append("There was a draw between the following choices:\n");
                 drawingOptions.Add(groupedResults.First().First().VotedPollOption);
                 List<string> results = new List<string>();
+                drawingOptions = drawingOptions.OrderBy(x => x).ToList();
                 foreach(PollOption option in drawingOptions)
                 {
                     results.Add(poll.CreatedOptions[(int)option].DisplayText);
@@ -233,9 +238,9 @@ namespace Boudica.Commands
         {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.Title = question;
-            embedBuilder.Description = $"Use /poll-vote with an Id of {pollId} and pick your answer from the list to vote!";
+            embedBuilder.Description = $"Use **/poll-vote** with an Id of {pollId} and pick your answer from the list to vote!";
             embedBuilder.AddField("Options", GetEmbedOptions(validOptions, emojis));
-            embedBuilder.Footer = new EmbedFooterBuilder() { Text = $"Poll Id {pollId}\nUse /poll-vote with the PollId {pollId} to vote on this poll" };
+            embedBuilder.Footer = new EmbedFooterBuilder() { Text = $"Poll Id {pollId}\nUse /close-poll with the PollId {pollId} to close this poll" };
             embedBuilder.Color = Color.Blue;
             return embedBuilder;
         }

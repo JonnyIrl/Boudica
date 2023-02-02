@@ -15,7 +15,7 @@ namespace Boudica.MongoDB.Models
         public bool IsExotic { get; set; }
 
 
-        public WeaponType GetKineticWeapon(bool isExotic)
+        public WeaponType GetKineticWeapon(bool isExotic, Random random)
         {
             List<WeaponType> kineticWeapons = new List<WeaponType>()
             {
@@ -33,10 +33,9 @@ namespace Boudica.MongoDB.Models
                 WeaponType.Bow
             };
 
-            Random random = new Random();
             return kineticWeapons[random.Next(0, kineticWeapons.Count)];
         }
-        public WeaponType GetSpecialWeapon(bool isExotic, WeaponType kineticType)
+        public WeaponType GetSpecialWeapon(bool isExotic, WeaponType kineticType, Random random)
         {
             List<WeaponType> specialWeapons = new List<WeaponType>()
             {
@@ -60,7 +59,6 @@ namespace Boudica.MongoDB.Models
                 specialWeapons.Remove(WeaponType.SniperRifle);
             }
 
-            Random random = new Random();
             WeaponType randomWeaponType = specialWeapons[random.Next(0, specialWeapons.Count)];
             while(randomWeaponType == kineticType)
             {
@@ -69,7 +67,7 @@ namespace Boudica.MongoDB.Models
 
             return randomWeaponType;
         }
-        public WeaponType GetHeavyWeapon(bool isExotic)
+        public WeaponType GetHeavyWeapon(bool isExotic, Random random)
         {
             List<WeaponType> heavyWeapons = new List<WeaponType>()
             {
@@ -88,7 +86,6 @@ namespace Boudica.MongoDB.Models
                 heavyWeapons.Remove(WeaponType.Shotgun);
             }
 
-            Random random = new Random();
             return heavyWeapons[random.Next(0, heavyWeapons.Count)];
         }
     }

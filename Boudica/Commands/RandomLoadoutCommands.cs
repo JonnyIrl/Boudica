@@ -68,7 +68,7 @@ namespace Boudica.Commands
 
             var embed = new EmbedBuilder();
             embed.Title = "Random Loadout";
-            embed.Description = "If you do not have an exotic or it is not valid just use a legendary version. The same goes for elements";
+            embed.Description = "If the generated loadout is not valid or you do not have that element then swap elements.";
             //embed.AddField("Your Loadout", sb.ToString());
 
             embed.AddField("Subclass", GetElementTypeEmote(loadout.Subclass));
@@ -83,9 +83,9 @@ namespace Boudica.Commands
                 embed.AddField("Special", $"{GetElementTypeEmote(loadout.SpecialWeapon.WeaponElementType)} {loadout.SpecialWeapon.WeaponType.ToName()}", true);
 
             if (loadout.HeavyWeapon.IsExotic)
-                embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.SpecialWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()} {_exoticEmote}", true);
+                embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.HeavyWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()} {_exoticEmote}", true);
             else
-                embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.SpecialWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()}", true);
+                embed.AddField("Heavy", $"{GetElementTypeEmote(loadout.HeavyWeapon.WeaponElementType)} {loadout.HeavyWeapon.WeaponType.ToName()}", true);
 
             await RespondAsync(embed: embed.Build());
         }
