@@ -119,7 +119,7 @@ namespace Boudica.Commands
             if (result.Success == false)
                 await RespondAsync(result.Message, ephemeral: true);
             else
-                await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(guardianGlimmer * 2)} Glimmer. Best of luck!");
+                await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(betAmount * 2)} Glimmer. Best of luck!");
 
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, (betAmount * -1));
         }
@@ -180,6 +180,13 @@ namespace Boudica.Commands
             if (existingPoll.IsClosed)
             {
                 await RespondAsync("This poll is already closed", ephemeral: true);
+                return;
+            }
+
+            if(existingPoll.CreatedOptions.FirstOrDefault(x => x.PollOption == winningOption) == null)
+            {
+                await RespondAsync("This is not a valid option to win", ephemeral: true);
+                return;
             }
 
             existingPoll.IsClosed = true;
@@ -211,7 +218,8 @@ namespace Boudica.Commands
         private async Task<EmbedBuilder> CreateClosedPollEmbed(BetPoll poll, PollOption winningOption)
         {
             EmbedBuilder embedBuilder = new EmbedBuilder();
-            embedBuilder.Title = $"Results of the **{poll.Question}** Poll";
+            embedBuilder.Title = $"Results of the {poll.Question} Poll";
+            embedBuilder.Description = $"The winning option was **{poll.CreatedOptions.First(x => x.PollOption == winningOption).DisplayText}**";
             embedBuilder.Color = Color.Green;
             List<PlayerPollVote> winningPlayerPollVotes = poll.Votes.Where(x => x.VotedPollOption == winningOption).ToList();
             List<PlayerPollVote> losingPlayerPollVotes = poll.Votes.Where(x => x.VotedPollOption != winningOption).ToList();
@@ -234,8 +242,8 @@ namespace Boudica.Commands
             {
                 foreach (PlayerPollVote loser in losingPlayerPollVotes)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(loser.Id, loser.Username, loser.BetAmount * -1);
-                    losersStringBuilder.AppendLine($"{loser.Username}, you have lost {(loser.BetAmount * 2)} Glimmer");
+                    //Glimmer already taken off the user so no need to do it twice
+                    losersStringBuilder.AppendLine($"{loser.Username}, you have lost {(loser.BetAmount)} Glimmer");
                 }
             }
             
