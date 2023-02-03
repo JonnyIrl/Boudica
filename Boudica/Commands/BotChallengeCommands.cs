@@ -25,6 +25,8 @@ namespace Boudica.Commands
         private readonly GuardianService _guardianService;
         private readonly HistoryService _historyService;
         private static bool _subscribed = false;
+        private const int HigherOrLowerUpperLimit = 14;
+        private const int HigherOrLowerRandomUpperLimit = 15;
         public BotChallengeCommands(IServiceProvider services, CommandHandler handler)
         {
             _botChallengeService = services.GetRequiredService<BotChallengeService>();
@@ -233,7 +235,7 @@ namespace Boudica.Commands
         {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.WithTitle($"Higher Or Lower Challenge for {wagerAmount} Glimmer!");
-            embedBuilder.WithDescription("Rules: A random number between 1-12 will be displayed below.\nPress the Higher Button if you think the next number will be higher or press the Lower Button if you think the number will be lower. After 3 rounds you will be awarded Glimmer.");
+            embedBuilder.WithDescription($"Rules: A random number between 1-{HigherOrLowerUpperLimit} will be displayed below.\nPress the Higher Button if you think the next number will be higher or press the Lower Button if you think the number will be lower. After 3 rounds you will be awarded Glimmer.");
             embedBuilder.AddField($"{roundNumber.ToName()}", $"Do you think the next number is Higher or Lower than **{randomNumber}**");
             embedBuilder.WithColor(Color.LightOrange);
             return embedBuilder;
@@ -242,10 +244,10 @@ namespace Boudica.Commands
         private int GenerateRandomNumber(int previousNumber = -1)
         {
             Random random = new Random();
-            int randomNumber = random.Next(1, 13);
+            int randomNumber = random.Next(1, HigherOrLowerRandomUpperLimit);
             while (randomNumber == previousNumber)
             {
-                randomNumber = random.Next(1, 13);
+                randomNumber = random.Next(1, HigherOrLowerRandomUpperLimit);
             }
 
             return randomNumber;
