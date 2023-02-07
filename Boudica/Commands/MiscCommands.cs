@@ -1,4 +1,5 @@
-﻿using Boudica.Enums;
+﻿using Boudica.Attributes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -109,6 +110,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("joke", "Posts a random joke")]
+        [BotChannelOnly]
         public async Task JokeCommand()
         {
             //await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
@@ -162,6 +164,7 @@ namespace Boudica.Commands
         }       
 
         [SlashCommand("daily-gift", "Every day, get a free daily gift of 1-10 Glimmer!")]
+        [BotChannelOnly]
         public async Task DailyGift()
         {
             DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
