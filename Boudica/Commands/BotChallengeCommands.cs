@@ -125,7 +125,6 @@ namespace Boudica.Commands
         private async Task<Result> GuessIncorrect(SocketMessageComponent component, bool higher, RoundNumber roundNumber, int wagerAmount, int newRandomNumber, IEmbed existingEmbed, IUserMessage existingMessage)
         {
             EmbedBuilder embedBuilder = UpdateRoundGuess(roundNumber, higher, false, wagerAmount, newRandomNumber, existingEmbed);
-            await _guardianService.IncreaseGlimmerAsync(component.User.Id, component.User.Username, wagerAmount * -1);
             await component.RespondAsync($"Unlucky, you were incorrect, you have lost {wagerAmount} Glimmer, better luck next time!", ephemeral: true);
             await existingMessage.ModifyAsync(x =>
             {
@@ -179,7 +178,9 @@ namespace Boudica.Commands
             if (newMessage != null)
             {
                 await _botChallengeService.UpdateChallengeMessageDetails(newChallenge.SessionId, Context.Guild.Id, Context.Channel.Id, newMessage.Id);
-            }   
+            }
+
+            await _guardianService.RemoveGlimmerAsync(Context.User.Id, wager);
             await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.BotChallengeHigherOrLower);
         }
 

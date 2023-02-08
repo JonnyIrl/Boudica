@@ -321,13 +321,13 @@ namespace Boudica.Commands
                         {
                             await _guardianService.IncreaseGlimmerAsync(updatedUserChallenge.Challenger.UserId, updatedUserChallenge.Challenger.UserName, updatedUserChallenge.Wager);
                             //Loser gets decreased the wager amount
-                            await _guardianService.IncreaseGlimmerAsync(updatedUserChallenge.Contender.UserId, updatedUserChallenge.Contender.UserName, updatedUserChallenge.Wager * -1);
+                            await _guardianService.RemoveGlimmerAsync(updatedUserChallenge.Contender.UserId,  updatedUserChallenge.Wager);
                         }
                         else
                         {
                             await _guardianService.IncreaseGlimmerAsync(updatedUserChallenge.Contender.UserId, updatedUserChallenge.Contender.UserName, updatedUserChallenge.Wager);
                             //Loser gets decreased the wager amount
-                            await _guardianService.IncreaseGlimmerAsync(updatedUserChallenge.Challenger.UserId, updatedUserChallenge.Challenger.UserName, updatedUserChallenge.Wager * -1);
+                            await _guardianService.RemoveGlimmerAsync(updatedUserChallenge.Challenger.UserId, updatedUserChallenge.Wager);
                         }
 
                         await _userChallengeService.UpdateChallengeWinnerId(updatedUserChallenge.SessionId, (ulong)updatedUserChallenge.WinnerId);

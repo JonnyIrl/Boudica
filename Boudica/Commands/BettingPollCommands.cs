@@ -121,7 +121,7 @@ namespace Boudica.Commands
             else
                 await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(betAmount * 2)} Glimmer. Best of luck!");
 
-            await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, (betAmount * -1));
+            await _guardianService.RemoveGlimmerAsync(Context.User.Id, (betAmount * -1));
         }
 
         [DefaultMemberPermissions(GuildPermission.ModerateMembers)]
