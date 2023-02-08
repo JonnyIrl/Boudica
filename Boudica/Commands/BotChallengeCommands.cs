@@ -108,7 +108,8 @@ namespace Boudica.Commands
             EmbedBuilder embedBuilder = UpdateRoundGuess(roundNumber, higher, true, wagerAmount, newRandomNumber, existingEmbed);
             if (roundNumber == RoundNumber.GameOverRound)
             {
-                await _guardianService.IncreaseGlimmerAsync(component.User.Id, component.User.Username, wagerAmount);
+                //* 2 because we take away at the beginning of the round.
+                await _guardianService.IncreaseGlimmerAsync(component.User.Id, component.User.Username, wagerAmount * 2);
                 await component.RespondAsync($"Congatulations! You have won {wagerAmount} Glimmer!", ephemeral: true);
             }
             else
