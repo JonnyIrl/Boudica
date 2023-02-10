@@ -155,7 +155,7 @@ namespace Boudica.Commands
             Guardian challenger = await _guardianService.GetGuardian(Context.User.Id);
             if (challenger.Glimmer < wager)
             {
-                await RespondAsync("You do not have enough glimmer to bet");
+                await RespondAsync("You do not have enough glimmer to bet", ephemeral: true);
                 return;
             }
 
