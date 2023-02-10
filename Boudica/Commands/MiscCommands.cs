@@ -3,6 +3,7 @@ using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
+using CoreHtmlToImage;
 using Discord;
 using Discord.Interactions;
 using Discord.Rest;
@@ -11,9 +12,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Color = Discord.Color;
 
 namespace Boudica.Commands
 {
@@ -347,6 +350,31 @@ namespace Boudica.Commands
 
             builder.AddField("Here are your stats for last year.", sb.ToString());
             return builder;
+        }
+
+        [SlashCommand("my-profile", "My profile command - Test")]
+        public async Task MyProfile()
+        {
+            await RespondWithFileAsync(await ConvertHtmlToImage());
+        }
+
+        public async Task<string> ConvertHtmlToImage()
+        {
+            var converter = new HtmlConverter();
+            string html = string.Empty;
+            using(StreamReader sr = new StreamReader(@"C:\Users\jonat\Documents\HTML\index.html"))
+            {
+                html = await sr.ReadToEndAsync();
+            }
+            var imageBytes = converter.FromHtmlString(html, 400, CoreHtmlToImage.ImageFormat.Png, 100);
+            File.WriteAllBytes("resultImage.png", imageBytes);
+            //using(var ms = new MemoryStream(imageBytes))
+            //{
+            //    ms.Position = 0;
+            //    Bitmap bmp = new Bitmap(ms);
+            //    bmp.Save("resultImage.png", System.Drawing.Imaging.ImageFormat.Png);
+            //}
+            return "resultImage.png";
         }
     }
 }
