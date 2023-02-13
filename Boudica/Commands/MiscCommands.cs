@@ -363,6 +363,7 @@ namespace Boudica.Commands
         public async Task<string> ConvertHtmlToImage()
         {
             const string ProfileNameReplacement = "%Username%";
+            const string ProfilePictureUrlReplacement = "%ProfilePictureUrl%";
             const string GlimmerReplacement = "%GlimmerCount%";
             const string RaidReplacement = "%RaidCount%";
             const string FireteamReplacement = "%FireteamCount%";
@@ -378,6 +379,7 @@ namespace Boudica.Commands
                 html = sr.ReadToEnd();
             }
             html = html
+                .Replace(ProfilePictureUrlReplacement, Context.User.GetAvatarUrl(Discord.ImageFormat.Png, 64))
                 .Replace(ProfileNameReplacement, Context.User.Username)
                 .Replace(GlimmerReplacement, glimmerCount.ToString())
                 .Replace(RaidReplacement, raidCount.ToString())
