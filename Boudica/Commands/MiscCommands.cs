@@ -10,6 +10,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PuppeteerSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -355,26 +356,68 @@ namespace Boudica.Commands
         [SlashCommand("my-profile", "My profile command - Test")]
         public async Task MyProfile()
         {
-            await RespondWithFileAsync(await ConvertHtmlToImage());
+            await DeferAsync();
+            await FollowupWithFileAsync(await ConvertHtmlToImage());
         }
 
         public async Task<string> ConvertHtmlToImage()
         {
-            var converter = new HtmlConverter();
+            const string ProfileNameReplacement = "%Username%";
+            const string GlimmerReplacement = "%GlimmerCount%";
+            const string RaidReplacement = "%RaidCount%";
+            const string FireteamReplacement = "%FireteamCount%";
+            const string AwardReplacement = "%AwardCount%";
+            int glimmerCount = await _guardianService.GetGuardianGlimmer(Context.User.Id);
+            long raidCount = await _activityService.GetRaidCount(Context.User.Id);
+            long fireteamCount = await _activityService.GetFireteamCount(Context.User.Id);
+            long awardCount = await _historyService.GetAwardedCountAsync(Context.User.Id);
+
             string html = string.Empty;
-            using(StreamReader sr = new StreamReader(@"C:\Users\jonat\Documents\HTML\index.html"))
+            using (StreamReader sr = new StreamReader(BoudicaConfig.ProfileDirectory + "index.html"))
             {
-                html = await sr.ReadToEndAsync();
+                html = sr.ReadToEnd();
             }
-            var imageBytes = converter.FromHtmlString(html, 400, CoreHtmlToImage.ImageFormat.Png, 100);
-            File.WriteAllBytes("resultImage.png", imageBytes);
-            //using(var ms = new MemoryStream(imageBytes))
-            //{
-            //    ms.Position = 0;
-            //    Bitmap bmp = new Bitmap(ms);
-            //    bmp.Save("resultImage.png", System.Drawing.Imaging.ImageFormat.Png);
-            //}
-            return "resultImage.png";
+            html = html
+                .Replace(ProfileNameReplacement, Context.User.Username)
+                .Replace(GlimmerReplacement, glimmerCount.ToString())
+                .Replace(RaidReplacement, raidCount.ToString())
+                .Replace(FireteamReplacement, fireteamCount.ToString())
+                .Replace(AwardReplacement, awardCount.ToString());
+
+            string htmlFile = GetHtmlFileName(Context.User.Id);
+            using (StreamWriter sw = new StreamWriter(htmlFile, false))
+            {
+                await sw.WriteAsync(html);
+            }
+
+            var browserFetcher = new BrowserFetcher();
+            await browserFetcher.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+            var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = true
+            });
+            var page = await browser.NewPageAsync();
+            await page.GoToAsync("file:///" + htmlFile);
+            await page.SetViewportAsync(new ViewPortOptions
+            {
+                Width = 520,
+                Height = 200
+            });
+            await page.ScreenshotAsync(GetImageFileName(Context.User.Id));
+            await browser.DisposeAsync();
+
+
+            return GetImageFileName(Context.User.Id);
+        }
+
+        private string GetHtmlFileName(ulong userId)
+        {
+            return BoudicaConfig.ProfileDirectory + userId + ".html";
+        }
+
+        private string GetImageFileName(ulong userId)
+        {
+            return BoudicaConfig.ProfileDirectory + userId + ".png";
         }
     }
 }

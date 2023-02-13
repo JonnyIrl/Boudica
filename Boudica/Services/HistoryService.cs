@@ -46,5 +46,10 @@ namespace Boudica.Services
                 DateTimeInserted = DateTime.UtcNow,
             };
         }
+
+        public async Task<long> GetAwardedCountAsync(ulong userId)
+        {
+            return await _historyRecordCollection.CountDocumentsAsync(x => x.TargetUserId == userId && x.HistoryType == HistoryType.Award);
+        }
     }
 }

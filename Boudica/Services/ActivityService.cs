@@ -108,6 +108,10 @@ namespace Boudica.Services
         {
             return await _raidCollection.Find(x => x.GuidId == guildId).ToListAsync();
         }
+        public async Task<long> GetRaidCount(ulong userId)
+        {
+            return await _raidCollection.CountDocumentsAsync(x => x.CreatedByUserId == userId || x.Players.Any(x => x.UserId == userId));
+        }
         #endregion
 
         #region Mongo Fireteam
@@ -167,6 +171,10 @@ namespace Boudica.Services
         public async Task<List<Fireteam>> GetAllFireteams(ulong guildId)
         {
             return await _fireteamCollection.Find(x => x.GuidId == guildId).ToListAsync();
+        }
+        public async Task<long> GetFireteamCount(ulong userId)
+        {
+            return await _fireteamCollection.CountDocumentsAsync(x => x.CreatedByUserId == userId || x.Players.Any(x => x.UserId == userId));
         }
         #endregion
     }

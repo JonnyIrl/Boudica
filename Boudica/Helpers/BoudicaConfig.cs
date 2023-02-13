@@ -33,5 +33,7 @@ namespace Boudica.Helpers
 
         [JsonProperty("DebugBungieClientSecret")]
         public static string DebugBungieClientSecret { get; set; }
+        [JsonProperty("ProfileDirectory")]
+        public static string ProfileDirectory { get; set; }
     }
 }
