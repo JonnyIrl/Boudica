@@ -200,7 +200,7 @@ namespace Boudica.Commands
             int amount = random.Next(1, 11);
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);
             await _dailyGiftService.UpsertUsersDailyGift(Context.User.Id);
-            await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.DailyGift);
+            await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.DailyGift, amount);
             await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"You have received {amount} Glimmer as your daily gift!").Build());
             //switch(amount)
             //{

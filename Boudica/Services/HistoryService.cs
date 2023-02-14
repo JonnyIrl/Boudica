@@ -31,12 +31,12 @@ namespace Boudica.Services
             return record;
         }
 
-        public async Task<HistoryRecord> InsertHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType)
+        public async Task<HistoryRecord> InsertHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType, int? amount = null)
         {
             return await InsertHistoryRecord(CreateHistoryRecord(userId, targetId, historyType));
         }
 
-        public HistoryRecord CreateHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType)
+        public HistoryRecord CreateHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType, int? amount = null)
         {
             return new HistoryRecord()
             {
@@ -44,6 +44,7 @@ namespace Boudica.Services
                 TargetUserId = targetId,
                 HistoryType = historyType,
                 DateTimeInserted = DateTime.UtcNow,
+                Amount = amount
             };
         }
 

@@ -119,7 +119,7 @@ namespace Boudica.MongoDB.Models
                 case WeaponType.Sword:
                     return "Sword";
                 case WeaponType.SpecialGrenadeLauncher:
-                    return "Special Grendade Launcher";
+                    return "Special Grenade Launcher";
                 case WeaponType.GrenadeLauncher:
                     return "Grenade Launcher";
                 case WeaponType.TraceRifle:
