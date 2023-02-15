@@ -131,5 +131,9 @@ namespace Boudica.Services
         {
             return await _botChallengeCollection.Find(x => x.ExpiryDateTime < DateTime.UtcNow && x.Accepted == true && x.IsClosed == false).ToListAsync();
         }
+        public async Task<List<BotChallenge>> GetUsersChallengesAsync(ulong userId)
+        {
+            return await _botChallengeCollection.Find(x => x.Challenger.UserId == userId).ToListAsync();
+        }
     }
 }

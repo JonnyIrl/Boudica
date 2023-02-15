@@ -3,6 +3,7 @@ using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
+using Boudica.Structs;
 using CoreHtmlToImage;
 using Discord;
 using Discord.Interactions;
@@ -31,6 +32,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly DailyGiftService _dailyGiftService;
         private readonly HistoryService _historyService;
+        private readonly BotChallengeService _botChallengeService;
 
         private const int CreatorPoints = 5;
 
@@ -45,6 +47,7 @@ namespace Boudica.Commands
             _dailyGiftService = services.GetRequiredService<DailyGiftService>();
             _activityService = services.GetRequiredService<ActivityService>();
             _historyService = services.GetRequiredService<HistoryService>();
+            _botChallengeService = services.GetRequiredService<BotChallengeService>();
         }
 
         [SlashCommand("insult", "Choose a player to insult")]
@@ -362,29 +365,14 @@ namespace Boudica.Commands
 
         public async Task<string> ConvertHtmlToImage()
         {
-            const string ProfileNameReplacement = "%Username%";
-            const string ProfilePictureUrlReplacement = "%ProfilePictureUrl%";
-            const string GlimmerReplacement = "%GlimmerCount%";
-            const string RaidReplacement = "%RaidCount%";
-            const string FireteamReplacement = "%FireteamCount%";
-            const string AwardReplacement = "%AwardCount%";
-            int glimmerCount = await _guardianService.GetGuardianGlimmer(Context.User.Id);
-            long raidCount = await _activityService.GetRaidCount(Context.User.Id);
-            long fireteamCount = await _activityService.GetFireteamCount(Context.User.Id);
-            long awardCount = await _historyService.GetAwardedCountAsync(Context.User.Id);
+           
 
             string html = string.Empty;
             using (StreamReader sr = new StreamReader(BoudicaConfig.ProfileDirectory + "index.html"))
             {
                 html = sr.ReadToEnd();
             }
-            html = html
-                .Replace(ProfilePictureUrlReplacement, Context.User.GetAvatarUrl(Discord.ImageFormat.Png, 64))
-                .Replace(ProfileNameReplacement, Context.User.Username)
-                .Replace(GlimmerReplacement, glimmerCount.ToString())
-                .Replace(RaidReplacement, raidCount.ToString())
-                .Replace(FireteamReplacement, fireteamCount.ToString())
-                .Replace(AwardReplacement, awardCount.ToString());
+            html = await SwapoutHTMLValues(html);
 
             string htmlFile = GetHtmlFileName(Context.User.Id);
             using (StreamWriter sw = new StreamWriter(htmlFile, false))
@@ -403,13 +391,66 @@ namespace Boudica.Commands
             await page.SetViewportAsync(new ViewPortOptions
             {
                 Width = 520,
-                Height = 200
+                Height = 300
             });
             await page.ScreenshotAsync(GetImageFileName(Context.User.Id));
             await browser.DisposeAsync();
 
 
             return GetImageFileName(Context.User.Id);
+        }
+
+        private async Task<string> SwapoutHTMLValues(string html)
+        {
+            const string ProfileNameReplacement = "%Username%";
+            const string ProfilePictureUrlReplacement = "%ProfilePictureUrl%";
+            const string GlimmerReplacement = "%GlimmerCount%";
+            const string RaidReplacement = "%RaidCount%";
+            const string FireteamReplacement = "%FireteamCount%";
+            const string AwardReplacement = "%AwardCount%";
+            const string GlimmerWonReplacement = "%GlimmerWon%";
+            const string GlimmerLostReplacement = "%GlimmerLost%";
+            const string WinRateReplacement = "%WinRate%";
+            int glimmerCount = await _guardianService.GetGuardianGlimmer(Context.User.Id);
+            long raidCount = await _activityService.GetRaidCount(Context.User.Id);
+            long fireteamCount = await _activityService.GetFireteamCount(Context.User.Id);
+            long awardCount = await _historyService.GetAwardedCountAsync(Context.User.Id);
+            UserBotChallengeResult userBotChallengeResult = GetUsersWonGlimmer(await _botChallengeService.GetUsersChallengesAsync(Context.User.Id));
+            return html
+                .Replace(ProfilePictureUrlReplacement, Context.User.GetAvatarUrl(Discord.ImageFormat.Png, 64))
+                .Replace(ProfileNameReplacement, Context.User.Username)
+                .Replace(GlimmerReplacement, glimmerCount.ToString())
+                .Replace(RaidReplacement, raidCount.ToString())
+                .Replace(FireteamReplacement, fireteamCount.ToString())
+                .Replace(AwardReplacement, awardCount.ToString())
+                .Replace(GlimmerWonReplacement, userBotChallengeResult.GlimmerWon.ToString())
+                .Replace(GlimmerLostReplacement, userBotChallengeResult.GlimmerLost.ToString())
+                .Replace(WinRateReplacement, GetWinRatePercentage(userBotChallengeResult).ToString() + "%");
+        }
+
+        private int GetWinRatePercentage(UserBotChallengeResult result)
+        {
+            if (result.GamesLost + result.GamesWon == 0) return 0;
+            return (int) Math.Round((100.0f / (result.GamesWon + result.GamesLost)) * result.GamesWon);
+        }
+
+        private UserBotChallengeResult GetUsersWonGlimmer(List<BotChallenge> botChallenges)
+        {
+            UserBotChallengeResult result = new UserBotChallengeResult();
+            foreach (BotChallenge botChallenge in botChallenges)
+            {
+                if(botChallenge.WinnerId == null)
+                {
+                    result.GamesLost++;
+                    result.GlimmerLost += botChallenge.Wager;
+                }
+                else
+                {
+                    result.GamesWon++;
+                    result.GlimmerWon += botChallenge.Wager;
+                }
+            }
+            return result;
         }
 
         private string GetHtmlFileName(ulong userId)
