@@ -1,4 +1,5 @@
-﻿using Boudica.Classes;
+﻿using Boudica.Attributes;
+using Boudica.Classes;
 using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
@@ -1518,6 +1519,97 @@ namespace Boudica.Commands
             embedBuilder.Description = sb.ToString();
             embedBuilder.WithDescription(sb.ToString());
             await RespondAsync(embed: embedBuilder.Build());
+        }
+
+        [SlashCommand("last-activity", "Gets a list of all members last activities")]
+        [ModOrMe]
+        public async Task LastActivityList()
+        {
+            await DeferAsync();
+            const string Moderator = "Moderator";
+            const string ClanAdmin = "Clan Admin";
+            IRole modRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Moderator);
+            if(modRole == null)
+            {
+                await FollowupAsync("No mod role found");
+                return;
+            }
+            IRole clanAdminRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == ClanAdmin);
+            if (clanAdminRole == null)
+            {
+                await FollowupAsync("No clan admin role found");
+                return;
+            }
+            List<Raid> allRaids = await _activityService.GetAllRaids(Context.Guild.Id);
+            allRaids = allRaids.OrderByDescending(x => x.Id).ToList();
+
+            List<Fireteam> allFireteams = await _activityService.GetAllFireteams(Context.Guild.Id);
+            allFireteams = allFireteams.OrderByDescending(x => x.Id).ToList();
+
+            List<SocketGuildUser> users = Context.Guild.Users.ToList();
+            users = users.ToList();
+            StringBuilder clanAdminsStringBuilder = new StringBuilder();
+            StringBuilder clanAdminsStringBuilder2 = new StringBuilder();
+            StringBuilder moderatorsStringBuilder = new StringBuilder();
+            StringBuilder moderatorsStringBuilder2 = new StringBuilder();
+            StringBuilder membersStringBuilder = new StringBuilder();
+            StringBuilder membersStringBuilder2 = new StringBuilder();
+            StringBuilder membersStringBuilder3 = new StringBuilder();
+            StringBuilder membersStringBuilder4 = new StringBuilder();
+            List<LastActivityUser> activityUsers = new List<LastActivityUser>();
+            foreach (SocketGuildUser user in users)
+            {
+                if (user.IsBot) continue;
+                Raid lastRaid = allRaids.FirstOrDefault(x => x.CreatedByUserId == user.Id || x.Players.FirstOrDefault(y => y.UserId == user.Id) != null);
+                Fireteam lastFireteam = allFireteams.FirstOrDefault(x => x.CreatedByUserId == user.Id || x.Players.FirstOrDefault(y => y.UserId == user.Id) != null);
+                activityUsers.Add(new LastActivityUser(user.Username, lastRaid, lastFireteam, user.Roles));
+            }
+            foreach (LastActivityUser lastActivityUser in activityUsers.OrderByDescending(x => x.LastActivityDateTime))
+            { 
+                if (lastActivityUser.Roles.FirstOrDefault(x => x.Id == clanAdminRole.Id) != null)
+                {
+                    clanAdminsStringBuilder.AppendLine($"{lastActivityUser.Username} - {lastActivityUser.GetLastActivityText()}");
+
+                }
+                else if (lastActivityUser.Roles.FirstOrDefault(x => x.Id == modRole.Id) != null)
+                {
+                    moderatorsStringBuilder.AppendLine($"{lastActivityUser.Username} - {lastActivityUser.GetLastActivityText()}");
+                }
+                else
+                {
+                    if(membersStringBuilder.Length < 900) 
+                        membersStringBuilder.AppendLine($"{lastActivityUser.Username} - {lastActivityUser.GetLastActivityText()}");
+                    if(membersStringBuilder.Length >= 900)
+                    {
+                        membersStringBuilder2.AppendLine($"{lastActivityUser.Username} - {lastActivityUser.GetLastActivityText()}");
+                    }
+                    if(membersStringBuilder2.Length > 900)
+                    {
+                        membersStringBuilder3.AppendLine($"{lastActivityUser.Username} - {lastActivityUser.GetLastActivityText()}");
+                    }
+                }
+            }
+
+            string resultClanAdmin = clanAdminsStringBuilder.ToString();
+            string resultModerator = moderatorsStringBuilder.ToString();
+            if (string.IsNullOrEmpty(resultClanAdmin)) resultClanAdmin = "No clan admins";
+            if (string.IsNullOrEmpty(resultModerator)) resultModerator = "No moderators";
+
+            EmbedBuilder embed = new EmbedBuilder();
+            embed.Title = "Members last activities";
+            embed.Color = Color.Blue;
+            embed.AddField("Clan Admins", resultClanAdmin);
+            embed.AddField("Moderators", resultModerator);
+            embed.AddField("Members", membersStringBuilder.ToString());
+            if(membersStringBuilder2.Length > 0)
+            {
+                embed.AddField("Members Continued", membersStringBuilder2.ToString());
+            }
+            if (membersStringBuilder3.Length > 0)
+            {
+                embed.AddField("Members Continued", membersStringBuilder3.ToString());
+            }
+            await FollowupAsync(embed: embed.Build());
         }
     }
 }
