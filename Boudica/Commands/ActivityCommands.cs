@@ -273,27 +273,6 @@ namespace Boudica.Commands
             else
                 await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateFireteamModal(playersToAdd), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
         }
-       
-        private IRole GetRoleForChannel(ulong channelId)
-        {
-            switch(channelId)
-            {
-                case RaidChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
-                case VanguardChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
-                case CrucibleChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
-                case GambitChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
-                case MiscChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
-                case DungeonChannel:
-                    return Context.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
-            }
-
-            return null;
-        }
 
         private IRole GetRoleForChannelModal(IGuildUser user, ulong channelId)
         {
@@ -828,9 +807,6 @@ namespace Boudica.Commands
         {
             return await _activityService.CreatedFireteamThisWeek(userId);
         }
-
-        
-
     }
 
     public class OtherActivityCommands : ActivityHelper
