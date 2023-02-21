@@ -20,6 +20,7 @@ namespace Boudica.MongoDB.Models
         public DateTime DateTimeCreated { get; set; }
         public DateTime DateTimeClosed { get; set; }
         public DateTime DateTimeAlerted { get; set; }
+        public DateTime DateTimePlanned { get; set; }
         public bool AwardedGlimmer { get; set; }
         public List<ActivityUser> Players { get; set; }
         public List<ActivityUser> Substitutes { get; set; }

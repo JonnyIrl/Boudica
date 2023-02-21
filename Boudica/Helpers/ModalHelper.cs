@@ -11,14 +11,15 @@ namespace Boudica.Helpers
 {
     public static class ModalHelper
     {
-        public static Modal EditRaidModal(Raid newRaid, string existingTitle, string existingDescription)
+        public static Modal EditRaidModal(Raid newRaid, string existingTitle, string existingDescription, string existingDateTimePlanned)
         {
             //$"{(int)ButtonCustomId.EditRaid}-{newRaid.Id}"
             ModalBuilder builder = new ModalBuilder()
                 .WithCustomId($"{(int)CustomId.EditRaid}-{newRaid.Id}")
                 .WithTitle("Edit Raid")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, value: existingTitle, required: false, maxLength: 250)
-                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, required: false, maxLength: 400);
+                .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, value: existingDescription, required: false, maxLength: 400)
+                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, value: existingDateTimePlanned, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: false, maxLength: 11);
             return builder.Build();
         }
 
@@ -29,6 +30,7 @@ namespace Boudica.Helpers
                 .WithTitle("Create Raid")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
+                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: false, maxLength: 11)
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes");
             return builder.Build();
         }
@@ -40,6 +42,7 @@ namespace Boudica.Helpers
                 .WithTitle("Create Raid")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
+                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: false, maxLength: 11)
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes")
                 .AddTextInput("Existing Players (dont change anything here)", $"{(int)ModalInputType.ExistingPlayers}", TextInputStyle.Short, required: false, value: existingPlayers);
             return builder.Build();

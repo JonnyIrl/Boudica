@@ -139,7 +139,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel, string existingPlayers)
+        private async Task<Result> OnCreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, DateTime dateTimePlanned, bool alertChannel, string existingPlayers)
         {
             if(string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -161,6 +161,7 @@ namespace Boudica.Commands
                     GuidId = guildUser.Guild.Id,
                     ChannelId = channel.Id,
                     MaxPlayerCount = 6,
+                    DateTimePlanned = dateTimePlanned,
                     Players = new List<ActivityUser>()
                     {
                         new ActivityUser(guildUser.Id, guildUser.Username, true)
@@ -188,6 +189,11 @@ namespace Boudica.Commands
                 embed.WithAuthor(guildUser);
 
                 embed.Title = title.Trim();
+                if(dateTimePlanned != DateTime.MinValue)
+                {
+                    long unixTime = ((DateTimeOffset)dateTimePlanned).ToUnixTimeSeconds();
+                    embed.Title += $"\n<t:{unixTime}:F> in <t:{unixTime}:R>";
+                }
                 embed.Description = description.Trim();
 
                 AddActivityUsersField(embed, "Players", newRaid.Players);
@@ -313,7 +319,7 @@ namespace Boudica.Commands
             }
         }
 
-        private async Task<Result> OnEditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId)
+        private async Task<Result> OnEditRaidModalSubmitted(ITextChannel channel, string title, string description, DateTime dateTimePlanned, int raidId)
         {
             if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
             {
@@ -325,12 +331,21 @@ namespace Boudica.Commands
             {
                 return new Result(false, "Could not find Raid to edit");
             }
+            existingRaid.DateTimePlanned = dateTimePlanned;
+            await _activityService.UpdateRaidAsync(existingRaid);
 
             IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
             if (message == null)
             {
-                return new Result(false, "Could not find message to edit"); ;
+                return new Result(false, "Could not find message to edit");
             }
+
+            if (dateTimePlanned != DateTime.MinValue)
+            {
+                long unixTime = ((DateTimeOffset)dateTimePlanned).ToUnixTimeSeconds();
+                title += $"\n<t:{unixTime}:F> <t:{unixTime}:R>";
+            }
+            
 
             Task.Run(async () =>
             {
@@ -353,45 +368,45 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        [SlashCommand("raid", "Edit a Raid")]
-        public async Task EditRaid(int raidId, string newDescription)
-        {
-            Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
-            bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
-            if (existingRaidResult == false) return;
+        //[SlashCommand("raid", "Edit a Raid")]
+        //public async Task EditRaid(int raidId, string newDescription)
+        //{
+        //    Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
+        //    bool existingRaidResult = await CheckExistingRaidIsValid(existingRaid, false);
+        //    if (existingRaidResult == false) return;
 
-            if (Context.Guild.Id != existingRaid.GuidId)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-                return;
-            }
-            ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-                return;
-            }
+        //    if (Context.Guild.Id != existingRaid.GuidId)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+        //        return;
+        //    }
+        //    ITextChannel channel = Context.Guild.GetTextChannel(existingRaid.ChannelId);
+        //    if (channel == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+        //        return;
+        //    }
+        //    IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingRaid.MessageId, CacheMode.AllowDownload);
+        //    if (message == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+        //        return;
+        //    }
 
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            modifiedEmbed.Description = newDescription;
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-            });
+        //    var modifiedEmbed = new EmbedBuilder();
+        //    var embed = message.Embeds.FirstOrDefault();
+        //    modifiedEmbed.Description = newDescription;
+        //    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingRaid);
+        //    EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+        //    await message.ModifyAsync(x =>
+        //    {
+        //        x.Embed = modifiedEmbed.Build();
+        //    });
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been edited!").Build());
-        }
+        //    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The raid Id {raidId} has been edited!").Build());
+        //}
 
         private async Task<Result> OnEditRaidButtonClick(SocketMessageComponent component, int raidId)
         {
@@ -415,7 +430,18 @@ namespace Boudica.Commands
                 return new Result(false, "Failed");
             }
 
-            await component.RespondWithModalAsync(ModalHelper.EditRaidModal(existingRaid, embed.Title, embed.Description));
+            string title = embed.Title;
+            //Check to see if we already have a DateTime value set
+            int dateTimePlannedIndex = embed.Title.IndexOf("\n");
+            if (dateTimePlannedIndex != -1)
+                title = embed.Title.Remove(dateTimePlannedIndex);
+            await component.RespondWithModalAsync(
+                ModalHelper.EditRaidModal(
+                    existingRaid,
+                    title,
+                    embed.Description,
+                    existingRaid.DateTimePlanned == DateTime.MinValue ? string.Empty : existingRaid.DateTimePlanned.ToString("dd/MM HH:mm")));
+
             return new Result(true, string.Empty);
         }
 
@@ -485,41 +511,41 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        [SlashCommand("fireteam", "Edit a Fireteam")]
-        public async Task EditFireteam(int fireteamId, string newDescription)
-        {
-            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
-            if (existingFireteamResult == false) return;
+        //[SlashCommand("fireteam", "Edit a Fireteam")]
+        //public async Task EditFireteam(int fireteamId, string newDescription)
+        //{
+        //    Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+        //    bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+        //    if (existingFireteamResult == false) return;
 
-            ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
+        //    ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
+        //    if (channel == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+        //        return;
+        //    }
 
-            IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-                return;
-            }
+        //    IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
+        //    if (message == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+        //        return;
+        //    }
 
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            modifiedEmbed.Description = newDescription;
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-            });
+        //    var modifiedEmbed = new EmbedBuilder();
+        //    var embed = message.Embeds.FirstOrDefault();
+        //    modifiedEmbed.Description = newDescription;
+        //    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+        //    EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+        //    await message.ModifyAsync(x =>
+        //    {
+        //        x.Embed = modifiedEmbed.Build();
+        //    });
 
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The fireteam Id {fireteamId} has been edited!").Build());
-        }
+        //    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The fireteam Id {fireteamId} has been edited!").Build());
+        //}
     }
 
     [Group("close", "Close an activity")]
@@ -548,67 +574,67 @@ namespace Boudica.Commands
             return await CloseFireteamButtonClick(component, fireteamId, activityType);
         }
 
-        [SlashCommand("fireteam", "Close a Fireteam")]
-        public async Task CloseFireteam(int fireteamId)
-        {
-            Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-            bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
-            if (existingFireteamResult == false) return;
+        //[SlashCommand("fireteam", "Close a Fireteam")]
+        //public async Task CloseFireteam(int fireteamId)
+        //{
+        //    Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
+        //    bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
+        //    if (existingFireteamResult == false) return;
 
-            if (existingFireteam.DateTimeClosed == DateTime.MinValue)
-            {
-                existingFireteam.DateTimeClosed = DateTime.UtcNow;
-                await _activityService.UpdateFireteamAsync(existingFireteam);
-            }
+        //    if (existingFireteam.DateTimeClosed == DateTime.MinValue)
+        //    {
+        //        existingFireteam.DateTimeClosed = DateTime.UtcNow;
+        //        await _activityService.UpdateFireteamAsync(existingFireteam);
+        //    }
 
-            ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
-            if (channel == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-                return;
-            }
+        //    ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
+        //    if (channel == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
+        //        return;
+        //    }
 
-            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
-            if (message == null)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-                return;
-            }
-            var modifiedEmbed = new EmbedBuilder();
-            var embed = message.Embeds.FirstOrDefault();
-            if (embed?.Title == "This activity is now closed")
-            {
-                await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
-                return;
-            }
+        //    IUserMessage message = (IUserMessage)await channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
+        //    if (message == null)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
+        //        return;
+        //    }
+        //    var modifiedEmbed = new EmbedBuilder();
+        //    var embed = message.Embeds.FirstOrDefault();
+        //    if (embed?.Title == "This activity is now closed")
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("This Fireteam is already closed").Build());
+        //        return;
+        //    }
 
-            EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
-            EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
-            EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-            modifiedEmbed.Title = "This activity is now closed";
-            modifiedEmbed.Color = Color.Red;
-            await message.UnpinAsync();
-            await message.ModifyAsync(x =>
-            {
-                x.Embed = modifiedEmbed.Build();
-                x.Components = null;
-            });
+        //    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateDescriptionTitleColorOnEmbed(modifiedEmbed, embed);
+        //    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
+        //    EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
+        //    modifiedEmbed.Title = "This activity is now closed";
+        //    modifiedEmbed.Color = Color.Red;
+        //    await message.UnpinAsync();
+        //    await message.ModifyAsync(x =>
+        //    {
+        //        x.Embed = modifiedEmbed.Build();
+        //        x.Components = null;
+        //    });
 
-            //Has to be more than 1 player in a Raid/Fireteam in order to award glimmer
-            if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.Players.Count > 1)
-            {
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
-                IUserMessage responseMessage = await GetOriginalResponseAsync();
-                if (responseMessage != null) await responseMessage.AddReactionsAsync(_successFailEmotes);
-            }
-            else
-            {
-                existingFireteam.AwardedGlimmer = true;
-                await _activityService.UpdateFireteamAsync(existingFireteam);
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
-            }
-        }
+        //    //Has to be more than 1 player in a Raid/Fireteam in order to award glimmer
+        //    if (existingFireteam.DateTimeClosed != DateTime.MinValue && existingFireteam.Players.Count > 1)
+        //    {
+        //        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed! <@{existingFireteam.CreatedByUserId}> did this activity get completed?").Build());
+        //        IUserMessage responseMessage = await GetOriginalResponseAsync();
+        //        if (responseMessage != null) await responseMessage.AddReactionsAsync(_successFailEmotes);
+        //    }
+        //    else
+        //    {
+        //        existingFireteam.AwardedGlimmer = true;
+        //        await _activityService.UpdateFireteamAsync(existingFireteam);
+        //        await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Fireteam {fireteamId} has been closed!").Build());
+        //    }
+        //}
 
         public async Task<Result> CloseRaidButtonClick(SocketMessageComponent component, int raidId, ClosedActivityType activityType)
         {

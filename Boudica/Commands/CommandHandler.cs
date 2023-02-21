@@ -19,8 +19,8 @@ namespace Boudica.Commands
     public class CommandHandler
     {
         #region Raid Modals
-        public delegate Task<Result> EditRaidModalSubmitted(ITextChannel channel, string title, string description, int raidId);
-        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, bool alertChannel, string existingUsers);
+        public delegate Task<Result> EditRaidModalSubmitted(ITextChannel channel, string title, string description, DateTime dateTimePlanned, int raidId);
+        public delegate Task<Result> CreateRaidModalSubmitted(SocketModal modal, ITextChannel channel, string title, string description, DateTime dateTimePlanned, bool alertChannel, string existingUsers);
         public event CreateRaidModalSubmitted OnCreateRaidModalSubmitted;
         public event EditRaidModalSubmitted OnEditRaidModalSubmitted;
         #endregion
@@ -499,6 +499,7 @@ namespace Boudica.Commands
             bool alertChannel = false;
             string guess = string.Empty;
             string existingPlayers = string.Empty;
+            DateTime dateTimePlanned = DateTime.MinValue;
             foreach (SocketMessageComponentData component in components)
             {
                 if(int.TryParse(component.CustomId, out int modalInputType))
@@ -527,6 +528,9 @@ namespace Boudica.Commands
                         case ModalInputType.ExistingPlayers:
                             existingPlayers = component.Value;
                             break;
+                        case ModalInputType.DateTimePlanned:
+                            dateTimePlanned = ParseDateTimePlanned(component.Value);
+                            break;
                         default:
                             break;
                     }
@@ -541,7 +545,7 @@ namespace Boudica.Commands
                 case CustomId.EditRaid:
                     if (OnEditRaidModalSubmitted != null)
                     {
-                        Result result = await OnEditRaidModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, id);
+                        Result result = await OnEditRaidModalSubmitted.Invoke((ITextChannel)modal.Channel, title, description, dateTimePlanned, id);
                         if (result.Success)
                         {
                             await modal.RespondAsync("Success", ephemeral: true);
@@ -573,7 +577,7 @@ namespace Boudica.Commands
                 case CustomId.CreateRaid:
                     if (OnCreateRaidModalSubmitted != null)
                     {
-                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, alertChannel, existingPlayers);
+                        Result result = await OnCreateRaidModalSubmitted.Invoke(modal, (ITextChannel)modal.Channel, title, description, dateTimePlanned, alertChannel, existingPlayers);
                         if (result.Success)
                         {
                             await modal.FollowupAsync("Successfully created raid", ephemeral: true);
@@ -625,6 +629,13 @@ namespace Boudica.Commands
 
         }
 
+        private DateTime ParseDateTimePlanned(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return DateTime.MinValue;
+            if(DateTime.TryParseExact(value, "dd/MM HH:mm", null, System.Globalization.DateTimeStyles.None, out DateTime plannedDateTime))
+                return plannedDateTime;
+            return DateTime.MinValue;
+        }
         public async Task InitializeAsync()
         {
             // register modules that are public and inherit ModuleBase<T>.

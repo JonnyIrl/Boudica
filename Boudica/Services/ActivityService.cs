@@ -49,7 +49,7 @@ namespace Boudica.Services
             return await Task.FromResult(raid);
         }
 
-        public async Task<MongoDB.Models.Raid> UpdateRaidAsync(MongoDB.Models.Raid raid)
+        public async Task<Raid> UpdateRaidAsync(Raid raid)
         {
             if (raid.Id <= 0) throw new ArgumentNullException("Id must be provided to update");
             var builder = Builders<MongoDB.Models.Raid>.Filter;
