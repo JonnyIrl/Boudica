@@ -17,6 +17,7 @@ namespace Boudica.Enums
         DailyGift = 6,
         TrialsVote = 7,
         UserChallenge = 8,
-        BotChallengeHigherOrLower = 9
+        BotChallengeHigherOrLower = 9,
+        AdminAward = 10
     }
 }

@@ -245,6 +245,25 @@ namespace Boudica.Commands
             //await FollowupAsync(text: string.Empty, embed: EmbedHelper.CreateSuccessReply($"You have received {amount} Glimmer as your daily gift!").Build());
         }
 
+        [SlashCommand("award-glimmer", "Command to give X amount of glimmer to somebody")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task AdminAward(SocketGuildUser user, [Summary("glimmerToAward", "Amount of Glimmer to award")]int glimmerToAward)
+        {
+            if(glimmerToAward <= 0)
+            {
+                await RespondAsync("Glimmer has to be more than 0", ephemeral: true);
+                return;
+            }
+            if(user.IsBot)
+            {
+                await RespondAsync("Bots cannot be awarded", ephemeral: true);
+                return;
+            }
+            await _guardianService.IncreaseGlimmerAsync(user.Id, user.Username, glimmerToAward);
+            await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.AdminAward, glimmerToAward);
+            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{user.Username}, you have been awarded {glimmerToAward} Glimmer!").Build());
+        }
+
         public async Task DailyGift_NewYears()
         {
             await DeferAsync();

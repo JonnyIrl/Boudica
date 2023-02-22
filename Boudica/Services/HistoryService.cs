@@ -33,7 +33,7 @@ namespace Boudica.Services
 
         public async Task<HistoryRecord> InsertHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType, int? amount = null)
         {
-            return await InsertHistoryRecord(CreateHistoryRecord(userId, targetId, historyType));
+            return await InsertHistoryRecord(CreateHistoryRecord(userId, targetId, historyType, amount));
         }
 
         public HistoryRecord CreateHistoryRecord(ulong userId, ulong? targetId, HistoryType historyType, int? amount = null)
