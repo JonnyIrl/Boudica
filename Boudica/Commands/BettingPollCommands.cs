@@ -105,7 +105,7 @@ namespace Boudica.Commands
             PlayerPollVote existingVote = existingPoll.Votes.FirstOrDefault(x => x.Id == Context.User.Id);
             if (existingVote != null)
             {
-                await RespondAsync($"You have already voted on this poll for {existingPoll.CreatedOptions[(int)existingVote.VotedPollOption]}");
+                await RespondAsync($"You have already voted on this poll for {(existingPoll.CreatedOptions[(int)existingVote.VotedPollOption]).ToString()}");
                 return;
             }
             int guardianGlimmer = await _guardianService.GetGuardianGlimmer(Context.User.Id);
@@ -119,9 +119,10 @@ namespace Boudica.Commands
             if (result.Success == false)
                 await RespondAsync(result.Message, ephemeral: true);
             else
-                await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(betAmount * 2)} Glimmer. Best of luck!");
+                //await RespondAsync($"Your vote for {existingPoll.CreatedOptions[(int)option].DisplayText} has been counted for {betAmount} Glimmer! If you win, you will get {(betAmount * 2)} Glimmer. Best of luck!");
+                await RespondAsync($"Your vote has been counted. Best of luck!");
 
-            await _guardianService.RemoveGlimmerAsync(Context.User.Id, (betAmount * -1));
+                await _guardianService.RemoveGlimmerAsync(Context.User.Id, (betAmount));
         }
 
         [DefaultMemberPermissions(GuildPermission.ModerateMembers)]

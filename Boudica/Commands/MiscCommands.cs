@@ -246,7 +246,8 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("award-glimmer", "Command to give X amount of glimmer to somebody")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        [ClanAdminOrMe]
         public async Task AdminAward(SocketGuildUser user, [Summary("glimmerToAward", "Amount of Glimmer to award")]int glimmerToAward)
         {
             if(glimmerToAward <= 0)
