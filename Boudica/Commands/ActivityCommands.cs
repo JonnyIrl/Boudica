@@ -470,42 +470,6 @@ namespace Boudica.Commands
 
             return new Result(true, string.Empty);
         }
-
-        //[SlashCommand("fireteam", "Edit a Fireteam")]
-        //public async Task EditFireteam(int fireteamId, string newDescription)
-        //{
-        //    Fireteam existingFireteam = await _activityService.GetMongoFireteamAsync(fireteamId);
-        //    bool existingFireteamResult = await CheckExistingFireteamIsValid(existingFireteam);
-        //    if (existingFireteamResult == false) return;
-
-        //    ITextChannel channel = Context.Guild.GetTextChannel(existingFireteam.ChannelId);
-        //    if (channel == null)
-        //    {
-        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find channel where message is").Build());
-        //        return;
-        //    }
-
-        //    IUserMessage message = (IUserMessage)await Context.Channel.GetMessageAsync(existingFireteam.MessageId, CacheMode.AllowDownload);
-        //    if (message == null)
-        //    {
-        //        await RespondAsync(embed: EmbedHelper.CreateFailedReply("Could not find message to edit").Build());
-        //        return;
-        //    }
-
-        //    var modifiedEmbed = new EmbedBuilder();
-        //    var embed = message.Embeds.FirstOrDefault();
-        //    modifiedEmbed.Description = newDescription;
-        //    EmbedHelper.UpdateAuthorOnEmbed(modifiedEmbed, embed);
-        //    EmbedHelper.UpdateTitleColorOnEmbed(modifiedEmbed, embed);
-        //    EmbedHelper.UpdateFooterOnEmbed(modifiedEmbed, existingFireteam);
-        //    EmbedHelper.UpdateFieldsOnEmbed(modifiedEmbed, embed);
-        //    await message.ModifyAsync(x =>
-        //    {
-        //        x.Embed = modifiedEmbed.Build();
-        //    });
-
-        //    await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"The fireteam Id {fireteamId} has been edited!").Build());
-        //}
     }
 
     [Group("close", "Close an activity")]
