@@ -297,6 +297,11 @@ namespace Boudica.Services
                 var response = await client.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
                 var content = response.Content.ReadAsStringAsync().Result;
                 dynamic item = JsonConvert.DeserializeObject(content);
+
+                if (IsBungieAPIDown(content))
+                {
+                    return false;
+                }
                 if (item == null) return false;
                 return DestinyManifestVersion != $"{item.Response.version}";
             }
@@ -320,6 +325,11 @@ namespace Boudica.Services
                 var response = await client.GetAsync($"https://www.bungie.net/Platform/Destiny2/Manifest/");
                 var content = await response.Content.ReadAsStringAsync();
                 dynamic item = JsonConvert.DeserializeObject(content);
+
+                if (IsBungieAPIDown(content))
+                {
+                    return false;
+                }
                 DestinyManifestVersion = item.Response.version;
                 if (!File.Exists($"{ManifestJsonPath}{DestinyManifestVersion}.json"))
                 {

@@ -18,6 +18,7 @@ namespace Boudica.Enums
         TrialsVote = 7,
         UserChallenge = 8,
         BotChallengeHigherOrLower = 9,
-        AdminAward = 10
+        AdminAward = 10,
+        Echo = 11, 
     }
 }

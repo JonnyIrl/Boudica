@@ -539,5 +539,36 @@ namespace Boudica.Commands
 
             await FollowupAsync("Done!", ephemeral: true);
         }
+
+        [SlashCommand("echo", "Boudica will echo your message in a channel")]
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        public async Task Echo(string channel, string message)
+        {
+            if(string.IsNullOrEmpty(message))
+            {
+                await RespondAsync("You must send a message", ephemeral: true);
+                return;
+            }
+            if(string.IsNullOrEmpty(channel))
+            {
+                await RespondAsync("Invalid Channel", ephemeral: true);
+                return;
+            }    
+            string channelIdString = channel.Replace("<#", string.Empty).Replace(">", string.Empty);
+            if(ulong.TryParse(channelIdString, out ulong channelId) == false)
+            {
+                await RespondAsync("Invalid Channel", ephemeral: true);
+                return;
+            }
+            ITextChannel textChannel = Context.Guild.GetTextChannel(channelId);
+            if(textChannel == null)
+            {
+                await RespondAsync("Invalid Channel", ephemeral: true);
+                return;
+            }
+            await textChannel.SendMessageAsync(message);
+            await RespondAsync("Message Sent!", ephemeral: true);
+            await _historyService.InsertHistoryRecord(_historyService.CreateHistoryRecord(Context.User.Id, null, HistoryType.Echo));
+        }
     }
 }
