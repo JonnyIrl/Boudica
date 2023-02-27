@@ -1,4 +1,5 @@
 ﻿using Boudica.Attributes;
+using Boudica.Classes;
 using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
@@ -481,6 +482,62 @@ namespace Boudica.Commands
         private string GetImageFileName(ulong userId)
         {
             return BoudicaConfig.ProfileDirectory + userId + ".png";
+        }
+
+        [SlashCommand("member-stats", "Only useable by Jonny")]
+        [OnlyMe]
+        public async Task MemberStats()
+        {
+            await DeferAsync();
+            const string Raid = "Raid Fanatics";
+            const string Nightfall = "Nightfall Enthusiasts";
+            const string Gambit = "Gambit Hustlers";
+            const string Crucible = "Crucible Contenders";
+            const string Activity = "Activity Aficionados";
+            const string Dungeon = "Dungeon Challengers";
+            IRole raidRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Raid);
+            IRole nightFallRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Nightfall);
+            IRole gambitRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Gambit);
+            IRole crucibleRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Crucible);
+            IRole activityRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Activity);
+            IRole dungeonRole = Context.Guild.Roles.FirstOrDefault(x => x.Name == Dungeon);
+
+            if (raidRole == null || nightFallRole == null || gambitRole == null || crucibleRole == null || activityRole == null || dungeonRole == null)
+            {
+                await FollowupAsync("No role found");
+                return;
+            }
+
+            List<SocketGuildUser> users = Context.Guild.Users.ToList();
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Id, Username, Raid, Nightfall, Gambit, Crucible, Acticity, Dunegon");
+            foreach(SocketGuildUser user in users)
+            {
+                UserRoleExport userExport = new UserRoleExport();
+                userExport.Id = user.Id;
+                userExport.Username = user.Username.Replace(",", string.Empty);
+                if (user.Roles.Contains(raidRole))
+                    userExport.Raid = true;
+                if (user.Roles.Contains(nightFallRole))
+                    userExport.Nightfall= true;
+                if (user.Roles.Contains(gambitRole))
+                    userExport.Gambit = true;
+                if (user.Roles.Contains(crucibleRole))
+                    userExport.Crucible = true;
+                if (user.Roles.Contains(activityRole))
+                    userExport.Activity = true;
+                if (user.Roles.Contains(dungeonRole))
+                    userExport.Dungeon = true;
+
+                sb.AppendLine(userExport.ToString());
+            }
+
+            using(StreamWriter sw = new StreamWriter("MemberStats.txt"))
+            {
+                sw.Write(sb.ToString());
+            }
+
+            await FollowupAsync("Done!", ephemeral: true);
         }
     }
 }
