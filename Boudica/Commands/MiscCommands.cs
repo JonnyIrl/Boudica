@@ -201,7 +201,7 @@ namespace Boudica.Commands
 
            
             Random random = new Random();
-            int amount = random.Next(1, 11);
+            int amount = random.Next(10, 21);
             await _guardianService.IncreaseGlimmerAsync(Context.User.Id, Context.User.Username, amount);
             await _dailyGiftService.UpsertUsersDailyGift(Context.User.Id);
             await _historyService.InsertHistoryRecord(Context.User.Id, null, HistoryType.DailyGift, amount);
@@ -567,7 +567,7 @@ namespace Boudica.Commands
                 return;
             }
             await textChannel.SendMessageAsync(message);
-            await RespondAsync("Message Sent!", ephemeral: true);
+            await RespondAsync($"{Context.User.Username} said the following in {channel}:\n{message}");
             await _historyService.InsertHistoryRecord(_historyService.CreateHistoryRecord(Context.User.Id, null, HistoryType.Echo));
         }
     }

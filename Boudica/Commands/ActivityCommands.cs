@@ -712,7 +712,8 @@ namespace Boudica.Commands
         private async Task<Tuple<int, bool>> CalculateGlimmerForActivity(List<ActivityUser> activityUsers, ulong creatorId, bool isRaid)
         {
             if (activityUsers == null) return new Tuple<int, bool>(-1, false);
-            int increaseAmount = (1 * activityUsers.Count(x => x.Reacted));
+            //int increaseAmount = (1 * activityUsers.Count(x => x.Reacted));
+            int increaseAmount = 20;
             bool awardedThisWeek = false;
             foreach (ActivityUser user in activityUsers)
             {
@@ -728,8 +729,9 @@ namespace Boudica.Commands
                     //Give bonus of 3 for first activity each week.
                     if (awardedThisWeek == false)
                     {
-                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
-                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount + 3}");
+                        //await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount + 3);
+                        await _guardianService.IncreaseGlimmerAsync(user.UserId, user.DisplayName, increaseAmount);
+                        Console.WriteLine($"Increased Glimmer for {user.DisplayName} by {increaseAmount}");
                     }
                     else
                     {

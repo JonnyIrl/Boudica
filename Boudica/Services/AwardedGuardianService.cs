@@ -16,7 +16,7 @@ namespace Boudica.Services
         protected IMongoCollection<AwardedGuardians> _awardedGuardiansCollection;
         private SettingsService _settingsService;
         private GuardianService _guardianService;
-        private readonly int AwardedGlimmerAmount = 3;
+        private readonly int AwardedGlimmerAmount = 10;
 
         public AwardedGuardianService(IMongoDBContext mongoDBContext, IServiceProvider services)
         {
