@@ -143,6 +143,7 @@ class Program
             .AddScoped<BotChallengeService>()
             .AddScoped<PollService>()
             .AddScoped<BetPollService>()
+            .AddScoped<MiscService>()
             .BuildServiceProvider();
     }
 }

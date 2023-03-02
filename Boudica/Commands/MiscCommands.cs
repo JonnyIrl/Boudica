@@ -34,6 +34,7 @@ namespace Boudica.Commands
         private readonly DailyGiftService _dailyGiftService;
         private readonly HistoryService _historyService;
         private readonly BotChallengeService _botChallengeService;
+        private readonly MiscService _miscService;
 
         private const int CreatorPoints = 5;
 
@@ -49,6 +50,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _historyService = services.GetRequiredService<HistoryService>();
             _botChallengeService = services.GetRequiredService<BotChallengeService>();
+            _miscService = services.GetRequiredService<MiscService>();
         }
 
         [SlashCommand("insult", "Choose a player to insult")]
@@ -569,6 +571,28 @@ namespace Boudica.Commands
             await textChannel.SendMessageAsync(message);
             await RespondAsync($"{Context.User.Username} said the following in {channel}:\n{message}");
             await _historyService.InsertHistoryRecord(_historyService.CreateHistoryRecord(Context.User.Id, null, HistoryType.Echo));
+        }
+
+        [SlashCommand("signup", "Sign up for Day One Raid")]
+        public async Task SignUpDayOne([Summary("happyToLFG", "You are happy or not to LFG if there is not enough players to fill a full group")]bool happyToLFG)
+        {
+            bool alreadySignedUp = await _miscService.AlreadySignedUp(Context.User.Id);
+            if (alreadySignedUp)
+            {
+                await RespondAsync("You are already signed up", ephemeral: true);
+                return;
+            }
+
+            try
+            {
+                await _miscService.SignUp(Context.User.Id, Context.User.Username, happyToLFG);
+                await RespondAsync("Successfully signed up! We will let you know your team in advance you don't have to do anything else. If you find a team before hand please let a Clan Admin know!", ephemeral: true);
+            }
+            catch
+            {
+                await RespondAsync("Could not sign up.. something went wrong talk to Jonny", ephemeral: true);
+            }
+
         }
     }
 }
