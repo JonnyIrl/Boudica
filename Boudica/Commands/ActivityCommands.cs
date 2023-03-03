@@ -192,7 +192,7 @@ namespace Boudica.Commands
                 if(dateTimePlanned != DateTime.MinValue)
                 {
                     long unixTime = ((DateTimeOffset)dateTimePlanned).ToUnixTimeSeconds();
-                    embed.Title += $"\n<t:{unixTime}:F> in <t:{unixTime}:R>";
+                    embed.Title += $"\n<t:{unixTime}:F> <t:{unixTime}:R>";
                 }
                 embed.Description = description.Trim();
 
