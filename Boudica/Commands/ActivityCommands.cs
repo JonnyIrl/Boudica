@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 namespace Boudica.Commands
 {
     [Group("create", "Create an activity")]
+    [Suspended]
     public class CreateActivityCommands : ActivityHelper
     {
         private static bool _subscribed = false;
@@ -303,6 +304,7 @@ namespace Boudica.Commands
     }
 
     [Group("edit", "Edit an activity")]
+    [Suspended]
     public class EditActivityCommands : ActivityHelper
     {
         private static bool _subscribed = false;
@@ -473,6 +475,7 @@ namespace Boudica.Commands
     }
 
     [Group("close", "Close an activity")]
+    [Suspended]
     public class CloseActivityCommands : ActivityHelper
     {
         private readonly HiringService _hiringService;
@@ -839,6 +842,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("add-player", "Add Player to activity")]
+        [Suspended]
         public async Task AddToActivity(Enums.ActivityType activityType, int id, string playersToAdd)
         {
             switch(activityType)
@@ -1010,6 +1014,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("remove-player", "Remove a player from an activity")]
+        [Suspended]
         public async Task RemovePlayer(Enums.ActivityType activityType, int id, string playersToRemove)
         {
             switch (activityType)
@@ -1183,6 +1188,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("alert", "Alert all members of an activity")]
+        [Suspended]
         public async Task AlertActivity(Enums.ActivityType activityType, int id)
         {
             switch (activityType)

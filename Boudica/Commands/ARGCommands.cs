@@ -272,6 +272,7 @@ namespace Boudica.Commands
         //}
 
         [SlashCommand("leaderboard", "Display current glimmer leaderboard")]
+        [Suspended]
         public async Task GetLeaderboard(bool fullLeaderboard = false)
         {
             List<Guardian> guardians = new List<Guardian>();
@@ -325,6 +326,7 @@ namespace Boudica.Commands
 
 
         [SlashCommand("award", "Award a player with 3 Glimmer daily")]
+        [Suspended]
         public async Task AwardPlayer(SocketGuildUser user, string reasonForAward = null)
         {
             if (user == null || user.IsBot)

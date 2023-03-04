@@ -54,6 +54,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("insult", "Choose a player to insult")]
+        [Suspended]
         public async Task InsultCommand(SocketGuildUser user)
         {
             if (user == null || user.IsBot)
@@ -92,6 +93,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("compliment", "Compliment a Player")]
+        [Suspended]
         public async Task ComplimentCommand(SocketGuildUser user)
         {
             if (user == null || user.IsBot)
@@ -121,6 +123,7 @@ namespace Boudica.Commands
 
         [SlashCommand("joke", "Posts a random joke")]
         [BotChannelOnly]
+        [Suspended]
         public async Task JokeCommand()
         {
             //await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"Jokes currently going through filtering..").Build());
@@ -130,6 +133,7 @@ namespace Boudica.Commands
         }
 
         [SlashCommand("coinflip", "Random coinflip")]
+        [Suspended]
         public async Task CoinflipCommand()
         {
             Random random = new Random();
@@ -175,6 +179,7 @@ namespace Boudica.Commands
 
         [SlashCommand("daily-gift", "Every day, get a free daily gift of 1-10 Glimmer!")]
         [BotChannelOnly]
+        [Suspended]
         public async Task DailyGift()
         {
             DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
@@ -251,21 +256,25 @@ namespace Boudica.Commands
         [SlashCommand("award-glimmer", "Command to give X amount of glimmer to somebody")]
         [DefaultMemberPermissions(GuildPermission.KickMembers)]
         [ClanAdminOrMe]
-        public async Task AdminAward(SocketGuildUser user, [Summary("glimmerToAward", "Amount of Glimmer to award")]int glimmerToAward)
+        public async Task AdminAward(SocketGuildUser user, [Summary("glimmerAmount", "Amount of Glimmer to add or deduct away")]int glimmerAmount)
         {
-            if(glimmerToAward <= 0)
-            {
-                await RespondAsync("Glimmer has to be more than 0", ephemeral: true);
-                return;
-            }
             if(user.IsBot)
             {
                 await RespondAsync("Bots cannot be awarded", ephemeral: true);
                 return;
             }
-            await _guardianService.IncreaseGlimmerAsync(user.Id, user.Username, glimmerToAward);
-            await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.AdminAward, glimmerToAward);
-            await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{user.Username}, you have been awarded {glimmerToAward} Glimmer!").Build());
+            await _historyService.InsertHistoryRecord(Context.User.Id, user.Id, HistoryType.AdminAward, glimmerAmount);
+            if (glimmerAmount <= 0)
+            {
+                await _guardianService.RemoveGlimmerAsync(user.Id, glimmerAmount);
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{user.Username}, you have been deducted {glimmerAmount} Glimmer!").Build());
+            }
+            else
+            {
+                await _guardianService.IncreaseGlimmerAsync(user.Id, user.Username, glimmerAmount);
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{user.Username}, you have been awarded {glimmerAmount} Glimmer!").Build());
+            }
+            
         }
 
         public async Task DailyGift_NewYears()
@@ -594,5 +603,34 @@ namespace Boudica.Commands
             }
 
         }
+
+        [SlashCommand("suspend", "This will suspend the user from making any commands for an amount of time")]
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        public async Task SuspendUser(SocketGuildUser userToSuspend, [Summary("hoursToSuspend", "Hours to suspend the user for")]int hoursToSuspend)
+        {
+            if(userToSuspend.IsBot)
+            {
+                await RespondAsync("You can't suspend a bot");
+                return;
+            }
+            if(hoursToSuspend <= 0)
+            {
+                await RespondAsync("Enter a valid amount of hours to suspend", ephemeral: true);
+                return;
+            }
+
+            SuspendedUser suspendedUser = await _miscService.SuspendUser(userToSuspend.Id, hoursToSuspend, Context.User.Id);
+            if(suspendedUser == null)
+            {
+                await RespondAsync("Could not suspend User, try again or report issue to Jonny", ephemeral: true);
+                return; 
+            }
+            else
+            {
+                await RespondAsync($"<@{userToSuspend.Id}> has been suspended from making commands until {suspendedUser.DateTimeSuspendedUntil.ToString("dd/MM/yyyy HH:mm")}");
+                await _historyService.InsertHistoryRecord(_historyService.CreateHistoryRecord(Context.User.Id, userToSuspend.Id, HistoryType.Suspended));
+            }
+        }
+
     }
 }

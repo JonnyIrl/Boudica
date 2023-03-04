@@ -20,5 +20,6 @@ namespace Boudica.Enums
         BotChallengeHigherOrLower = 9,
         AdminAward = 10,
         Echo = 11, 
+        Suspended = 12, 
     }
 }

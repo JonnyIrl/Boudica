@@ -143,6 +143,7 @@ namespace Boudica.Commands
 
         [SlashCommand("challenge-boudica", "Challenge Boudica")]
         [BotChannelOnly]
+        [Suspended]
         public async Task ChallengeBoudica(
             [Summary("wager", "The amount to bet and potentially win!")] int wager,
             [Summary("challenge", "Choose a Challenge")] BotChallenges challenge)

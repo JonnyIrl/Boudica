@@ -38,6 +38,7 @@ namespace Boudica.Commands
 
         [SlashCommand("challenge", "Challenge a User")]
         [BotChannelOnly]
+        [Suspended]
         public async Task CreateUserChallenge(
             [Summary("personToChallenge", "Person to Challenge")] SocketGuildUser personToChallenge,
             [Summary("wager", "The amount to bet")] int wager,
