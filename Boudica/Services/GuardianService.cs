@@ -92,6 +92,11 @@ namespace Boudica.Services
 #else
             Guardian existingGuardian = await _guardianCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
             UpdateResult result;
+            if(count <= 0)
+            {
+                count = count * -1;
+            }
+
             if (existingGuardian == null || (existingGuardian.Glimmer - count) < 0)
             {
                 result = await _guardianCollection.UpdateOneAsync(filter, updateBuilder.SetOnInsert("Id", userId).Set("Glimmer", 0), new UpdateOptions() { IsUpsert = true });

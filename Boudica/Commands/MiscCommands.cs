@@ -397,8 +397,6 @@ namespace Boudica.Commands
 
         public async Task<string> ConvertHtmlToImage()
         {
-           
-
             string html = string.Empty;
             using (StreamReader sr = new StreamReader(BoudicaConfig.ProfileDirectory + "index.html"))
             {
