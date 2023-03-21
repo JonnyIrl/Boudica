@@ -24,7 +24,7 @@ namespace Boudica.Helpers
         private static List<string> JokesList = new List<string>()
         {
             "The economy in the UK is getting so dire that the elderly aren't getting to enjoy their retirement.\n\nThe BBC interviewed 73 year old Charles from Windsor: \"despite having a generous government pension, I've had to start working today.\"",
-            "Why are the pyramids located in Egypt?\n\nTHey were too big to transport to England",
+            "Why are the pyramids located in Egypt?\n\nThey were too big to transport to England",
             "What's the Longest Word in English?\n\nSmiles\n\nBecause both the first and the last letters are a mile apart",
             "How many Trump supporters does it take to change a lightbulb?\n\nNone. Trump says it’s changed and his supporters all cheer in the dark.",
             "I taught my kids about democracy tonight by having them vote on what movie to watch and pizza to order\n\nAnd then I picked the movie and pizza I wanted because I'm the one with the money.",

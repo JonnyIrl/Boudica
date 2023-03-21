@@ -44,8 +44,8 @@ namespace Boudica.Services
             if (results.Any() == false) 
                 return new Tuple<bool, string>(true, string.Empty);
             //Only award person once per day.
-            if (results.Any(x => x.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)) 
-                return new Tuple<bool, string>(false, "This player has already been awarded glimmer today");
+            //if (results.Any(x => x.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)) 
+            //    return new Tuple<bool, string>(false, "This player has already been awarded glimmer today");
             //Can't award same person twice in a row.
             if (userAwardedResult != null && userAwardedResult.AwardedGuardiansId == targetGuardianId) 
                 return new Tuple<bool, string>(false, "You cannot award the same player glimmer for 2 consecutive days");
