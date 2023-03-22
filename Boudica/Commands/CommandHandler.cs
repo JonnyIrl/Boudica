@@ -844,24 +844,24 @@ namespace Boudica.Commands
                 return;
             }
 
-            else if (reaction.Emote.Name == "misc_glimmer")
-            {
-                var originalMessage = await message.GetOrDownloadAsync();
-                if (originalMessage != null)
-                {
-                    ulong authorId = originalMessage.Author.Id;
-                    //Stop person adding increasing their own
-                    if (authorId != reaction.UserId)
-                    {
-                        var user = await reaction.Channel.GetUserAsync(authorId) as SocketGuildUser;
-                        if (user == null || user.IsBot)
-                        {
-                            return;
-                        }
-                        await _guardianService.IncreaseGlimmerAsync(user.Id, user.DisplayName, (1 * 2));
-                    }
-                }
-            }
+            //else if (reaction.Emote.Name == "misc_glimmer")
+            //{
+            //    var originalMessage = await message.GetOrDownloadAsync();
+            //    if (originalMessage != null)
+            //    {
+            //        ulong authorId = originalMessage.Author.Id;
+            //        //Stop person adding increasing their own
+            //        if (authorId != reaction.UserId)
+            //        {
+            //            var user = await reaction.Channel.GetUserAsync(authorId) as SocketGuildUser;
+            //            if (user == null || user.IsBot)
+            //            {
+            //                return;
+            //            }
+            //            await _guardianService.IncreaseGlimmerAsync(user.Id, user.DisplayName, (1 * 2));
+            //        }
+            //    }
+            //}
             else if (reaction.Emote.Name == "✅")
             {
                 var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
