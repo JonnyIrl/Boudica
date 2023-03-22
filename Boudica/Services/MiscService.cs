@@ -14,6 +14,7 @@ namespace Boudica.Services
         private readonly IMongoDBContext _mongoDBContext;
         protected IMongoCollection<DayOneSignup> _dayOneCollection;
         protected IMongoCollection<SuspendedUser> _suspendedUserCollection;
+        protected IMongoCollection<DramaReport> _dramaCollection;
 
         public MiscService(IMongoDBContext mongoDBContext)
         {
@@ -21,12 +22,15 @@ namespace Boudica.Services
 #if DEBUG
             string dayOneSignupName = typeof(DayOneSignup).Name + "Test";
             string suspendedUserName = typeof(SuspendedUser).Name + "Test";
+            string dramaName = typeof(DramaReport).Name + "Test";
 #else
             string dayOneSignupName = typeof(DayOneSignup).Name;
             string suspendedUserName = typeof(SuspendedUser).Name;
+            string dramaName = typeof(DramaReport).Name;
 #endif
             _dayOneCollection = _mongoDBContext.GetCollection<DayOneSignup>(dayOneSignupName);
             _suspendedUserCollection = _mongoDBContext.GetCollection<SuspendedUser>(suspendedUserName);
+            _dramaCollection = mongoDBContext.GetCollection<DramaReport>(dramaName);
         }
 
         public async Task<bool> AlreadySignedUp(ulong id)
@@ -70,6 +74,36 @@ namespace Boudica.Services
             }
 
             return suspendedUser;
+        }
+
+        public async Task<DramaReport> GetDramaReport()
+        {
+            DramaReport report = await _dramaCollection.Find(x => x.Id > 0).FirstOrDefaultAsync();
+            if(report == null)
+            {
+                report = new DramaReport() { Id = 1, Start = DateTime.UtcNow };
+                await _dramaCollection.InsertOneAsync(report);
+            }
+
+            return report;
+        }
+
+        public async Task<DramaReport> ResetDramaReport()
+        {
+            DramaReport report = await _dramaCollection.Find(x => x.Id > 0).FirstOrDefaultAsync();
+            if (report == null)
+            {
+                report = new DramaReport() { Start = DateTime.UtcNow };
+                await _dramaCollection.InsertOneAsync(report);
+            }
+            else
+            {
+                var builder = Builders<DramaReport>.Update;
+                var update = builder.Set(x => x.Start, DateTime.UtcNow);
+                await _dramaCollection.UpdateOneAsync(x => x.Id > 0, update);
+            }
+
+            return report;
         }
     }
 }

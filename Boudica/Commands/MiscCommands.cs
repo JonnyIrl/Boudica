@@ -630,5 +630,91 @@ namespace Boudica.Commands
             }
         }
 
+        [SlashCommand("drama-report", "Days since last clan drama.")]
+
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        [ConclaveSeraphimChannelOnly]
+        public async Task LastDramaReport()
+        {
+            DramaReport report = await _miscService.GetDramaReport();
+            if (report == null)
+            {
+                await _miscService.ResetDramaReport();
+                report = new DramaReport() { Start = DateTime.UtcNow };
+            }
+
+            int dayDifference = (int)DateTime.UtcNow.Subtract(report.Start).TotalDays;
+            if (dayDifference < 0) dayDifference = 0;
+            StringBuilder sb = new StringBuilder();
+            if (dayDifference == 1)
+                sb.Append($"It has been {dayDifference} day since the last clan drama.. ");
+            else
+                sb.Append($"It has been {dayDifference} days since the last clan drama.. ");
+
+            switch (dayDifference)
+            {
+                case 0:
+                    sb.Append("oof wonder what happened this time?");
+                    break;
+                case 1:
+                    sb.Append("forward march!");
+                    break;
+                case 2:
+                    sb.Append("making progress!");
+                    break;
+                case 3:
+                    sb.Append("keep going!");
+                    break;
+                case 4:
+                    sb.Append("steady progress!");
+                    break;
+                case 5:
+                    sb.Append("it's a miracle!");
+                    break;
+                case 6:
+                    sb.Append("nearly a full week keep up the good work!");
+                    break;
+                case 7:
+                    sb.Append("one week! I don't know how you did it but keep doing it!");
+                    break;
+                case 8:
+                    sb.Append("now you're just showing off!");
+                    break;
+                case 9:
+                    sb.Append("did Zodiac leave?");
+                    break;
+                case 10:
+                    sb.Append("did pegging get banned?");
+                    break;
+                case 11:
+                    sb.Append("don't let anybody get drunk!");
+                    break;
+                case 12:
+                    sb.Append("ok, now you're just showing off!");
+                    break;
+                case 13:
+                    sb.Append("ok this is unheard of!");
+                    break;
+                case 14:
+                    sb.Append("two weeks!?! Seriously??? oh look up.. is that.. is that a.. pig??");
+                    break;
+                default:
+                    sb.Append("I've nothing more left to say, either the clan is dead or everyone else is, either way no drama woohoo!!");
+                    break;
+            }
+
+            await RespondAsync(sb.ToString());
+        }
+
+        
+        [SlashCommand("reset-drama-report", "Reset the Days since last clan drama.")]
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        [ConclaveSeraphimChannelOnly]
+        public async Task ResetDramaReport()
+        {
+            await _miscService.ResetDramaReport();
+            await RespondAsync("*sigh* who did it now? Days since last drama has been reset");
+        }
+
     }
 }

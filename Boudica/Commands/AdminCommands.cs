@@ -21,6 +21,7 @@ namespace Boudica.Commands
         private readonly ActivityService _activityService;
         private readonly HiringService _hiringService;
         private readonly GuardianService _guardianService;
+        private readonly MiscService _miscService;
         //private readonly APIService _apIService;
 
         private readonly Emoji _successEmoji;
@@ -32,6 +33,7 @@ namespace Boudica.Commands
             _activityService = services.GetRequiredService<ActivityService>();
             _hiringService = services.GetRequiredService<HiringService>();
             _guardianService = services.GetRequiredService<GuardianService>();
+            _miscService = services.GetRequiredService<MiscService>();
 
             _successEmoji = new Emoji("✅");
             _failureEmoji = new Emoji("❌");
