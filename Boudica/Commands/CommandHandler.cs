@@ -943,17 +943,17 @@ namespace Boudica.Commands
                 return;
             }
 
-            else if (reaction.Emote.Name == "misc_glimmer")
-            {
-                var originalMessage = await message.GetOrDownloadAsync();
-                if (originalMessage != null)
-                {
-                    ulong authorId = originalMessage.Author.Id;
-                    //Stop person decreasing their own
-                    if (authorId != reaction.UserId)
-                        await _guardianService.RemoveGlimmerAsync(authorId, 1);
-                }
-            }
+            //else if (reaction.Emote.Name == "misc_glimmer")
+            //{
+            //    var originalMessage = await message.GetOrDownloadAsync();
+            //    if (originalMessage != null)
+            //    {
+            //        ulong authorId = originalMessage.Author.Id;
+            //        //Stop person decreasing their own
+            //        if (authorId != reaction.UserId)
+            //            await _guardianService.RemoveGlimmerAsync(authorId, 1);
+            //    }
+            //}
 
         }
         private async Task<ActivityResponse> AddPlayerToActivityV2(Cacheable<IUserMessage, ulong> message, SocketGuildUser user)
