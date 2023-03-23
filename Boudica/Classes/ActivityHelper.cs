@@ -27,23 +27,25 @@ namespace Boudica.Classes
         public Emote _glimmerEmote;
         public List<Emoji> _successFailEmotes = null;
 
+        public const string LightbearerRole = "Lightbearer";
+
         public const ulong RaidChannel = 530529729321631785;
-        public const string RaidRole = "Raid Fanatics";
+        //public const string RaidRole = "Raid Fanatics";
 
         public const ulong DungeonChannel = 530529123349823528;
-        public const string DungeonRole = "Dungeon Challengers";
+        //public const string DungeonRole = "Dungeon Challengers";
 
         public const ulong VanguardChannel = 530530338099691530;
-        public const string VanguardRole = "Nightfall Enthusiasts";
+        //public const string VanguardRole = "Nightfall Enthusiasts";
 
         public const ulong CrucibleChannel = 530529088620724246;
-        public const string CrucibleRole = "Crucible Contenders";
+        //public const string CrucibleRole = "Crucible Contenders";
 
         public const ulong GambitChannel = 552184673749696512;
-        public const string GambitRole = "Gambit Hustlers";
+        //public const string GambitRole = "Gambit Hustlers";
 
         public const ulong MiscChannel = 530528672172736515;
-        public const string MiscRole = "Activity Aficionados";
+        //public const string MiscRole = "Activity Aficionados";
 
 
 #if DEBUG

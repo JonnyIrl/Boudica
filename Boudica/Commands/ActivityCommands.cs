@@ -286,17 +286,17 @@ namespace Boudica.Commands
             switch (channelId)
             {
                 case RaidChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case VanguardChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case CrucibleChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case GambitChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case MiscChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case DungeonChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
             }
 
             return null;
