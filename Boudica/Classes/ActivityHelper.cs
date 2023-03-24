@@ -167,7 +167,7 @@ namespace Boudica.Classes
             //Force Command should only work for users who did not create the raid.
             if (forceCommand && existingRaid.CreatedByUserId != user.Id)
             {
-                if (user != null)
+                if (user != null) 
                 {
                     if (user.GuildPermissions.ModerateMembers)
                     {

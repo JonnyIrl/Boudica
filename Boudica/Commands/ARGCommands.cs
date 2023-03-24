@@ -325,7 +325,7 @@ namespace Boudica.Commands
         }
 
 
-        [SlashCommand("award", "Award a player with 3 Glimmer daily")]
+        [SlashCommand("award", "Award a player with 10 Glimmer daily")]
         [Suspended]
         public async Task AwardPlayer(SocketGuildUser user, string reasonForAward = null)
         {
@@ -378,7 +378,7 @@ namespace Boudica.Commands
         }
 
         [RequireUserPermission(GuildPermission.KickMembers)]
-        [SlashCommand("supersub", "Award a Player with 6 Glimmer for being a Super Sub!")]
+        [SlashCommand("supersub", "Award a Player with 20 Glimmer for being a Super Sub!")]
         public async Task AwardSuperSubPlayer(SocketGuildUser user, string reason = null)
         {
             if(user == null || user.IsBot)
@@ -395,12 +395,12 @@ namespace Boudica.Commands
 
             if (activityUser.UserId == Context.User.Id)
             {
-                await _guardianService.RemoveGlimmerAsync(activityUser.UserId, 9);
-                await RespondAsync($"<@{activityUser.UserId}>, you have lost 9 glimmer!");
+                await _guardianService.RemoveGlimmerAsync(activityUser.UserId, 20);
+                await RespondAsync($"<@{activityUser.UserId}>, you have lost 20 glimmer!");
                 return;
             }
 
-            await _awardedGuardianService.AwardGuardian(Context.User.Id, activityUser.UserId, activityUser.DisplayName, 1, true);
+            await _awardedGuardianService.AwardGuardian(Context.User.Id, activityUser.UserId, activityUser.DisplayName, 2, true);
             if(string.IsNullOrEmpty(reason))
                 await RespondAsync($"<@{activityUser.UserId}>, your fellow clanmate has awarded you some glimmer for being a super sub!");
             else

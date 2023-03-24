@@ -598,9 +598,9 @@ namespace Boudica.Commands
                     if (glimmerResult.Item2 == false)
                     {
                         Console.WriteLine("glimmerResult.Item2 == false");
-                        string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
-                        if (string.IsNullOrEmpty(creatorName) == false)
-                            updateMessageText.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
+                        //string creatorName = existingRaid.Players.FirstOrDefault(x => x.UserId == existingRaid.CreatedByUserId)?.DisplayName;
+                        //if (string.IsNullOrEmpty(creatorName) == false)
+                        //    updateMessageText.Append($" {creatorName} received a first-time weekly bonus of 3 Glimmer for creating the activity");
                     }
                     break;
             }
