@@ -1,4 +1,5 @@
-﻿using Boudica.MongoDB;
+﻿using Boudica.Helpers;
+using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -38,7 +39,7 @@ namespace Boudica.Services
         {
             AwardedGuardians userAwardedResult = await  _awardedGuardiansCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
             //Make sure person only awards once per day
-            if(userAwardedResult != null && userAwardedResult.DateTimeLastAwarded.Date == DateTime.UtcNow.Date)
+            if(userAwardedResult != null && userAwardedResult.DateTimeLastAwarded.AddHours(ConfigHelper.HourOffset).Date == ConfigHelper.GetDateTime().Date)
                 return new Tuple<bool, string>(false, "You can only award once per day");
             List<AwardedGuardians> results = await _awardedGuardiansCollection.Find(x => x.AwardedGuardiansId == targetGuardianId).ToListAsync();
             if (results.Any() == false) 
