@@ -55,7 +55,7 @@ namespace Boudica.Helpers
                 .WithTitle("Create Fireteam")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
-                .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true)
+                .AddTextInput("Fireteam Size (Number between 2 and 6)", $"{(int)ModalInputType.FireteamSize}", TextInputStyle.Paragraph, minLength: 1, maxLength: 1, required: true, value: "3")
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes");
             return builder.Build();
         }

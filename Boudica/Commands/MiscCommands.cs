@@ -66,7 +66,7 @@ namespace Boudica.Commands
             try
             {
                 Insult usersLastInsult = await _insultService.Get(Context.User.Id);
-                if (usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.Date == DateTime.UtcNow.Date)
+                if (usersLastInsult != null && usersLastInsult.DateTimeLastInsulted.AddHours(ConfigHelper.HourOffset).Date == ConfigHelper.GetDateTime().Date)
                 {
                     await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only insult once per day, use it wisely!").Build());
                     return;
@@ -183,7 +183,7 @@ namespace Boudica.Commands
         public async Task DailyGift()
         {
             DailyGift dailyGift = await _dailyGiftService.Get(Context.User.Id);
-            if (dailyGift != null && dailyGift.DateTimeLastGifted.Date == DateTime.UtcNow.Date)
+            if (dailyGift != null && dailyGift.DateTimeLastGifted.AddHours(ConfigHelper.HourOffset).Date == ConfigHelper.GetDateTime().Date)
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply("You can only get one gift per day.").Build(), ephemeral: true);
                 return;
@@ -580,27 +580,27 @@ namespace Boudica.Commands
             await _historyService.InsertHistoryRecord(_historyService.CreateHistoryRecord(Context.User.Id, null, HistoryType.Echo));
         }
 
-        [SlashCommand("signup", "Sign up for Day One Raid")]
-        public async Task SignUpDayOne([Summary("happyToLFG", "You are happy or not to LFG if there is not enough players to fill a full group")]bool happyToLFG)
-        {
-            bool alreadySignedUp = await _miscService.AlreadySignedUp(Context.User.Id);
-            if (alreadySignedUp)
-            {
-                await RespondAsync("You are already signed up", ephemeral: true);
-                return;
-            }
+        //[SlashCommand("signup", "Sign up for Day One Raid")]
+        //public async Task SignUpDayOne([Summary("happyToLFG", "You are happy or not to LFG if there is not enough players to fill a full group")]bool happyToLFG)
+        //{
+        //    bool alreadySignedUp = await _miscService.AlreadySignedUp(Context.User.Id);
+        //    if (alreadySignedUp)
+        //    {
+        //        await RespondAsync("You are already signed up", ephemeral: true);
+        //        return;
+        //    }
 
-            try
-            {
-                await _miscService.SignUp(Context.User.Id, Context.User.Username, happyToLFG);
-                await RespondAsync("Successfully signed up! We will let you know your team in advance you don't have to do anything else. If you find a team before hand please let a Clan Admin know!", ephemeral: true);
-            }
-            catch
-            {
-                await RespondAsync("Could not sign up.. something went wrong talk to Jonny", ephemeral: true);
-            }
+        //    try
+        //    {
+        //        await _miscService.SignUp(Context.User.Id, Context.User.Username, happyToLFG);
+        //        await RespondAsync("Successfully signed up! We will let you know your team in advance you don't have to do anything else. If you find a team before hand please let a Clan Admin know!", ephemeral: true);
+        //    }
+        //    catch
+        //    {
+        //        await RespondAsync("Could not sign up.. something went wrong talk to Jonny", ephemeral: true);
+        //    }
 
-        }
+        //}
 
         [SlashCommand("suspend", "This will suspend the user from making any commands for an amount of time")]
         [DefaultMemberPermissions(GuildPermission.KickMembers)]

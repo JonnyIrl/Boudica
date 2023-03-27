@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
 using Discord;
+using Boudica.Helpers;
 
 namespace Boudica.Services
 {
@@ -86,7 +87,7 @@ namespace Boudica.Services
 
         public async Task<bool> CreatedRaidThisWeek(ulong userId)
         {
-            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
+            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow.AddHours(ConfigHelper.HourOffset), DayOfWeek.Monday);
             //Greater than 1 because when you hit close it already marks it as being closed before this check.
             return await _raidCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId).CountDocumentsAsync() > 1;
         }
@@ -152,7 +153,7 @@ namespace Boudica.Services
 
         public async Task<bool> CreatedFireteamThisWeek(ulong userId)
         {
-            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow, DayOfWeek.Monday);
+            DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow.AddHours(ConfigHelper.HourOffset), DayOfWeek.Monday);
             return await _fireteamCollection.Find(x => x.DateTimeClosed >= startOfWeek && x.CreatedByUserId == userId).CountDocumentsAsync() > 1;
         }
 

@@ -153,6 +153,7 @@ namespace Boudica.Commands
                 return new Result(false, "Could not find user");
             }
             Raid newRaid = null;
+            dateTimePlanned = dateTimePlanned.AddHours(ConfigHelper.HourOffset * -1);
             try
             {
                 newRaid = new Raid()
@@ -333,6 +334,8 @@ namespace Boudica.Commands
             {
                 return new Result(false, "Could not find Raid to edit");
             }
+            Console.WriteLine("DateTimePlanned Adjusted" + dateTimePlanned.AddHours(ConfigHelper.HourOffset * -1));
+            dateTimePlanned = dateTimePlanned.AddHours(ConfigHelper.HourOffset * -1);
             existingRaid.DateTimePlanned = dateTimePlanned;
             await _activityService.UpdateRaidAsync(existingRaid);
 
@@ -342,6 +345,7 @@ namespace Boudica.Commands
                 return new Result(false, "Could not find message to edit");
             }
 
+            Console.WriteLine("DateTimePlanned: " + dateTimePlanned);
             if (dateTimePlanned != DateTime.MinValue)
             {
                 long unixTime = ((DateTimeOffset)dateTimePlanned).ToUnixTimeSeconds();
@@ -402,7 +406,7 @@ namespace Boudica.Commands
                     existingRaid,
                     title,
                     embed.Description,
-                    existingRaid.DateTimePlanned == DateTime.MinValue ? string.Empty : existingRaid.DateTimePlanned.ToString("dd/MM HH:mm")));
+                    existingRaid.DateTimePlanned == DateTime.MinValue ? string.Empty : existingRaid.DateTimePlanned.AddHours(ConfigHelper.HourOffset).ToString("dd/MM HH:mm")));
 
             return new Result(true, string.Empty);
         }

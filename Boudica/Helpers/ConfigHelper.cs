@@ -9,9 +9,14 @@ namespace Boudica.Helpers
 {
     public class ConfigHelper
     {
+        public static int HourOffset = 0;
         public static bool LoadConfig()
         {
             BoudicaConfig boudicaConfig;
+            TimeZoneInfo info = TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
+            HourOffset = (int)info.GetUtcOffset(DateTime.UtcNow).TotalHours;
+            Console.WriteLine("TimeZone Offset: " + HourOffset);
+
             if (File.Exists(BoudicaConfig.FilePath))
             {
                 string json = File.ReadAllText(BoudicaConfig.FilePath);
@@ -25,6 +30,11 @@ namespace Boudica.Helpers
                 return false;
             }
 
+        }
+
+        public static DateTime GetDateTime()
+        {
+            return DateTime.UtcNow.AddHours(HourOffset);
         }
     }
 }
