@@ -153,7 +153,8 @@ namespace Boudica.Commands
                 return new Result(false, "Could not find user");
             }
             Raid newRaid = null;
-            dateTimePlanned = dateTimePlanned.AddHours(ConfigHelper.HourOffset * -1);
+            if(dateTimePlanned != DateTime.MinValue)
+                dateTimePlanned = dateTimePlanned.AddHours(ConfigHelper.HourOffset * -1);
             try
             {
                 newRaid = new Raid()

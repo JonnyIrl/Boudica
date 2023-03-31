@@ -234,9 +234,10 @@ namespace Boudica.Commands
             bool result = await _hiringService.UpdateProbationPassed(existingRecruiter.Recruit);
             if (result)
             {
-                await _guardianService.IncreaseGlimmerAsync(existingRecruiter.UserId, existingRecruiter.DisplayName, 50);
-                await _guardianService.IncreaseGlimmerAsync(existingRecruiter.Recruit.Id, existingRecruiter.Recruit.DisplayName, 50);
-                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded 50 Glimmer and {existingRecruiter.DisplayName} has earned 50 Glimmer for recruiting this player.").Build());
+                int glimmerAmount = 1000;
+                await _guardianService.IncreaseGlimmerAsync(existingRecruiter.UserId, existingRecruiter.DisplayName, glimmerAmount);
+                await _guardianService.IncreaseGlimmerAsync(existingRecruiter.Recruit.Id, existingRecruiter.Recruit.DisplayName, glimmerAmount);
+                await RespondAsync(embed: EmbedHelper.CreateSuccessReply($"{existingRecruiter.Recruit.DisplayName} has passed their probation! {existingRecruiter.Recruit.DisplayName} has been awarded {glimmerAmount} Glimmer and {existingRecruiter.DisplayName} has earned {glimmerAmount} Glimmer for recruiting this player.").Build());
                 return;
             }
             else
