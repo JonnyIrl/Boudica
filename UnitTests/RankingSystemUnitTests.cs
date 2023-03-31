@@ -13,84 +13,111 @@ namespace UnitTests
     public class RankingSystemTests
     {
         [TestMethod]
-        public void NewRankingSystem_DefaultRankIsUnranked()
+        public void GetRank_ShouldReturnBronzeIII_WhenScoreIs0()
         {
-            var rs = new RankingSystem();
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(0);
 
-            Assert.AreEqual(RankType.Unranked, rs.GetRank().Type);
-            Assert.AreEqual(0, rs.GetRank().MajorRank);
-            Assert.AreEqual(0, rs.GetRank().MinorRank);
+            Assert.AreEqual(RankType.BronzeIII, rank.RankType);
         }
 
         [TestMethod]
-        public void NewRankingSystem_WithScore()
+        public void GetRank_ShouldReturnBronzeIII_WhenScoreIs50()
         {
-            var rs = new RankingSystem(200);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(50);
 
-            Assert.AreEqual(RankType.Silver, rs.GetRank().Type);
-            Assert.AreEqual(2, rs.GetRank().MajorRank);
-            Assert.AreEqual(0, rs.GetRank().MinorRank);
+            Assert.AreEqual(RankType.BronzeIII, rank.RankType);
         }
 
         [TestMethod]
-        public void Score_IncreasesScore()
+        public void GetRank_ShouldReturnBronzeII_WhenScoreIs100()
         {
-            var rs = new RankingSystem(200);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(100);
 
-            rs.Score(50);
-
-            Assert.AreEqual(250, rs.GetScore());
+            Assert.AreEqual(RankType.BronzeII, rank.RankType);
         }
 
         [TestMethod]
-        public void Score_IncreasesRank()
+        public void GetRank_ShouldReturnBronzeI_WhenScoreIs150()
         {
-            var rs = new RankingSystem(200);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(150);
 
-            rs.Score(200);
-
-            Assert.AreEqual(RankType.Gold, rs.GetRank().Type);
-            Assert.AreEqual(3, rs.GetRank().MajorRank);
-            Assert.AreEqual(0, rs.GetRank().MinorRank);
+            Assert.AreEqual(RankType.BronzeI, rank.RankType);
         }
 
         [TestMethod]
-        public void Score_DoesNotIncreaseRank()
+        public void GetRank_ShouldReturnSilverIII_WhenScoreIs200()
         {
-            var rs = new RankingSystem(400);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(200);
 
-            rs.Score(50);
-
-            Assert.AreEqual(RankType.Gold, rs.GetRank().Type);
-            Assert.AreEqual(3, rs.GetRank().MajorRank);
-            Assert.AreEqual(0, rs.GetRank().MinorRank);
+            Assert.AreEqual(RankType.SilverIII, rank.RankType);
         }
 
         [TestMethod]
-        public void Score_MovesToNextMajorRank()
+        public void GetRank_ShouldReturnSilverII_WhenScoreIs300()
         {
-            var rs = new RankingSystem(700);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(300);
 
-            rs.Score(100);
-
-            Assert.AreEqual(RankType.Platinum, rs.GetRank().Type);
-            Assert.AreEqual(1, rs.GetRank().MajorRank);
-            Assert.AreEqual(0, rs.GetRank().MinorRank);
+            Assert.AreEqual(RankType.SilverII, rank.RankType);
         }
 
         [TestMethod]
-        public void Score_MovesToNextMinorRank()
+        public void GetRank_ShouldReturnSilverI_WhenScoreIs400()
         {
-            var rs = new RankingSystem(450);
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(400);
 
-            rs.Score(50);
+            Assert.AreEqual(RankType.SilverI, rank.RankType);
+        }
 
-            Assert.AreEqual(RankType.Gold, rs.GetRank().Type);
-            Assert.AreEqual(3, rs.GetRank().MajorRank);
-            Assert.AreEqual(1, rs.GetRank().MinorRank);
+        [TestMethod]
+        public void GetRank_ShouldReturnGoldIII_WhenScoreIs500()
+        {
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(500);
+
+            Assert.AreEqual(RankType.GoldIII, rank.RankType);
+        }
+
+        [TestMethod]
+        public void GetRank_ShouldReturnGoldII_WhenScoreIs600()
+        {
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(600);
+
+            Assert.AreEqual(RankType.GoldII, rank.RankType);
+        }
+
+        [TestMethod]
+        public void GetRank_ShouldReturnGoldI_WhenScoreIs700()
+        {
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(700);
+
+            Assert.AreEqual(RankType.GoldI, rank.RankType);
+        }
+
+        [TestMethod]
+        public void GetRank_ShouldReturnDiamondIII_WhenScoreIs800()
+        {
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(800);
+
+            Assert.AreEqual(RankType.DiamondIII, rank.RankType);
+        }
+
+        [TestMethod]
+        public void GetRank_ShouldReturnDiamondII_WhenScoreIs1200()
+        {
+            var rankingSystem = new RankingSystem();
+            var rank = rankingSystem.GetRank(1200);
+
+            Assert.AreEqual(RankType.DiamondII, rank.RankType);
         }
     }
-
-
-
 }

@@ -14,99 +14,88 @@ namespace Boudica.Classes
     //    string currentRank = rankingSystem.GetRank();
     //    Console.WriteLine($"Current rank: {currentRank}"); // Outputs "Gold I"
 
-
     public enum RankType
     {
-        Unranked,
-        Bronze,
-        Silver,
-        Gold,
-        Platinum,
-        Diamond
+        BronzeIII = 1,
+        BronzeII = 2,
+        BronzeI = 3,
+        SilverIII = 4,
+        SilverII = 5,
+        SilverI = 6,
+        GoldIII = 7,
+        GoldII = 8,
+        GoldI = 9,
+        DiamondIII = 10,
+        DiamondII = 11,
+        DiamondI = 12,
+        PlatinumIII = 13,
+        PlatinumII = 14,
+        PlatinumI = 15
     }
 
     public class Rank
     {
-        public RankType Type { get; set; }
+        public RankType RankType { get; set; }
         public int MajorRank { get; set; }
         public int MinorRank { get; set; }
+        public int MinimumScore { get; set; }
 
-        public Rank(RankType type, int majorRank, int minorRank)
+        public Rank(RankType rankType, int majorRank, int minorRank, int minimumScore)
         {
-            Type = type;
+            RankType = rankType;
             MajorRank = majorRank;
             MinorRank = minorRank;
-        }
-
-        public override string ToString()
-        {
-            return $"{Type} {MajorRank}.{MinorRank}";
+            MinimumScore = minimumScore;
         }
     }
 
     public class RankingSystem
     {
-        private int _score;
-        private Rank _rank;
-
-        private static readonly Dictionary<RankType, int[]> _rankThresholds = new Dictionary<RankType, int[]> {
-        { RankType.Bronze, new int[] { 0, 100 } },
-        { RankType.Silver, new int[] { 101, 300 } },
-        { RankType.Gold, new int[] { 301, 700 } },
-        { RankType.Platinum, new int[] { 701, 1500 } },
-        { RankType.Diamond, new int[] { 1501, int.MaxValue } }
-    };
+        private Dictionary<RankType, Rank> _ranks;
 
         public RankingSystem()
         {
-            _score = 0;
-            _rank = new Rank(RankType.Unranked, 0, 0);
-        }
+            _ranks = new Dictionary<RankType, Rank>();
 
-        public RankingSystem(int score)
-        {
-            _score = score;
-            _rank = CalculateRank(score);
-        }
-
-        public void Score(int points)
-        {
-            _score += points;
-            var newRank = CalculateRank(_score);
-
-            if (newRank.Type > _rank.Type || (newRank.Type == _rank.Type && newRank.MajorRank > _rank.MajorRank))
+            // Initialize the ranks
+            int score = 0;
+            for (int majorRank = 1; majorRank <= 5; majorRank++)
             {
-                _rank = newRank;
-            }
-        }
-
-        public Rank GetRank()
-        {
-            return _rank;
-        }
-
-        public int GetScore()
-        {
-            return _score;
-        }
-
-        private static Rank CalculateRank(int score)
-        {
-            foreach (var rank in Enum.GetValues(typeof(RankType)).Cast<RankType>().Reverse())
-            {
-                var thresholds = _rankThresholds[rank];
-                if (score >= thresholds[0] && score <= thresholds[1])
+                for (int minorRank = 3; minorRank >= 1; minorRank--)
                 {
-                    var majorRank = (score - thresholds[0]) / ((thresholds[1] - thresholds[0]) / 3) + 1;
-                    var minorRank = (score - thresholds[0]) % ((thresholds[1] - thresholds[0]) / 3) + 1;
-                    return new Rank(rank, majorRank, minorRank);
+                    score += CalculateMinorRankStep(majorRank, minorRank);
+
+                    var rankType = (RankType)((majorRank - 1) * 3 + minorRank);
+                    var rank = new Rank(rankType, majorRank, minorRank, score);
+
+                    _ranks[rankType] = rank;
                 }
             }
+        }
 
-            return new Rank(RankType.Unranked, 0, 0);
+        public Rank GetRank(int score)
+        {
+            var rankType = _ranks.Keys.LastOrDefault(k => _ranks[k].MinimumScore <= score);
+            return _ranks[rankType];
+        }
+
+        private int CalculateMinorRankStep(int majorRank, int minorRank)
+        {
+            switch (majorRank)
+            {
+                case 1:
+                    return minorRank == 3 ? 100 : minorRank == 2 ? 200 : 300;
+                case 2:
+                    return minorRank == 3 ? 200 : minorRank == 2 ? 400 : 600;
+                case 3:
+                    return minorRank == 3 ? 400 : minorRank == 2 ? 800 : 1200;
+                case 4:
+                    return minorRank == 3 ? 800 : minorRank == 2 ? 1600 : 2400;
+                case 5:
+                    return minorRank == 3 ? 1600 : minorRank == 2 ? 3200 : 4800;
+                default:
+                    return 0;
+            }
         }
     }
-
-
-
 }
