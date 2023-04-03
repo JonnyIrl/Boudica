@@ -263,6 +263,40 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
+        [SlashCommand("test", "Create a Raid")]
+        public async Task CreateTestCommand([Summary("plannedTime", "Are you doing this Activity Now or Later?")]ActivityPlannerTime plannedTime, [Summary("date", "Date like DD/MM e.g. 16/03")]string date = null, [Summary("time", "Time like HH:mm e.g. 20:00")]string time = null)
+        {
+            try
+            {
+                if (plannedTime == ActivityPlannerTime.Later)
+                {
+                    if(date == null || time == null)
+                    {
+                        await RespondAsync("If you are making an activity for Later you must supply a Date and Time");
+                    }
+                    if (date.Length != 5 || DateTimeHelper.IsDateDigitsOnly(date) == false)
+                    {
+                        await RespondAsync("Date must be in the format of **Day/Month** like 16/03");
+                    }
+                    if (time.Length != 5 || DateTimeHelper.IsTimeDigitsOnly(time) == false)
+                    {
+                        await RespondAsync("Time must be in the format of **Hour/Minute** like 20:00");
+                    }
+                    DateTime result = DateTime.Parse(date + "/2023" + " " + "time");
+                    await RespondAsync("OK - " + result.ToString());
+                }
+                else
+                {
+                    await RespondAsync("OK");
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync("Not OK");
+            }
+        }
+
         [SlashCommand("raid", "Create a Raid")]
         public async Task CreateRaidCommand([Summary("playersToAdd", "Players to be automatically added")] string playersToAdd = null)
         {
