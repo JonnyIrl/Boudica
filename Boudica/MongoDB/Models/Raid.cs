@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.MongoDB.Models
 {
+    [BsonIgnoreExtraElements]
     public class Raid : IRecordId
     {
         [BsonId]

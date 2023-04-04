@@ -85,6 +85,13 @@ namespace Boudica.Services
             return await (await _raidCollection.FindAsync(x => x.DateTimeClosed != DateTime.MinValue)).ToListAsync();
         }
 
+        public async Task<List<Raid>> FindRaidsCloseToProposedRaid(DateTime dateTimePlanned)
+        {
+            DateTime before = dateTimePlanned.AddHours(-1);
+            DateTime after = dateTimePlanned.AddHours(1);
+            return await _raidCollection.Find(x => x.DateTimeClosed == DateTime.MinValue && (x.DateTimePlanned > before && x.DateTimePlanned < after)).ToListAsync();
+        }
+
         public async Task<bool> CreatedRaidThisWeek(ulong userId)
         {
             DateTime startOfWeek = DateTimeExtensions.StartOfWeek(DateTime.UtcNow.AddHours(ConfigHelper.HourOffset), DayOfWeek.Monday);
