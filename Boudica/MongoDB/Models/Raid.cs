@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using Boudica.Enums;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,8 @@ namespace Boudica.MongoDB.Models
         [BsonId]
         public int Id { get; set; }
         public ulong CreatedByUserId { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
         public ulong GuidId { get; set; }
         public ulong ChannelId { get; set; }
         public ulong MessageId { get; set; }

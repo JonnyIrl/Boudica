@@ -231,5 +231,28 @@ namespace Boudica.Extensions
 
             return "Not found";
         }
+
+        public static string ToName(this RaidName raid)
+        {
+            switch (raid)
+            {
+                case RaidName.DeepStoneCrypt:
+                    return "Deep Stone Crypt";
+                case RaidName.GardenOfSalvation:
+                    return "Garden of Salvation";
+                case RaidName.KingsFall:
+                    return "King's Fall";
+                case RaidName.LastWish:
+                    return "Last Wish";
+                case RaidName.RootOfNightmares:
+                    return "Root of Nightmares";
+                case RaidName.VaultOfGlass:
+                    return "Vault of Glass";
+                case RaidName.VowOfTheDisciple:
+                    return "Vow of the Disciple";
+                default:
+                    return string.Empty;
+            }
+        }
     }
 }

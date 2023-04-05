@@ -17,6 +17,8 @@ namespace Boudica.Enums
         KingsFall,
         [ChoiceDisplay("Last Wish")]
         LastWish,
+        [ChoiceDisplay("Root of Nightmares")]
+        RootOfNightmares,
         [ChoiceDisplay("Vault of Glass")]
         VaultOfGlass,
         [ChoiceDisplay("Vow of the Disciple")]

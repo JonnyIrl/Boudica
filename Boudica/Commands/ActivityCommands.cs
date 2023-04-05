@@ -1,6 +1,7 @@
 ﻿using Boudica.Attributes;
 using Boudica.Classes;
 using Boudica.Enums;
+using Boudica.Extensions;
 using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
@@ -165,6 +166,8 @@ namespace Boudica.Commands
                     ChannelId = channel.Id,
                     MaxPlayerCount = 6,
                     DateTimePlanned = dateTimePlanned,
+                    Title = title.Trim(),
+                    Description = description.Trim(),
                     Players = new List<ActivityUser>()
                     {
                         new ActivityUser(guildUser.Id, guildUser.Username, true)
@@ -263,71 +266,75 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
-        [SlashCommand("test", "Create a Raid")]
-        public async Task CreateTestCommand([Summary("date", "Date like DD/MM e.g. 16/03")] string date, [Summary("time", "Time like HH:mm e.g. 20:00")] string time, [Summary("playersToAdd", "@ Players that you want to auto-add to this raid")] string playersToAdd = null)
-        {
-            try
-            {
-                if (date == null || time == null)
-                {
-                    await RespondAsync("If you are making an activity for Later you must supply a Date and Time");
-                    return;
-                }
-                if (date.Length != 5 || DateTimeHelper.IsDateDigitsOnly(date) == false)
-                {
-                    await RespondAsync("Date must be in the format of **Day/Month** like 16/03");
-                    return;
-                }
-                if (time.Length != 5 || DateTimeHelper.IsTimeDigitsOnly(time) == false)
-                {
-                    await RespondAsync("Time must be in the format of **Hour/Minute** like 20:00");
-                    return;
-                }
-                DateTime result = DateTime.Parse(date + "/2023" + " " + time);
+        //[SlashCommand("test", "Create a Raid")]
+        //public async Task CreateTestCommand(RaidName raid, [Summary("date", "Date like DD/MM e.g. 16/03")] string date, [Summary("time", "Time like HH:mm e.g. 20:00")] string time, [Summary("playersToAdd", "@ Players that you want to auto-add to this raid")] string playersToAdd = null)
+        //{
+        //    try
+        //    {
+        //        if (date == null || time == null)
+        //        {
+        //            await RespondAsync("If you are making an activity for Later you must supply a Date and Time");
+        //            return;
+        //        }
+        //        if (date.Length != 5 || DateTimeHelper.IsDateDigitsOnly(date) == false)
+        //        {
+        //            await RespondAsync("Date must be in the format of **Day/Month** like 16/03");
+        //            return;
+        //        }
+        //        if (time.Length != 5 || DateTimeHelper.IsTimeDigitsOnly(time) == false)
+        //        {
+        //            await RespondAsync("Time must be in the format of **Hour/Minute** like 20:00");
+        //            return;
+        //        }
+        //        if(DateTime.TryParse(date + "/2023" + " " + time, out DateTime result) == false)
+        //        {
+        //            await RespondAsync("Could not get a valid Date Time to start the raid. Ensure you have entered valid values");
+        //            return;
+        //        }
 
-                List<Raid> potentialRaids = await _activityService.FindRaidsCloseToProposedRaid(result);
-                if(potentialRaids == null || potentialRaids.Count == 0)
-                {
-                    await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, date, time), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
-                }
-                else
-                {
-                    List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
-                    //+1 to include the current user making the activity
-                    int spacesNeeded = usersToAdd.Count + 1;
-                    potentialRaids.RemoveAll(x => (x.Players.Count + spacesNeeded) > x.MaxPlayerCount || x.CreatedByUserId == Context.User.Id || x.Players.FirstOrDefault(x => x.UserId == Context.User.Id) != null);
-                    if(potentialRaids.Count == 0)
-                    {
-                        await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, date, time), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
-                    }
-                    else
-                    {
-                        var noButtonComponent = new ComponentBuilder().WithButton("No I want to make my own Raid", $"{(int)CustomId.EditRaid}-{99}", ButtonStyle.Primary);
-                        await RespondAsync("The following Raid(s) are all happening at a time close to you and have spaces free, would you like to join them instead of making a new one? If you have manually added players they will auto-join the Raid too!", 
-                            components: noButtonComponent.Build(),
-                            ephemeral: true);
-                        for(int i = 0; i < potentialRaids.Count; i++)
-                        {
-                            var componentBuilder = new ComponentBuilder().WithButton("Join this Raid", $"{(int)CustomId.EditRaid}-{potentialRaids[i].Id}", ButtonStyle.Primary);
-                            await FollowupAsync($"Raid Id {potentialRaids[i].Id}", components: componentBuilder.Build(), ephemeral: true);
-                        }
-                    }
-                }
+        //        List<Raid> potentialRaids = await _activityService.FindRaidsCloseToProposedRaid(result);
+        //        if(potentialRaids == null || potentialRaids.Count == 0)
+        //        {
+        //            await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, date, time, raid.ToName()), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+        //        }
+        //        else
+        //        {
+        //            List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
+        //            //+1 to include the current user making the activity
+        //            int spacesNeeded = usersToAdd.Count + 1;
+        //            potentialRaids.RemoveAll(x => (x.Players.Count + spacesNeeded) > x.MaxPlayerCount || x.CreatedByUserId == Context.User.Id || x.Players.FirstOrDefault(x => x.UserId == Context.User.Id) != null);
+        //            if(potentialRaids.Count == 0)
+        //            {
+        //                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, date, time, raid.ToName()), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+        //            }
+        //            else
+        //            {
+        //                var noButtonComponent = new ComponentBuilder().WithButton("No I want to make my own Raid", $"{(int)CustomId.EditRaid}-{99}", ButtonStyle.Primary);
+        //                await RespondAsync("The following Raid(s) are all happening at a time close to you and have spaces free, would you like to join them instead of making a new one? If you have manually added players they will auto-join the Raid too!", 
+        //                    components: noButtonComponent.Build(),
+        //                    ephemeral: true);
+        //                for(int i = 0; i < potentialRaids.Count; i++)
+        //                {
+        //                    var componentBuilder = new ComponentBuilder().WithButton("Join this Raid", $"{(int)CustomId.EditRaid}-{potentialRaids[i].Id}", ButtonStyle.Primary);
+        //                    await FollowupAsync($"Raid Id {potentialRaids[i].Id}", components: componentBuilder.Build(), ephemeral: true);
+        //                }
+        //            }
+        //        }
 
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync("Not OK");
-            }
-        }       
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await RespondAsync("Not OK");
+        //    }
+        //}       
 
         [SlashCommand("raid", "Create a Raid")]
         public async Task CreateRaidCommand([Summary("playersToAdd", "Players to be automatically added")] string playersToAdd = null)
         {
-            if(string.IsNullOrEmpty(playersToAdd))
+            if (string.IsNullOrEmpty(playersToAdd))
                 await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
             else
-                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
+                await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, string.Empty, string.Empty, string.Empty), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
         }
 
         [SlashCommand("fireteam", "Create a Fireteam")]

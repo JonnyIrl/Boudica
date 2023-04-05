@@ -30,20 +30,20 @@ namespace Boudica.Helpers
                 .WithTitle("Create Raid")
                 .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
-                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: false, maxLength: 11)
+                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: true, maxLength: 11)
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes");
             return builder.Build();
         }
 
-        public static Modal CreateRaidModal(string existingPlayers, string date = null, string time = null)
+        public static Modal CreateRaidModal(string existingPlayers, string date, string time, string title)
         {
+            string dateTime = (!string.IsNullOrEmpty(date) && !string.IsNullOrEmpty(time)) ? date + " " + time : string.Empty;
             ModalBuilder builder = new ModalBuilder()
                 .WithCustomId($"{(int)CustomId.CreateRaid}-0")
                 .WithTitle("Create Raid")
-                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250)
+                .AddTextInput("Title", $"{(int)ModalInputType.InputTitle}", TextInputStyle.Short, required: false, maxLength: 250, value: title)
                 .AddTextInput("Description", $"{(int)ModalInputType.InputDescription}", TextInputStyle.Paragraph, required: false, maxLength: 400)
-                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: true, maxLength: 11, 
-                value: (!string.IsNullOrEmpty(date) && !string.IsNullOrEmpty(time)) ? date + " " + time : "")
+                .AddTextInput("Date Time (dd/MM HH:mm like 16/02 21:00)", $"{(int)ModalInputType.DateTimePlanned}", TextInputStyle.Short, placeholder: "dd/MM HH:mm format like 28/01 21:00", required: true, maxLength: 11, value: dateTime)
                 .AddTextInput("Alert Channel", $"{(int)ModalInputType.AlertChannel}", TextInputStyle.Short, required: true, maxLength: 3, value: "Yes")
                 .AddTextInput("Existing Players (dont change anything here)", $"{(int)ModalInputType.ExistingPlayers}", TextInputStyle.Short, required: false, value: string.IsNullOrEmpty(existingPlayers) ? string.Empty : existingPlayers);
             return builder.Build();

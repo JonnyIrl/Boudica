@@ -178,6 +178,10 @@ namespace Boudica.Classes
             }
             else
             {
+                if(user.GuildPermissions.KickMembers)
+                {
+                    return new Result(true, string.Empty);
+                }
                 if (existingRaid.CreatedByUserId != user.Id)
                 {
                     return new Result(false, "Only the Guardian who created the raid can edit/close a raid");
@@ -244,6 +248,7 @@ namespace Boudica.Classes
 
         public List<ActivityUser> AddPlayersToNewActivity(string args, int maxCount = 5, bool removePlayer = false)
         {
+            if (string.IsNullOrEmpty(args)) return new List<ActivityUser>();
             string sanitisedSplit = Regex.Replace(args, @"[(?<=\<)(.*?)(?=\>)]", string.Empty);
             List<ActivityUser> activityUsers = new List<ActivityUser>();
             if (sanitisedSplit.Contains("@") == false) return activityUsers;
