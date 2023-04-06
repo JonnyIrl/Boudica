@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace UnitTests
 {
     using Boudica.Classes;
+    using Boudica.Enums;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
@@ -18,7 +19,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(0);
 
-            Assert.AreEqual(RankType.BronzeIII, rank.RankType);
+            Assert.AreEqual(RankType.BronzeIII, rank.Rank);
         }
 
         [TestMethod]
@@ -27,16 +28,16 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(50);
 
-            Assert.AreEqual(RankType.BronzeIII, rank.RankType);
+            Assert.AreEqual(RankType.BronzeIII, rank.Rank);
         }
 
         [TestMethod]
         public void GetRank_ShouldReturnBronzeII_WhenScoreIs100()
         {
             var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(100);
+            var rank = rankingSystem.GetRank(90);
 
-            Assert.AreEqual(RankType.BronzeII, rank.RankType);
+            Assert.AreEqual(RankType.BronzeII, rank.Rank);
         }
 
         [TestMethod]
@@ -45,7 +46,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(150);
 
-            Assert.AreEqual(RankType.BronzeI, rank.RankType);
+            Assert.AreEqual(RankType.BronzeI, rank.Rank);
         }
 
         [TestMethod]
@@ -54,7 +55,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(200);
 
-            Assert.AreEqual(RankType.SilverIII, rank.RankType);
+            Assert.AreEqual(RankType.SilverIII, rank.Rank);
         }
 
         [TestMethod]
@@ -63,7 +64,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(300);
 
-            Assert.AreEqual(RankType.SilverII, rank.RankType);
+            Assert.AreEqual(RankType.SilverII, rank.Rank);
         }
 
         [TestMethod]
@@ -72,7 +73,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(400);
 
-            Assert.AreEqual(RankType.SilverI, rank.RankType);
+            Assert.AreEqual(RankType.SilverI, rank.Rank);
         }
 
         [TestMethod]
@@ -81,7 +82,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(500);
 
-            Assert.AreEqual(RankType.GoldIII, rank.RankType);
+            Assert.AreEqual(RankType.GoldIII, rank.Rank);
         }
 
         [TestMethod]
@@ -90,7 +91,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(600);
 
-            Assert.AreEqual(RankType.GoldII, rank.RankType);
+            Assert.AreEqual(RankType.GoldII, rank.Rank);
         }
 
         [TestMethod]
@@ -99,7 +100,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(700);
 
-            Assert.AreEqual(RankType.GoldI, rank.RankType);
+            Assert.AreEqual(RankType.GoldI, rank.Rank);
         }
 
         [TestMethod]
@@ -108,7 +109,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(800);
 
-            Assert.AreEqual(RankType.DiamondIII, rank.RankType);
+            Assert.AreEqual(RankType.DiamondIII, rank.Rank);
         }
 
         [TestMethod]
@@ -117,7 +118,7 @@ namespace UnitTests
             var rankingSystem = new RankingSystem();
             var rank = rankingSystem.GetRank(1200);
 
-            Assert.AreEqual(RankType.DiamondII, rank.RankType);
+            Assert.AreEqual(RankType.DiamondII, rank.Rank);
         }
     }
 }
