@@ -89,6 +89,8 @@ namespace Boudica.Commands
         private List<Emoji> _alphabetList;
 
         #region Ids
+        public const string LightbearerRole = "Lightbearer";
+
         private const ulong RaidChannel = 530529729321631785;
         private const string RaidRole = "Raid Fanatics";
 
@@ -977,7 +979,7 @@ namespace Boudica.Commands
                 if (activityType.Activity == ActivityTypes.Raid)
                 {
                     Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
-                    if (existingRaid == null || existingRaid.AwardedGlimmer)
+                    if (existingRaid == null || existingRaid.DateTimeClosed != DateTime.MinValue)
                     {
                         //Set to success to let the reaction go through
                         activityResponse.Success = true;
@@ -1003,7 +1005,7 @@ namespace Boudica.Commands
                     //If the raid has been closed and new people try and join
                     if(existingRaid.DateTimeClosed != DateTime.MinValue)
                     {
-                        activityResponse.Success = true;
+                        activityResponse.Success = false;
                         return activityResponse;
                     }
 
@@ -1169,14 +1171,6 @@ namespace Boudica.Commands
             var embed = embeds?.First();
             if (embed != null)
             {
-#region Check Closed
-                if (embed.Title == RaidIsClosed || embed.Title == ActivityIsClosed)
-                {
-                    return activityResponse;
-                }
-#endregion
-
-
                 ActivityType activityType = new ActivityType();
                 activityType.Parse(embed);
                 if (activityType.Activity == ActivityTypes.Unknown)
@@ -1184,8 +1178,8 @@ namespace Boudica.Commands
 
                 if (activityType.Activity == ActivityTypes.Raid)
                 {
-                    MongoDB.Models.Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
-                    if (existingRaid == null)
+                    Raid existingRaid = await _activityService.GetMongoRaidAsync(activityType.Id);
+                    if (existingRaid == null || existingRaid.DateTimeClosed != DateTime.MinValue)
                     {
                         return activityResponse;
                     }
@@ -1224,7 +1218,7 @@ namespace Boudica.Commands
                             IRole role = GetRoleForChannel(user, originalMessage.Channel.Id);
                             if (role != null)
                             {
-                                await originalMessage.ReplyAsync(role.Mention + " A slot has now opened up!");
+                                await originalMessage.ReplyAsync(role.Mention + $" A slot has now opened up for {existingRaid.Title}!");
                             }
                         }
                         catch (Exception ex)
@@ -1233,7 +1227,7 @@ namespace Boudica.Commands
                         }
                     }
 
-                    await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{user.Id}> has left Raid Id {existingRaid.Id}").Build());
+                    await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateInfoReply($"<@{user.Id}> has left Raid Id {existingRaid.Id}. {existingRaid.Title}").Build());
 
                     activityResponse.Success = true;
                     return activityResponse;
@@ -1751,17 +1745,17 @@ namespace Boudica.Commands
             switch (channelId)
             {
                 case RaidChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == RaidRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case VanguardChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == VanguardRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case CrucibleChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == CrucibleRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case GambitChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == GambitRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case MiscChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == MiscRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
                 case DungeonChannel:
-                    return user.Guild.Roles.FirstOrDefault(x => x.Name == DungeonRole);
+                    return user.Guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
             }
 
             return null;
