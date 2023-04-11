@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Boudica.Commands
 {
-    [DefaultMemberPermissions(GuildPermission.ModerateMembers)]
+    [DefaultMemberPermissions(GuildPermission.KickMembers)]
     [Group("recruit", "Commands for recruits")]
     public class AdminCommands: InteractionModuleBase<SocketInteractionContext>
     {
