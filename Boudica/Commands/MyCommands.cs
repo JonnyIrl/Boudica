@@ -38,7 +38,7 @@ namespace Boudica.Commands
         public async Task GetMyRaids()
         {
             List<Raid> openRaids = await _activityService.FindAllOpenRaids(Context.Guild.Id);
-            openRaids.RemoveAll(x => (x.CreatedByUserId != Context.User.Id && x.Players.Any(x => x.UserId == Context.User.Id) == false) || x.GuidId != Context.Guild.Id);
+            openRaids.RemoveAll(x => (x.CreatedByUserId != Context.User.Id && x.Players.Any(x => x.UserId == Context.User.Id) == false) || x.GuidId != Context.Guild.Id || (x.DateTimePlanned == DateTime.MinValue || x.DateTimePlanned < DateTime.UtcNow));
             if (openRaids.Any() == false)
             {
                 await RespondAsync(embed: EmbedHelper.CreateSuccessReply("You are in no open raids").Build(), ephemeral: true);
@@ -47,23 +47,15 @@ namespace Boudica.Commands
             else
             {
                 StringBuilder sb = new StringBuilder();
-                foreach (Raid openRaid in openRaids)
+                if (openRaids.Count > 1)
+                    sb.AppendLine("You have the following Raids:\n\n");
+                else
+                    sb.AppendLine("You have the following Raid:\n\n");
+                foreach (Raid openRaid in openRaids.OrderBy(x => x.DateTimePlanned))
                 {
-                    ITextChannel channel = Context.Guild.GetTextChannel(openRaid.ChannelId);
-                    if (channel == null)
-                    {
-                        continue;
-                    }
-                    IUserMessage message = (IUserMessage)await channel.GetMessageAsync(openRaid.MessageId, CacheMode.AllowDownload);
-                    if (message == null)
-                    {
-                        continue;
-                    }
-
-                    var embed = message.Embeds.FirstOrDefault();
-                    if (embed == null) continue;
-                    sb.AppendLine($"Raid Id {openRaid.Id}");
-                    sb.AppendLine(embed.Description);
+                    if (openRaid.DateTimePlanned == DateTime.MinValue) continue;
+                    long unixTime = ((DateTimeOffset)openRaid.DateTimePlanned).ToUnixTimeSeconds();
+                    sb.AppendLine($"{openRaid.Title}. <t:{unixTime}:F> <t:{unixTime}:R>");
                     sb.AppendLine("");
                 };
 
@@ -74,7 +66,7 @@ namespace Boudica.Commands
                 }
                 else
                 {
-                    await RespondAsync(embed: EmbedHelper.CreateSuccessReply("Here are your current open raids\n\n" + sb.ToString()).Build(), ephemeral: true);
+                    await RespondAsync(embed: EmbedHelper.CreateSuccessReply(sb.ToString()).Build(), ephemeral: true);
                 }
             }
         }
