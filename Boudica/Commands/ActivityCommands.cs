@@ -273,22 +273,22 @@ namespace Boudica.Commands
             {
                 if (date == null || time == null)
                 {
-                    await RespondAsync("If you are making an activity for Later you must supply a Date and Time");
+                    await RespondAsync("If you are making an activity for Later you must supply a Date and Time", ephemeral: true);
                     return;
                 }
                 if (date.Length != 5 || DateTimeHelper.IsDateDigitsOnly(date) == false)
                 {
-                    await RespondAsync("Date must be in the format of **Day/Month** like 16/03");
+                    await RespondAsync("Date must be in the format of **Day/Month** like 16/03", ephemeral: true);
                     return;
                 }
                 if (time.Length != 5 || DateTimeHelper.IsTimeDigitsOnly(time) == false)
                 {
-                    await RespondAsync("Time must be in the format of **Hour/Minute** like 20:00");
+                    await RespondAsync("Time must be in the format of **Hour/Minute** like 20:00", ephemeral: true);
                     return;
                 }
-                if (DateTime.TryParse(date + "/2023" + " " + time, out DateTime result) == false)
+                if (DateTime.TryParseExact(date + "/2023" + " " + time, "dd/MM/yyyy HH:mm", null, System.Globalization.DateTimeStyles.None, out DateTime result) == false)
                 {
-                    await RespondAsync("Could not get a valid Date Time to start the raid. Ensure you have entered valid values");
+                    await RespondAsync("Could not get a valid Date Time to start the raid. Ensure you have entered valid values", ephemeral: true);
                     return;
                 }
 
@@ -301,24 +301,24 @@ namespace Boudica.Commands
                 {
                     List<ActivityUser> usersToAdd = AddPlayersToNewActivity(playersToAdd);
                     //+1 to include the current user making the activity
-                    int spacesNeeded = usersToAdd.Count + 1;
-                    potentialRaids.RemoveAll(x => (x.Players.Count + spacesNeeded) > x.MaxPlayerCount || x.CreatedByUserId == Context.User.Id || x.Players.FirstOrDefault(x => x.UserId == Context.User.Id) != null);
-                    if (potentialRaids.Count == 0)
-                    {
+                    //int spacesNeeded = usersToAdd.Count + 1;
+                    //potentialRaids.RemoveAll(x => (x.Players.Count + spacesNeeded) > x.MaxPlayerCount || x.CreatedByUserId == Context.User.Id || x.Players.FirstOrDefault(x => x.UserId == Context.User.Id) != null);
+                    //if (potentialRaids.Count == 0)
+                    //{
                         await Context.Interaction.RespondWithModalAsync(ModalHelper.CreateRaidModal(playersToAdd, date, time, raid.ToName()), new RequestOptions() { RetryMode = RetryMode.AlwaysFail, Timeout = 5000 });
-                    }
-                    else
-                    {
-                        var noButtonComponent = new ComponentBuilder().WithButton("No I want to make my own Raid", $"{(int)CustomId.EditRaid}-{99}", ButtonStyle.Primary);
-                        await RespondAsync("The following Raid(s) are all happening at a time close to you and have spaces free, would you like to join them instead of making a new one? If you have manually added players they will auto-join the Raid too!",
-                            components: noButtonComponent.Build(),
-                            ephemeral: true);
-                        for (int i = 0; i < potentialRaids.Count; i++)
-                        {
-                            var componentBuilder = new ComponentBuilder().WithButton("Join this Raid", $"{(int)CustomId.EditRaid}-{potentialRaids[i].Id}", ButtonStyle.Primary);
-                            await FollowupAsync($"Raid Id {potentialRaids[i].Id}", components: componentBuilder.Build(), ephemeral: true);
-                        }
-                    }
+                    //}
+                    //else
+                    //{
+                    //    var noButtonComponent = new ComponentBuilder().WithButton("No I want to make my own Raid", $"{(int)CustomId.EditRaid}-{99}", ButtonStyle.Primary);
+                    //    await RespondAsync("The following Raid(s) are all happening at a time close to you and have spaces free, would you like to join them instead of making a new one? If you have manually added players they will auto-join the Raid too!",
+                    //        components: noButtonComponent.Build(),
+                    //        ephemeral: true);
+                    //    for (int i = 0; i < potentialRaids.Count; i++)
+                    //    {
+                    //        var componentBuilder = new ComponentBuilder().WithButton("Join this Raid", $"{(int)CustomId.EditRaid}-{potentialRaids[i].Id}", ButtonStyle.Primary);
+                    //        await FollowupAsync($"Raid Id {potentialRaids[i].Id}", components: componentBuilder.Build(), ephemeral: true);
+                    //    }
+                    //}
                 }
 
             }
