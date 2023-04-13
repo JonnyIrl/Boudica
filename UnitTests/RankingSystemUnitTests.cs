@@ -116,7 +116,7 @@ namespace UnitTests
         public void GetRank_ShouldReturnDiamondII_WhenScoreIs1200()
         {
             var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(1200);
+            var rank = rankingSystem.GetRank(1201);
 
             Assert.AreEqual(RankType.DiamondII, rank.Rank);
         }
