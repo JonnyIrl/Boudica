@@ -110,20 +110,20 @@ namespace Boudica.Commands
         private const string MiscRole = "Activity Aficionados";
 
 #if DEBUG
+        private const ulong glimmerId = 1009200271475347567;
+        private const ulong GuildId = 958852217186713680;
+        const string WelcomeChannelId = "958852217186713683";
         private const ulong GeneralChannel = 958852217186713683;
 #else
         private const ulong GeneralChannel = 530528343666458663;
-#endif
-
-        #endregion
-
-#if DEBUG
-        private const ulong glimmerId = 1009200271475347567;
-        private const ulong GuildId = 958852217186713680;
-#else
+        const string WelcomeChannelId = "530536477151592469";
         private const ulong glimmerId = 728197708074188802;
         private const ulong GuildId = 530462081636368395;
 #endif
+
+        private IRole _lightbearerRole;
+
+        #endregion
         public CommandHandler(InteractionService interactionCommands, IServiceProvider services)
         {
             var oauthHelper = new OAuthHelper(services);
@@ -785,10 +785,34 @@ namespace Boudica.Commands
 
             if (reaction.Emote.Name == "🇯")
             {
+                if (_lightbearerRole == null)
+                {
+                    SocketGuild guild = _client.GetGuild(GuildId);
+                    if (guild != null)
+                    {
+                        _lightbearerRole = guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
+                    }
+                }
                 var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
                 if (user == null || user.IsBot)
                 {
                     return;
+                }
+
+                if(user.Roles.FirstOrDefault(x => x.Name == LightbearerRole) == null && _lightbearerRole != null)
+                {
+                    ITextChannel downloadedChannel = (ITextChannel) await channel.GetOrDownloadAsync();
+                    if(downloadedChannel != null)
+                    {
+                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have {_lightbearerRole.Mention} to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
+                        var originalMessage = await message.GetOrDownloadAsync();
+                        lock (_lock)
+                        {
+                            _manualRemovedReactionList.Add(user.Id);
+                        }
+                        await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                        return;
+                    }
                 }
                 ActivityResponse result = await AddPlayerToActivityV2(message, user);
                 if (result.Success == false)
@@ -818,6 +842,14 @@ namespace Boudica.Commands
 
             else if (reaction.Emote.Name == "🇸")
             {
+                if (_lightbearerRole == null)
+                {
+                    SocketGuild guild = _client.GetGuild(GuildId);
+                    if (guild != null)
+                    {
+                        _lightbearerRole = guild.Roles.FirstOrDefault(x => x.Name == LightbearerRole);
+                    }
+                }
                 var user = await reaction.Channel.GetUserAsync(reaction.UserId) as SocketGuildUser;
                 if (user == null || user.IsBot)
                 {
@@ -902,6 +934,20 @@ namespace Boudica.Commands
                 bool result = await _trialsService.AddPlayersVote(user.Id, user.Username, reaction.Emote.Name);
                 if(result)
                     await originalMessage.ReplyAsync($"<@{user.Id}>, your vote has been counted and locked in.");
+            }
+        }
+
+        private async Task RemoveUsersAddedReaction(ActivityResponse result, Cacheable<IUserMessage, ulong> message, SocketGuildUser user, SocketReaction reaction)
+        {
+            var originalMessage = await message.GetOrDownloadAsync();
+            lock (_lock)
+            {
+                _manualRemovedReactionList.Add(user.Id);
+            }
+            await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+            if (result.IsFull)
+            {
+                await originalMessage.ReplyAsync(null, false, EmbedHelper.CreateFailedReply($"<@{user.Id}>, sorry " + result.FullMessage).Build());
             }
         }
         public async Task ReactionRemovedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)

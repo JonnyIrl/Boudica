@@ -266,6 +266,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
+        [LightbearerRole]
         [SlashCommand("raid", "Create a Raid")]
         public async Task CreateRaidCommand(RaidName raid, [Summary("date", "Date like DD/MM e.g. 16/03")] string date, [Summary("time", "Time like HH:mm e.g. 20:00")] string time, [Summary("playersToAdd", "@ Players that you want to auto-add to this raid")] string playersToAdd = null)
         {
@@ -328,6 +329,7 @@ namespace Boudica.Commands
             }
         }
 
+        [LightbearerRole]
         [SlashCommand("fireteam", "Create a Fireteam")]
         public async Task CreateFireteamCommand(
             [Summary("playersToAdd", "Players to be automatically added")] string playersToAdd = null)
@@ -431,6 +433,7 @@ namespace Boudica.Commands
             return new Result(true, string.Empty);
         }
 
+        [LightbearerRole]
         private async Task<Result> OnEditRaidButtonClick(SocketMessageComponent component, int raidId)
         {
             Raid existingRaid = await _activityService.GetMongoRaidAsync(raidId);
@@ -467,7 +470,7 @@ namespace Boudica.Commands
 
             return new Result(true, string.Empty);
         }
-
+        [LightbearerRole]
         private async Task<Result> OnEditFireteamButtonClick(SocketMessageComponent component, int fireteamId)
         {
             SocketGuildUser user = component.User as SocketGuildUser;
