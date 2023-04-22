@@ -855,6 +855,21 @@ namespace Boudica.Commands
                 {
                     return;
                 }
+                if (user.Roles.FirstOrDefault(x => x.Name == LightbearerRole) == null && _lightbearerRole != null)
+                {
+                    ITextChannel downloadedChannel = (ITextChannel)await channel.GetOrDownloadAsync();
+                    if (downloadedChannel != null)
+                    {
+                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have {_lightbearerRole.Mention} to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
+                        var originalMessage = await message.GetOrDownloadAsync();
+                        lock (_lock)
+                        {
+                            _manualRemovedReactionList.Add(user.Id);
+                        }
+                        await originalMessage.RemoveReactionAsync(reaction.Emote, user);
+                        return;
+                    }
+                }
                 ActivityResponse result = await AddSubstituteToActivityV2(message, user);
                 if (result.Success == false)
                 {
