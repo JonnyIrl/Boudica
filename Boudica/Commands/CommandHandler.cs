@@ -804,7 +804,7 @@ namespace Boudica.Commands
                     ITextChannel downloadedChannel = (ITextChannel) await channel.GetOrDownloadAsync();
                     if(downloadedChannel != null)
                     {
-                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have {_lightbearerRole.Mention} to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
+                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have <@{_lightbearerRole.Id}> to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
                         var originalMessage = await message.GetOrDownloadAsync();
                         lock (_lock)
                         {
@@ -860,7 +860,7 @@ namespace Boudica.Commands
                     ITextChannel downloadedChannel = (ITextChannel)await channel.GetOrDownloadAsync();
                     if (downloadedChannel != null)
                     {
-                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have {_lightbearerRole.Mention} to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
+                        await downloadedChannel.SendMessageAsync($"<@{reaction.UserId}>, you must have <@{_lightbearerRole.Id}> to join an activity. You can react with this role in <#{WelcomeChannelId}> to get it.");
                         var originalMessage = await message.GetOrDownloadAsync();
                         lock (_lock)
                         {
