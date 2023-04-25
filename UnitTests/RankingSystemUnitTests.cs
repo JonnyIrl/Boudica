@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Boudica.Classes;
+using Boudica.Enums;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,119 +9,58 @@ using System.Threading.Tasks;
 
 namespace UnitTests
 {
-    using Boudica.Classes;
-    using Boudica.Enums;
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class RankingSystemTests
     {
-        [TestMethod]
-        public void GetRank_ShouldReturnBronzeIII_WhenScoreIs0()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(0);
+        private RankingSystem _rankingSystem;
 
-            Assert.AreEqual(RankType.BronzeIII, rank.Rank);
+        [TestInitialize]
+        public void SetUp()
+        {
+            _rankingSystem = new RankingSystem();
         }
 
-        [TestMethod]
-        public void GetRank_ShouldReturnBronzeIII_WhenScoreIs50()
+        [DataTestMethod]
+        [DataRow(-1)]
+        [DataRow(2410)]
+        public void GetRank_OutOfRange_ThrowsArgumentOutOfRangeException(int score)
         {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(50);
+            // Arrange
 
-            Assert.AreEqual(RankType.BronzeIII, rank.Rank);
+            // Act & Assert
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => _rankingSystem.GetRank(score));
         }
 
-        [TestMethod]
-        public void GetRank_ShouldReturnBronzeII_WhenScoreIs100()
+        [DataTestMethod]
+        [DataRow(0, MajorRank.Bronze, MinorRank.I)]
+        [DataRow(50, MajorRank.Bronze, MinorRank.I)]
+        [DataRow(99, MajorRank.Bronze, MinorRank.I)]
+        [DataRow(100, MajorRank.Bronze, MinorRank.I)]
+        [DataRow(101, MajorRank.Silver, MinorRank.I)]
+        [DataRow(150, MajorRank.Silver, MinorRank.I)]
+        [DataRow(299, MajorRank.Silver, MinorRank.I)]
+        [DataRow(300, MajorRank.Silver, MinorRank.I)]
+        [DataRow(301, MajorRank.Gold, MinorRank.I)]
+        [DataRow(450, MajorRank.Gold, MinorRank.I)]
+        [DataRow(599, MajorRank.Gold, MinorRank.I)]
+        [DataRow(600, MajorRank.Gold, MinorRank.I)]
+        [DataRow(601, MajorRank.Platinum, MinorRank.I)]
+        [DataRow(900, MajorRank.Platinum, MinorRank.I)]
+        [DataRow(1200, MajorRank.Platinum, MinorRank.I)]
+        [DataRow(1201, MajorRank.Ascendant, MinorRank.I)]
+        [DataRow(1800, MajorRank.Ascendant, MinorRank.I)]
+        [DataRow(2400, MajorRank.Ascendant, MinorRank.I)]
+        public void GetRank_ValidScore_ReturnsCorrectRank(int score, MajorRank expectedMajorRank, MinorRank expectedMinorRank)
         {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(90);
+            // Arrange
 
-            Assert.AreEqual(RankType.BronzeII, rank.Rank);
-        }
+            // Act
+            var actualRank = _rankingSystem.GetRank(score);
 
-        [TestMethod]
-        public void GetRank_ShouldReturnBronzeI_WhenScoreIs150()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(150);
-
-            Assert.AreEqual(RankType.BronzeI, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnSilverIII_WhenScoreIs200()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(200);
-
-            Assert.AreEqual(RankType.SilverIII, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnSilverII_WhenScoreIs300()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(300);
-
-            Assert.AreEqual(RankType.SilverII, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnSilverI_WhenScoreIs400()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(400);
-
-            Assert.AreEqual(RankType.SilverI, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnGoldIII_WhenScoreIs500()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(500);
-
-            Assert.AreEqual(RankType.GoldIII, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnGoldII_WhenScoreIs600()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(600);
-
-            Assert.AreEqual(RankType.GoldII, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnGoldI_WhenScoreIs700()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(700);
-
-            Assert.AreEqual(RankType.GoldI, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnDiamondIII_WhenScoreIs800()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(800);
-
-            Assert.AreEqual(RankType.DiamondIII, rank.Rank);
-        }
-
-        [TestMethod]
-        public void GetRank_ShouldReturnDiamondII_WhenScoreIs1200()
-        {
-            var rankingSystem = new RankingSystem();
-            var rank = rankingSystem.GetRank(1201);
-
-            Assert.AreEqual(RankType.DiamondII, rank.Rank);
+            // Assert
+            Assert.AreEqual(expectedMajorRank, actualRank.Major);
+            Assert.AreEqual(expectedMinorRank, actualRank.Minor);
         }
     }
 }

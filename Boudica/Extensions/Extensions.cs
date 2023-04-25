@@ -193,45 +193,6 @@ namespace Boudica.Extensions
             }
         }
 
-        public static string ToName(this RankType type)
-        {
-            switch (type)
-            {
-                case RankType.BronzeIII:
-                    return "Bronze III";
-                case RankType.BronzeII:
-                    return "Bronze II";
-                case RankType.BronzeI:
-                    return "Bronze I";
-                case RankType.SilverIII:
-                    return "Silver III";
-                case RankType.SilverII:
-                    return "Silver II";
-                case RankType.SilverI:
-                    return "Silver I";
-                case RankType.GoldIII:
-                    return "Gold III";
-                case RankType.GoldII:
-                    return "Gold II";
-                case RankType.GoldI:
-                    return "Gold I";
-                case RankType.DiamondIII:
-                    return "Diamond III";
-                case RankType.DiamondII:
-                    return "Diamond II";
-                case RankType.DiamondI:
-                    return "Diamond I";
-                case RankType.PlatinumIII:
-                    return "Platinum III";
-                case RankType.PlatinumII:
-                    return "Platinum II";
-                case RankType.PlatinumI:
-                    return "Platinum I";
-            }
-
-            return "Not found";
-        }
-
         public static string ToName(this RaidName raid)
         {
             switch (raid)
