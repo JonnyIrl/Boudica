@@ -12,6 +12,7 @@ namespace Boudica.MongoDB.Models
         [BsonId]
         public ulong Id { get; set; }
         public int Glimmer { get; set; }
+        public int RankScore { get; set; }
         public string Username { get; set; }
         public string BungieMembershipId { get; set; } = "-1";
         public string BungieMembershipType { get; set; } = "-1";
