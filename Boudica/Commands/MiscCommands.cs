@@ -721,7 +721,7 @@ namespace Boudica.Commands
         public async Task UnsubscribeFromRaids()
         {
             bool result = await _miscService.UnsubscribeUser(Context.User.Id);
-            if (result) await RespondAsync("Successfully unsubcribed. If you change your mind message JonnyIrl");
+            if (result) await RespondAsync("Successfully unsubcribed. If you change your mind message JonnyIrl", ephemeral: true);
             else await RespondAsync("Failed to unsubscribe.. alert JonnyIrl!", ephemeral: true);
         }
 

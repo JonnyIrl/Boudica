@@ -657,7 +657,7 @@ namespace Boudica.Commands
             _commands.ContextCommandExecuted += ContextCommandExecuted;
             _commands.ComponentCommandExecuted += ComponentCommandExecuted;
 
-            await _apiService.DownloadNewManifestFiles();
+            //await _apiService.DownloadNewManifestFiles();
         }
 
         private async Task HandleInteraction(SocketInteraction arg)

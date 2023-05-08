@@ -181,6 +181,7 @@ namespace Boudica.Services
                 sb.AppendLine("");
                 sb.AppendLine("*If you do not want to get these messages anymore you can use the /unsubscribe command in DVS at any time.*");
 
+                Console.WriteLine($"Sending daily reminder to: {user.DisplayName}");
                 var channel = await user.CreateDMChannelAsync();
                 await channel.SendMessageAsync(sb.ToString());
                 await Task.Delay(5000);
