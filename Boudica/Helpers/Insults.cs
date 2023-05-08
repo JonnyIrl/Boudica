@@ -142,6 +142,16 @@ namespace Boudica.Helpers
             "you started at the bottom and it's been downhill ever since.",
             "anybody who told you to just be yourself couldn't have given you worse advice.",
             "you are so ugly that when your mom dropped you off at school, she got a ticket for littering.",
+            "you’re the reason the gene pool needs a lifeguard.",
+            "hey, you have something on your chin… no, the third one down.",
+            "if the year 2020 was a person, it would be you.",
+            "you’re the reason no one likes you.",
+            "I think you have a huge pimple between your shoulders. Oh. That’s your face.",
+            "I wish I had more hands to show you more middle fingers.",
+            "you’re as useless as the ‘ueue’ in ‘queue’",
+            "when your mom dropped you off at school, did she get a fine for littering?",
+            "I'd slap you, but that would be animal abuse.",
+            "why don't you slip into something more comfortable... like a coma."
         };
     }
 }
