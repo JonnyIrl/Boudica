@@ -1,4 +1,5 @@
-﻿using Boudica.Enums;
+﻿using Boudica.Classes;
+using Boudica.Enums;
 using Boudica.Helpers;
 using Boudica.MongoDB;
 using Boudica.MongoDB.Models;
@@ -20,6 +21,7 @@ namespace Boudica.Services
         private readonly TrialsService _trialsService;
         private readonly UserChallengeService _userChallengeService;
         private readonly ActivityService _activityService;
+        private readonly MiscService _miscService;
         private const int FiveMinute = 300000;
         private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
@@ -54,11 +56,15 @@ namespace Boudica.Services
             _trialsService = services.GetRequiredService<TrialsService>();
             _userChallengeService = services.GetRequiredService<UserChallengeService>();
             _activityService = services.GetRequiredService<ActivityService>();
+            _miscService = services.GetRequiredService<MiscService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             if (_actionTimer == null)
             {
                 _actionTimer = new Timer(TimerElapsed, null, OneMinute, FiveMinute);
             }
+
+            bool result = CreateRaidReminderTask().Result;
+            int breakHere = 0;
         }
 
         //private void PopulateAlphabetList()
@@ -112,59 +118,18 @@ namespace Boudica.Services
                         await MarkTaskAsProcessed(task);
                         continue;
                     }
-                    SocketTextChannel channel = guild.GetTextChannel(task.ChannelId);
-                    if (channel == null)
-                    {
-                        task.DateTimeLastTriggered = DateTime.UtcNow;
-                        await MarkTaskAsProcessed(task);
-                        continue;
-                    }
 
-                    task.DateTimeLastTriggered = DateTime.UtcNow;
-                    await MarkTaskAsProcessed(task);
-
-                    if (task.Name == "TrialsVote")
+                    switch(task.TaskType)
                     {
-                        bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
-                        if (createdTrialsVote == false)
-                        {
-                            await channel.SendMessageAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
-                            return;
-                        }
+                        case CronTaskType.RaidReminder:
+                            await ExecuteRaidReminderTask(task, guild);
+                            break;
 
-                        EmbedBuilder embed = new EmbedBuilder();
-                        CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
-                        task.EmbedAttributes = attributes;
-                        embed.Title = task.EmbedAttributes.Title;
-                        embed.Description = task.EmbedAttributes.Description;
-                        string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
-                        embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-                        embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
-                        await SendTrialsVoteMessage(task, guild, channel, embed);
+                        case CronTaskType.LockTrialsVote:
+                        case CronTaskType.TrialsVote:
+                            await ExecuteTrialsTasks(task, guild);
+                            break;
                     }
-                    else if(task.Name == "TrialsVoteLock")
-                    {
-                        EmbedBuilder embed = new EmbedBuilder();
-                        CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
-                        task.EmbedAttributes = attributes;
-                        embed.Title = task.EmbedAttributes.Title;
-                        embed.Description = task.EmbedAttributes.Description;
-                        string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
-                        embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
-                        embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
-                        await SendTrialsLockVoteMessage(task, channel, embed);
-                    }
-                    else
-                    {
-                        if (task.LastMessageId > 0)
-                        {
-                            IUserMessage message = (IUserMessage)await channel.GetMessageAsync(task.LastMessageId);
-                            if (message == null) return;
-                            task.LastMessageId = message.Id;
-                            await MarkTaskAsProcessed(task);
-                        }
-                    }
-
                 }
 
             }
@@ -172,6 +137,131 @@ namespace Boudica.Services
             {
                 Console.WriteLine("Exception happened in CronService");
                 Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private async Task ExecuteRaidReminderTask(CronTask task, SocketGuild guild)
+        {
+            task.DateTimeLastTriggered = DateTime.UtcNow;
+            await MarkTaskAsProcessed(task);
+
+            List<Raid> todaysRaids = await _activityService.FindAllOpenRaids(guild.Id);
+            todaysRaids.RemoveAll(x => x.DateTimePlanned.Date != DateTime.UtcNow.Date);
+            if (todaysRaids.Any() == false) return;
+
+            List<RaidReminderMessage> raidReminderMessages = new List<RaidReminderMessage>();
+            foreach (Raid raid in todaysRaids)
+            {
+                raidReminderMessages.AddRange(CreateRaidReminderMessage(raid));
+            }
+
+            var groupedResults = raidReminderMessages.GroupBy(x => x.UserId).ToList();
+            foreach (var group in groupedResults)
+            {
+                if (await _miscService.IsUserUnsubscribed(group.Key))
+                {
+                    Console.WriteLine($"{group.Key} is unsubscribed");
+                    continue;
+                }
+                SocketGuildUser user = guild.GetUser(group.Key);
+                if (user == null) continue;
+
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"Hey {user.DisplayName}!");
+                sb.AppendLine("");
+                if (group.Count() > 1)
+                    sb.AppendLine("You have the following Raids today:\n");
+                else
+                    sb.AppendLine("You have the following Raid today:\n");
+                foreach (var openRaid in group.OrderBy(x => x.DateTimePlanned))
+                {
+                    long unixTime = ((DateTimeOffset)openRaid.DateTimePlanned).ToUnixTimeSeconds();
+                    sb.AppendLine($"{openRaid.Title}. <t:{unixTime}:F> <t:{unixTime}:R>. {openRaid.PlayerCount}/6 Players signed up");
+                };
+                sb.AppendLine("");
+                sb.AppendLine("*If you do not want to get these messages anymore you can use the /unsubscribe command in DVS at any time.*");
+
+                var channel = await user.CreateDMChannelAsync();
+                await channel.SendMessageAsync(sb.ToString());
+                await Task.Delay(5000);
+            }
+        }
+
+        private List<RaidReminderMessage> CreateRaidReminderMessage(Raid raid)
+        {
+            List<RaidReminderMessage> messages = new List<RaidReminderMessage>();
+            foreach(ActivityUser user in raid.Players)
+            {
+                messages.Add(CreateRaidReminderMessageForUser(raid, user.UserId));
+            }
+            return messages;
+        }
+
+        private RaidReminderMessage CreateRaidReminderMessageForUser(Raid raid, ulong userId)
+        {
+            return new RaidReminderMessage()
+            {
+                UserId = userId,
+                DateTimePlanned = raid.DateTimePlanned,
+                Title = raid.Title,
+                Description = raid.Description,
+                PlayerCount = raid.Players.Count(),
+            };
+        }
+
+        private async Task ExecuteTrialsTasks(CronTask task, SocketGuild guild)
+        {
+            SocketTextChannel channel = guild.GetTextChannel(task.ChannelId);
+            if (channel == null)
+            {
+                task.DateTimeLastTriggered = DateTime.UtcNow;
+                await MarkTaskAsProcessed(task);
+                return;
+            }
+
+            task.DateTimeLastTriggered = DateTime.UtcNow;
+            await MarkTaskAsProcessed(task);
+
+            if (task.Name == "TrialsVote")
+            {
+                bool createdTrialsVote = await _trialsService.CreateWeeklyTrialsVote();
+                if (createdTrialsVote == false)
+                {
+                    await channel.SendMessageAsync(embed: EmbedHelper.CreateFailedReply("Failed to create weekly trials vote").Build());
+                    return;
+                }
+
+                EmbedBuilder embed = new EmbedBuilder();
+                CronEmbedAttributes attributes = CreateTrialsVoteEmbedAttributes();
+                task.EmbedAttributes = attributes;
+                embed.Title = task.EmbedAttributes.Title;
+                embed.Description = task.EmbedAttributes.Description;
+                string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
+                embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+                embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
+                await SendTrialsVoteMessage(task, guild, channel, embed);
+            }
+            else if (task.Name == "TrialsVoteLock")
+            {
+                EmbedBuilder embed = new EmbedBuilder();
+                CronEmbedAttributes attributes = CreateTrialsVoteLockAttributes();
+                task.EmbedAttributes = attributes;
+                embed.Title = task.EmbedAttributes.Title;
+                embed.Description = task.EmbedAttributes.Description;
+                string[] rgb = task.EmbedAttributes.ColorCode.Split(",");
+                embed.Color = new Color(int.Parse(rgb[0]), int.Parse(rgb[1]), int.Parse(rgb[2]));
+                embed.AddField(task.EmbedAttributes.EmbedFieldBuilder);
+                await SendTrialsLockVoteMessage(task, channel, embed);
+            }
+            else
+            {
+                if (task.LastMessageId > 0)
+                {
+                    IUserMessage message = (IUserMessage)await channel.GetMessageAsync(task.LastMessageId);
+                    if (message == null) return;
+                    task.LastMessageId = message.Id;
+                    await MarkTaskAsProcessed(task);
+                }
             }
         }
 
@@ -267,8 +357,8 @@ namespace Boudica.Services
             tasks.RemoveAll(x =>
                 //Find Daily tasks that need to be run
                 (x.RecurringAttribute.RecurringDaily &&           
-                (utcNow < x.TriggerDateTime || 
-                x.DateTimeLastTriggered.DayOfWeek == utcNow.DayOfWeek || 
+                (utcNow < x.TriggerDateTime ||
+                (x.DateTimeLastTriggered != DateTime.MinValue && x.DateTimeLastTriggered.DayOfWeek == utcNow.DayOfWeek) || 
                 utcNow.TimeOfDay < x.TriggerDateTime.TimeOfDay))
                 ||
                 //Find Weekly tasks that need to be run
@@ -393,56 +483,26 @@ namespace Boudica.Services
             cronEmbedAttributes.EmbedFieldBuilder = new EmbedFieldBuilder() { Name = "Maps", Value = sb.ToString(), IsInline = true };
             return cronEmbedAttributes;
         }
-
-        private async Task UpdateRaidButtons(List<Raid> raids)
+        public async Task<bool> CreateRaidReminderTask()
         {
-            foreach (Raid raid in raids)
+            CronTask existingTask = await _cronTaskCollection.Find(x => x.Name == "RaidReminder").FirstOrDefaultAsync();
+            if (existingTask == null)
             {
-                SocketTextChannel channel = (SocketTextChannel) _client.GetChannel(raid.ChannelId);
-                if (channel == null)
+                CronTask task = new CronTask();
+                task.RecurringAttribute = new CronRecurringAttribute()
                 {
-                    Console.WriteLine("Updating raids.. channel is null");
-                    continue;
-                }
-                IUserMessage message = (IUserMessage)await channel.GetMessageAsync(raid.MessageId);
-                if(message == null)
-                {
-                    Console.WriteLine("Updating raids.. message is null");
-                    continue;
-                }
-
-                var selectMenuBuilder = new SelectMenuBuilder()
-                {
-
-                    CustomId = $"{(int)CustomId.CloseRaid}-{raid.Id}",
-                    Placeholder = "Close Raid Options",
-                    MaxValues = 1,
-                    MinValues = 1
+                    RecurringDaily = true,
+                    DayOfWeek = DayOfWeek.Monday
                 };
-                selectMenuBuilder.AddOption("Close Raid - Completed Successfully", $"{(int)ClosedActivityType.CloseRaidSuccess}");
-                selectMenuBuilder.AddOption("Close Raid - Did not complete", $"{(int)ClosedActivityType.CloseRaidFailure}");
-                selectMenuBuilder.AddOption("Force Close (Admin use only)", $"{(int)ClosedActivityType.ForceCloseRaid}");
-
-                var componentBuilder = new ComponentBuilder()
-                    .WithButton("Edit Raid", $"{(int)CustomId.EditRaid}-{raid.Id}", ButtonStyle.Primary)
-                    .WithButton("Alert Raid", $"{(int)CustomId.RaidAlert}-{raid.Id}", ButtonStyle.Primary)
-                    .WithSelectMenu(selectMenuBuilder);
-
-                await message.ModifyAsync(x =>
-                {
-                    x.Components = componentBuilder.Build();
-                });
+                task.TriggerDateTime = DateTime.ParseExact("2022-10-14 12:00:00", "yyyy-MM-dd HH:mm:ss", null);
+                task.Name = "RaidReminder";
+                task.GuidId = GuildId;
+                task.TaskType = CronTaskType.RaidReminder;
+                await _cronTaskCollection.InsertOneAsync(task);
+                return await _cronTaskCollection.Find(x => x.Name == "RaidReminder").FirstOrDefaultAsync() != null;
             }
-        }
 
-        private async Task<List<Raid>> GetRaids()
-        {
-            //135 136 137
-            List<Raid> raids = new List<Raid>();
-            raids.Add(await _activityService.GetMongoRaidAsync(135));
-            raids.Add(await _activityService.GetMongoRaidAsync(136));
-            raids.Add(await _activityService.GetMongoRaidAsync(137));
-            return raids;
+            return false;
         }
     }
 }

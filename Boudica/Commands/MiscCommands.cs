@@ -716,5 +716,14 @@ namespace Boudica.Commands
             await RespondAsync("*sigh* who did it now? Days since last drama has been reset");
         }
 
+        [SlashCommand("unsubscribe", "Unsubscribe to no longer receive a message from Boudica for Raid reminders.")]
+        [EnabledInDm(true)]
+        public async Task UnsubscribeFromRaids()
+        {
+            bool result = await _miscService.UnsubscribeUser(Context.User.Id);
+            if (result) await RespondAsync("Successfully unsubcribed. If you change your mind message JonnyIrl");
+            else await RespondAsync("Failed to unsubscribe.. alert JonnyIrl!", ephemeral: true);
+        }
+
     }
 }

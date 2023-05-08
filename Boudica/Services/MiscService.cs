@@ -15,6 +15,7 @@ namespace Boudica.Services
         protected IMongoCollection<DayOneSignup> _dayOneCollection;
         protected IMongoCollection<SuspendedUser> _suspendedUserCollection;
         protected IMongoCollection<DramaReport> _dramaCollection;
+        protected IMongoCollection<UnsubscribeReminder> _unsubscribedReminderCollection;
 
         public MiscService(IMongoDBContext mongoDBContext)
         {
@@ -23,14 +24,17 @@ namespace Boudica.Services
             string dayOneSignupName = typeof(DayOneSignup).Name + "Test";
             string suspendedUserName = typeof(SuspendedUser).Name + "Test";
             string dramaName = typeof(DramaReport).Name + "Test";
+            string unsubscribedName = typeof(UnsubscribeReminder).Name + "Test";
 #else
             string dayOneSignupName = typeof(DayOneSignup).Name;
             string suspendedUserName = typeof(SuspendedUser).Name;
             string dramaName = typeof(DramaReport).Name;
+            string unsubscribedName = typeof(UnsubscribeReminder).Name;
 #endif
             _dayOneCollection = _mongoDBContext.GetCollection<DayOneSignup>(dayOneSignupName);
             _suspendedUserCollection = _mongoDBContext.GetCollection<SuspendedUser>(suspendedUserName);
             _dramaCollection = mongoDBContext.GetCollection<DramaReport>(dramaName);
+            _unsubscribedReminderCollection = mongoDBContext.GetCollection<UnsubscribeReminder>(unsubscribedName);
         }
 
         public async Task<bool> AlreadySignedUp(ulong id)
@@ -104,6 +108,18 @@ namespace Boudica.Services
             }
 
             return report;
+        }
+
+        public async Task<bool> IsUserUnsubscribed(ulong guardianId)
+        {
+            return await _unsubscribedReminderCollection.Find(x => x.GuardianId == guardianId).AnyAsync();
+        }
+
+        public async Task<bool> UnsubscribeUser(ulong userId)
+        {
+            if (await IsUserUnsubscribed(userId)) return true;
+            await _unsubscribedReminderCollection.InsertOneAsync(new UnsubscribeReminder() { GuardianId = userId, DateTimeUnsubscribed = DateTime.UtcNow });
+            return await IsUserUnsubscribed(userId);
         }
     }
 }

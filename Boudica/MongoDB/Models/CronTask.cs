@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Boudica.Enums;
+using Discord;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace Boudica.MongoDB.Models
         public ulong ChannelId { get; set; }
         public ulong LastMessageId { get; set; }
         public CronEmbedAttributes EmbedAttributes { get; set; }
+        public CronTaskType TaskType { get; set; }
     }
 
     public class CronRecurringAttribute
