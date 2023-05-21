@@ -352,3 +352,4 @@ MigrationBackup/
 *.config.json
 *.config*
 /Boudica/config.json
+/DBHelper/config.json

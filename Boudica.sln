@@ -10,7 +10,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{102EB4B2-F74B-42AD-8E29-E1E726199CBF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "UnitTests\UnitTests.csproj", "{102EB4B2-F74B-42AD-8E29-E1E726199CBF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DBHelper", "DBHelper\DBHelper.csproj", "{485E54DC-01DF-425C-BDB1-FD8E9D3BB5DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{102EB4B2-F74B-42AD-8E29-E1E726199CBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{102EB4B2-F74B-42AD-8E29-E1E726199CBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{102EB4B2-F74B-42AD-8E29-E1E726199CBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{485E54DC-01DF-425C-BDB1-FD8E9D3BB5DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{485E54DC-01DF-425C-BDB1-FD8E9D3BB5DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{485E54DC-01DF-425C-BDB1-FD8E9D3BB5DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{485E54DC-01DF-425C-BDB1-FD8E9D3BB5DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

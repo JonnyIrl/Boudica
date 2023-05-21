@@ -46,6 +46,14 @@ namespace Boudica.MongoDB
             }
         }
 
+        public MongoDBContext(string connectionString, string databaseName)
+        {
+            _mongoClient = new MongoClient(connectionString);
+            _database = _mongoClient.GetDatabase(databaseName);
+            bool isMongoLive = _database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(5000);
+            int breakHere = 0;
+        }
+
         public IMongoCollection<T> GetCollection<T>(string collectionName)
         {
             return _database.GetCollection<T>(collectionName);

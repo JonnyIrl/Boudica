@@ -116,6 +116,10 @@ namespace Boudica.Services
         {
             return await _raidCollection.Find(x => x.GuidId == guildId).ToListAsync();
         }
+        public async Task<List<Raid>> GetAllRaids(DateTime from, DateTime to)
+        {
+            return await _raidCollection.Find(x => x.DateTimeCreated >= from && x.DateTimeClosed <= to).ToListAsync();
+        }
         public async Task<long> GetRaidCount(ulong userId)
         {
             return await _raidCollection.CountDocumentsAsync(x => x.CreatedByUserId == userId || x.Players.Any(x => x.UserId == userId));
@@ -179,6 +183,10 @@ namespace Boudica.Services
         public async Task<List<Fireteam>> GetAllFireteams(ulong guildId)
         {
             return await _fireteamCollection.Find(x => x.GuidId == guildId).ToListAsync();
+        }
+        public async Task<List<Fireteam>> GetAllFireteams(DateTime from, DateTime to)
+        {
+            return await _fireteamCollection.Find(x => x.DateTimeCreated >= from && x.DateTimeClosed <= to).ToListAsync();
         }
         public async Task<long> GetFireteamCount(ulong userId)
         {

@@ -52,5 +52,10 @@ namespace Boudica.Services
         {
             return await _historyRecordCollection.CountDocumentsAsync(x => x.TargetUserId == userId && x.HistoryType == HistoryType.Award);
         }
+
+        public async Task<List<HistoryRecord>> GetAllHistoryRecordsAsync(DateTime from, DateTime to)
+        {
+            return await _historyRecordCollection.Find(x => x.DateTimeInserted > from && x.DateTimeInserted < to).ToListAsync();
+        }
     }
 }
