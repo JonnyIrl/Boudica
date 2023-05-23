@@ -22,6 +22,7 @@ namespace Boudica.Services
         private readonly UserChallengeService _userChallengeService;
         private readonly ActivityService _activityService;
         private readonly MiscService _miscService;
+        private readonly NotificationService _notificationService;
         private const int FiveMinute = 300000;
         private const int OneMinute = 60000;
         private const int ThirtySeconds = 10000;
@@ -57,6 +58,7 @@ namespace Boudica.Services
             _userChallengeService = services.GetRequiredService<UserChallengeService>();
             _activityService = services.GetRequiredService<ActivityService>();
             _miscService = services.GetRequiredService<MiscService>();
+            _notificationService = services.GetRequiredService<NotificationService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             if (_actionTimer == null)
             {
@@ -102,6 +104,8 @@ namespace Boudica.Services
             {
                 await CloseAnyOpenChallenges();
 
+                await SendNotifications();
+
                 List<CronTask> tasks = await GetTasksToAction();
                 if (tasks.Count == 0)
                 {
@@ -137,6 +141,28 @@ namespace Boudica.Services
             {
                 Console.WriteLine("Exception happened in CronService");
                 Console.WriteLine(ex.ToString());
+            }
+        }
+
+
+        private async Task SendNotifications()
+        {
+            List<Notification> notificationsToSend = await _notificationService.GetAllNotificationsToAnnounce();
+            if(notificationsToSend.Count == 0)
+            {
+                Console.WriteLine("No notifications to send");
+            }
+
+            SocketGuild guild = _client.GetGuild(GuildId);
+            foreach (Notification notification in notificationsToSend)
+            {
+                notification.DateTimeAnnounced = DateTime.UtcNow;
+                await _notificationService.MarkNotificationAsAnnounced(notification.Id);
+                SocketTextChannel channel = guild.GetTextChannel(notification.ChannelIdToAnnounceIn);
+                if(channel == null)
+                    continue;
+
+                await channel.SendMessageAsync("**" + notification.AnnouncementText + "**");
             }
         }
 

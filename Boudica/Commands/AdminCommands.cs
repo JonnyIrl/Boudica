@@ -1,4 +1,5 @@
-﻿using Boudica.Helpers;
+﻿using Boudica.Attributes;
+using Boudica.Helpers;
 using Boudica.MongoDB.Models;
 using Boudica.Services;
 using Discord;
@@ -22,6 +23,7 @@ namespace Boudica.Commands
         private readonly HiringService _hiringService;
         private readonly GuardianService _guardianService;
         private readonly MiscService _miscService;
+        private readonly NotificationService _notificationService;
         //private readonly APIService _apIService;
 
         private readonly Emoji _successEmoji;
@@ -34,6 +36,7 @@ namespace Boudica.Commands
             _hiringService = services.GetRequiredService<HiringService>();
             _guardianService = services.GetRequiredService<GuardianService>();
             _miscService = services.GetRequiredService<MiscService>();
+            _notificationService = services.GetRequiredService<NotificationService>();
 
             _successEmoji = new Emoji("✅");
             _failureEmoji = new Emoji("❌");
@@ -339,6 +342,21 @@ namespace Boudica.Commands
             {
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Could not delete.. something went wrong.. blame Jonny").Build());
             }
+        }
+
+        [DefaultMemberPermissions(GuildPermission.KickMembers)]
+        [OnlyMe]
+        [SlashCommand("create-notification", "Test command for creating a notification")]
+        public async Task LodgeNotification(string announcementText, SocketTextChannel channel)
+        {
+            if (string.IsNullOrEmpty(announcementText) || channel == null)
+            {
+                await RespondAsync("Parameters invalid");
+                return;
+            }
+
+            bool result = await _notificationService.CreateNotification(announcementText, channel.Id);
+            await RespondAsync($"Created Notification: {result}", ephemeral: true);
         }
     }
 }

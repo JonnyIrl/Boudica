@@ -144,6 +144,7 @@ class Program
             .AddScoped<PollService>()
             .AddScoped<BetPollService>()
             .AddScoped<MiscService>()
+            .AddScoped<NotificationService>()
             .BuildServiceProvider();
     }
 }
