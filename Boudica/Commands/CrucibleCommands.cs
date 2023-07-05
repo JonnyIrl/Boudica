@@ -83,7 +83,7 @@ namespace Boudica.Commands
                 List<PlayerVote> allPlayerVotes = await _trialsService.GetAllTrialsGuesses();
                 foreach (PlayerVote playerVote in allPlayerVotes)
                 {
-                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 25);
+                    await _guardianService.IncreaseGlimmerAsync(playerVote.Id, playerVote.Username, 50);
                 }
                 await RespondAsync(embed: EmbedHelper.CreateFailedReply($"Nobody correctly guessed {trialsMap}... sooo you're all winners! 50 Glimmer for everyone!!").Build());
             }

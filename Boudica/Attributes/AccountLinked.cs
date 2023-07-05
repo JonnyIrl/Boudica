@@ -17,7 +17,7 @@ namespace Boudica.Attributes
             APIService apiService = services.GetRequiredService<APIService>();
             if(await apiService.IsExistingLinkedUser(context.User.Id) == false)
             {
-                return await Task.FromResult(PreconditionResult.FromError("You need to link your Destiny account, get started with the /link command."));
+                return await Task.FromResult(PreconditionResult.FromError("You need to link your Destiny account, get started by using the /link command."));
             }
             else
             {

@@ -395,6 +395,53 @@ namespace Boudica.Commands
             await FollowupWithFileAsync(await ConvertHtmlToImage());
         }
 
+        [SlashCommand("my-fishing", "Test Command - Displays your fishing stats")]
+        [AccountLinked]
+        public async Task MyFishing()
+        {
+            Guardian guardian = await _guardianService.GetGuardian(Context.User.Id);
+            if (guardian == null || guardian.BungieMembershipId == null)
+            {
+                await RespondAsync("Your guardian is not set up correctly. Use /link to fix this issue", ephemeral: true);
+                return;
+            }
+            await DeferAsync();
+            string filePath = await GetFishingStats(guardian.BungieMembershipId);
+            if (string.IsNullOrEmpty(filePath))
+            {
+                await FollowupAsync("Failed to fetch fishing stats, server might be under high load.. please wait and try again!", ephemeral: true);
+                return;
+            }
+
+            await FollowupWithFileAsync(filePath);
+        }
+
+        private async Task<string> GetFishingStats(string bungieMembershipId)
+        {
+            var browserFetcher = new BrowserFetcher();
+            await browserFetcher.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+            var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = true
+            });
+            var page = await browser.NewPageAsync();
+            string url = $"https://guardian.report/?view=FISHING&guardians={bungieMembershipId}";
+            await page.GoToAsync(url);
+            try
+            {
+                await page.WaitForSelectorAsync(".player", new WaitForSelectorOptions() { Timeout = 30000});
+            }
+            catch(Exception ex)
+            {
+                int breakHere = 0;
+            }
+            string fileName = GetMostRecentFishingImageFileName(Context.User.Id);
+            await page.ScreenshotAsync(fileName);
+            await browser.DisposeAsync();
+
+            return fileName;
+        }
+
         public async Task<string> ConvertHtmlToImage()
         {
             string html = string.Empty;
@@ -491,6 +538,10 @@ namespace Boudica.Commands
         private string GetImageFileName(ulong userId)
         {
             return BoudicaConfig.ProfileDirectory + userId + ".png";
+        }
+        private string GetMostRecentFishingImageFileName(ulong userId)
+        {
+            return BoudicaConfig.FishingDirectory + userId + ".png";
         }
 
         [SlashCommand("member-stats", "Only useable by Jonny")]
