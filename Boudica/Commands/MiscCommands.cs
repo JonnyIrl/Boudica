@@ -436,10 +436,34 @@ namespace Boudica.Commands
                 int breakHere = 0;
             }
             string fileName = GetMostRecentFishingImageFileName(Context.User.Id);
+            await Task.Delay(10000);
             await page.ScreenshotAsync(fileName);
             await browser.DisposeAsync();
 
-            return fileName;
+            return CroptoSquare(fileName);
+        }
+
+        private string CroptoSquare(string fileName)
+        {
+
+            // Create a new image at the cropped size
+            Bitmap cropped = new Bitmap(360, 480);
+
+            //Load image from file
+            using (System.Drawing.Image image = System.Drawing.Image.FromFile(fileName))
+            {
+                // Create a Graphics object to do the drawing, *with the new bitmap as the target*
+                using (Graphics g = Graphics.FromImage(cropped))
+                {
+                    // Draw the desired area of the original into the graphics object
+                    g.DrawImage(image, new Rectangle(0, 0, 360, 480), new Rectangle(370, 60, 360, 480), GraphicsUnit.Pixel);
+                    fileName = fileName.Insert(fileName.Length - 4, "cropped");
+                    // Save the result
+                    cropped.Save(fileName);
+                    return fileName;
+                }
+            }
+
         }
 
         public async Task<string> ConvertHtmlToImage()
