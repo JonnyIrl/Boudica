@@ -13,6 +13,9 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PuppeteerSharp;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -406,14 +409,22 @@ namespace Boudica.Commands
                 return;
             }
             await DeferAsync();
-            string filePath = await GetFishingStats(guardian.BungieMembershipId);
-            if (string.IsNullOrEmpty(filePath))
+            try
             {
-                await FollowupAsync("Failed to fetch fishing stats, server might be under high load.. please wait and try again!", ephemeral: true);
+                string filePath = await GetFishingStats(guardian.BungieMembershipId);
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    await FollowupAsync("Failed to fetch fishing stats, server might be under high load.. please wait and try again!", ephemeral: true);
+                    return;
+                }
+
+                await FollowupWithFileAsync(filePath);
+            }
+            catch(Exception ex)
+            {
+                await FollowupAsync("Something went wrong..", ephemeral: true);
                 return;
             }
-
-            await FollowupWithFileAsync(filePath);
         }
 
         private async Task<string> GetFishingStats(string bungieMembershipId)
@@ -440,30 +451,17 @@ namespace Boudica.Commands
             await page.ScreenshotAsync(fileName);
             await browser.DisposeAsync();
 
-            return CroptoSquare(fileName);
+            return await CroptoSquare(fileName);
         }
 
-        private string CroptoSquare(string fileName)
+        private async Task<string> CroptoSquare(string fileName)
         {
-
-            // Create a new image at the cropped size
-            Bitmap cropped = new Bitmap(360, 480);
-
-            //Load image from file
-            using (System.Drawing.Image image = System.Drawing.Image.FromFile(fileName))
-            {
-                // Create a Graphics object to do the drawing, *with the new bitmap as the target*
-                using (Graphics g = Graphics.FromImage(cropped))
-                {
-                    // Draw the desired area of the original into the graphics object
-                    g.DrawImage(image, new Rectangle(0, 0, 360, 480), new Rectangle(370, 60, 360, 480), GraphicsUnit.Pixel);
-                    fileName = fileName.Insert(fileName.Length - 4, "cropped");
-                    // Save the result
-                    cropped.Save(fileName);
-                    return fileName;
-                }
-            }
-
+            SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(fileName);
+            image.Mutate(i => i
+            .Crop(new SixLabors.ImageSharp.Rectangle(370, 60, 360, 480))
+            .Resize(360, 480));
+            await image.SaveAsPngAsync(fileName);
+            return fileName;
         }
 
         public async Task<string> ConvertHtmlToImage()
